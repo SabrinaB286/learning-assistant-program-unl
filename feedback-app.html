@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNL LA Feedback App</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100">
+    <div id="app" class="max-w-4xl mx-auto p-6">
+        <div class="bg-red-600 text-white p-4 rounded-lg mb-4">
+            <h1 class="text-2xl font-bold">UNL Learning Assistant Program</h1>
+            <p class="text-red-100">Feedback & Management System</p>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button v-for="tab in tabs" :key="tab.value" @click="activeTab = tab.value"
+                :class="['px-4 py-2 rounded-lg transition-colors', activeTab === tab.value ? 'bg-red-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100']">
+                {{ tab.label }}
+            </button>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow">
+            <component :is="activeTab"></component>
+        </div>
+    </div>
+
+    <script>
+        Vue.component('student-feedback', {
+            template: `
+        <form @submit.prevent="handleSubmit" class="space-y-4">
+          <div>
+            <label class="block mb-1 text-sm font-medium">Your Name</label>
+            <input v-model="form.studentName" class="w-full p-2 border rounded" required />
+          </div>
+          <div>
+            <label class="block mb-1 text-sm font-medium">Your Email</label>
+            <input v-model="form.studentEmail" type="email" class="w-full p-2 border rounded" required />
+          </div>
+          <div>
+            <label class="block mb-1 text-sm font-medium">Course</label>
+            <input v-model="form.course" class="w-full p-2 border rounded" required />
+          </div>
+          <div>
+            <label class="block mb-1 text-sm font-medium">Learning Assistant Name</label>
+            <input v-model="form.laName" class="w-full p-2 border rounded" required />
+          </div>
+          <div>
+            <label class="block mb-1 text-sm font-medium">Feedback</label>
+            <textarea v-model="form.feedback" rows="4" class="w-full p-2 border rounded" required></textarea>
+          </div>
+          <button class="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700">Submit Feedback</button>
+        </form>
+      `,
+            data() {
+                return {
+                    form: {
+                        studentName: '',
+                        studentEmail: '',
+                        course: '',
+                        laName: '',
+                        feedback: ''
+                    }
+                };
+            },
+            methods: {
+                handleSubmit() {
+                    alert('Thank you for your feedback!');
+                    this.form = { studentName: '', studentEmail: '', course: '', laName: '', feedback: '' };
+                }
+            }
+        });
+
+        new Vue({
+            el: '#app',
+            data: {
+                activeTab: 'student-feedback',
+                tabs: [
+                    { label: 'Student Feedback', value: 'student-feedback' },
+                    // Add additional components for staff-idea, candidate-nomination, issue-report if needed
+                ]
+            }
+        });
+    </script>
+</body>
+
+</html>
