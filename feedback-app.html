@@ -4,57 +4,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UNL LA Feedback App</title>
+    <title>UNL LAP Feedback System</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 </head>
 
-<body class="bg-gray-100">
-    <div id="app" class="max-w-4xl mx-auto p-6">
-        <div class="bg-red-600 text-white p-4 rounded-lg mb-4">
-            <h1 class="text-2xl font-bold">UNL Learning Assistant Program</h1>
-            <p class="text-red-100">Feedback & Management System</p>
+<body class="bg-gray-50 min-h-screen">
+    <div id="app" class="max-w-6xl mx-auto p-6">
+        <!-- Header -->
+        <div class="bg-red-600 text-white p-6 rounded-lg mb-6 shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold">UNL Learning Assistant Program</h1>
+                    <p class="text-red-100 mt-1">Feedback & Management System</p>
+                </div>
+                <div v-if="!currentUser" class="flex gap-3">
+                    <button @click="showLogin = true"
+                        class="bg-red-700 px-4 py-2 rounded hover:bg-red-800 transition-colors">
+                        Staff Login
+                    </button>
+                </div>
+                <div v-else class="flex items-center gap-4">
+                    <div class="text-right">
+                        <div class="text-sm text-red-100">Logged in as</div>
+                        <div class="font-semibold">{{ currentUser.name }}</div>
+                        <div class="text-xs text-red-200">NUID: {{ currentUser.nuid }} | Role: {{ currentUser.role ===
+                            'A' ? 'Admin' : 'Staff' }}</div>
+                    </div>
+                    <button @click="logout" class="bg-red-700 px-4 py-2 rounded hover:bg-red-800 transition-colors">
+                        Logout
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div class="flex flex-wrap gap-2 mb-4">
-            <button v-for="tab in tabs" :key="tab.value" @click="activeTab = tab.value"
-                :class="['px-4 py-2 rounded-lg transition-colors', activeTab === tab.value ? 'bg-red-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100']">
+        <!-- Navigation Tabs -->
+        <div class="flex flex-wrap gap-2 mb-6" v-if="isStaff && currentUser.role === 'A'">
+            <button v-for="tab in adminTabs" :key="tab.value" @click="activeTab = tab.value"
+                :class="['px-4 py-2 rounded-lg font-medium transition-colors', 
+                             activeTab === tab.value ? 'bg-red-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100']">
+                {{ tab.label }}
+            </button>
+        </div>
+        <div class="flex flex-wrap gap-2 mb-6" v-else-if="isStaff && currentUser.role === 'S'">
+            <button v-for="tab in staffTabs" :key="tab.value" @click="activeTab = tab.value"
+                :class="['px-4 py-2 rounded-lg font-medium transition-colors', 
+                             activeTab === tab.value ? 'bg-red-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100']">
                 {{ tab.label }}
             </button>
         </div>
 
-        <div class="bg-white p-6 rounded-lg shadow">
-            <component :is="activeTab"></component>
+        <!-- Main Content Area -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <component :is="activeTab" :submissions="submissions" :staff-list="staffList" :current-user="currentUser"
+                @submit-feedback="handleFeedbackSubmission" @add-staff="addStaffMember"
+                @remove-staff="removeStaffMember" @update-staff="updateStaffMember">
+            </component>
+        </div>
+
+        <!-- Login Modal -->
+        <div v-if="showLogin" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">Staff Login</h2>
+                <form @submit.prevent="checkLogin">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">NUID</label>
+                        <input v-model="loginForm.nuid"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                            placeholder="Enter your NUID" required />
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="submit"
+                            class="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 transition-colors font-medium">
+                            Login
+                        </button>
+                        <button type="button" @click="showLogin = false"
+                            class="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-400 transition-colors font-medium">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+                <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <p class="text-sm text-blue-800">
+                        <strong>Note:</strong> Default admin account - NUID: 12345678, or upload staff.txt file.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Upload Area (Admin Only) -->
+        <div v-if="currentUser && currentUser.role === 'A'" class="mt-6 bg-white p-6 rounded-lg shadow-lg">
+            <h3 class="text-lg font-semibold mb-4">Staff File Management</h3>
+            <div class="flex items-center gap-4">
+                <input type="file" @change="loadStaffFile" accept=".txt"
+                    class="file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+                <span class="text-sm text-gray-600">Upload staff.txt file (Format: NUID Name CourseList Role per
+                    line)</span>
+            </div>
+            <div v-if="staffList.length > 0" class="mt-4">
+                <p class="text-sm text-green-600">✓ {{ staffList.length }} staff members loaded</p>
+            </div>
         </div>
     </div>
 
     <script>
+        // EmailJS Configuration
+        emailjs.init("YOUR_EMAILJS_USER_ID");
+
+        // Student Feedback Component
         Vue.component('student-feedback', {
+            props: ['staffList'],
             template: `
-        <form @submit.prevent="handleSubmit" class="space-y-4">
-          <div>
-            <label class="block mb-1 text-sm font-medium">Your Name</label>
-            <input v-model="form.studentName" class="w-full p-2 border rounded" required />
-          </div>
-          <div>
-            <label class="block mb-1 text-sm font-medium">Your Email</label>
-            <input v-model="form.studentEmail" type="email" class="w-full p-2 border rounded" required />
-          </div>
-          <div>
-            <label class="block mb-1 text-sm font-medium">Course</label>
-            <input v-model="form.course" class="w-full p-2 border rounded" required />
-          </div>
-          <div>
-            <label class="block mb-1 text-sm font-medium">Learning Assistant Name</label>
-            <input v-model="form.laName" class="w-full p-2 border rounded" required />
-          </div>
-          <div>
-            <label class="block mb-1 text-sm font-medium">Feedback</label>
-            <textarea v-model="form.feedback" rows="4" class="w-full p-2 border rounded" required></textarea>
-          </div>
-          <button class="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700">Submit Feedback</button>
-        </form>
-      `,
+                <div class="p-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Submit Feedback</h2>
+                    <form @submit.prevent="handleSubmit" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Your Name</label>
+                                <input v-model="form.studentName" 
+                                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                                       required />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Your Email</label>
+                                <input v-model="form.studentEmail" 
+                                       type="email" 
+                                       class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                                       required />
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Course</label>
+                                <select v-model="form.course" 
+                                        @change="updateLAOptions"
+                                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                                        required>
+                                    <option disabled value="">Select a course</option>
+                                    <option v-for="course in availableCourses" :key="course">{{ course }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Learning Assistant Name</label>
+                                <select v-model="form.laName" 
+                                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                                        required>
+                                    <option disabled value="">Select Learning Assistant</option>
+                                    <option v-for="la in availableLAs" :key="la">{{ la }}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Feedback Type</label>
+                            <select v-model="form.feedbackType" 
+                                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                                    required>
+                                <option disabled value="">Select feedback type</option>
+                                <option>Positive Feedback</option>
+                                <option>Constructive Feedback</option>
+                                <option>Issue/Concern</option>
+                                <option>Suggestion</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Your Feedback</label>
+                            <textarea v-model="form.feedback" 
+                                      rows="6" 
+                                      class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" 
+                                      placeholder="Please provide detailed feedback about your experience with the Learning Assistant..."
+                                      required></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Rating (1-5 stars)</label>
+                            <div class="flex gap-2">
+                                <button v-for="star in 5" 
+                                        :key="star"
+                                        type="button"
+                                        @click="form.rating = star"
+                                        :class="['text-2xl', star <= form.rating ? 'text-yellow-400' : 'text-gray-300']">
+                                    ★
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" 
+                                class="w-full bg-red-600 text-white py-3 px-6 rounded-lg hover:bg-red-700 transition-colors font-medium text-lg">
+                            Submit Feedback
+                        </button>
+                    </form>
+                </div>
+            `,
             data() {
                 return {
                     form: {
@@ -62,26 +206,591 @@
                         studentEmail: '',
                         course: '',
                         laName: '',
-                        feedback: ''
-                    }
+                        feedback: '',
+                        feedbackType: '',
+                        rating: 0
+                    },
+                    availableLAs: []
                 };
             },
+            computed: {
+                availableCourses() {
+                    const courses = ['CSCE 101', 'CSCE 155A', 'CSCE 155E', 'CSCE 155H', 'CSCE 155N', 'CSCE 156', 'CSCE 230', 'CSCE 235'];
+                    return courses;
+                }
+            },
             methods: {
+                updateLAOptions() {
+                    this.form.laName = '';
+                    this.availableLAs = this.staffList
+                        .filter(staff => staff.courses && staff.courses.includes(this.form.course))
+                        .map(staff => staff.name);
+                },
                 handleSubmit() {
-                    alert('Thank you for your feedback!');
-                    this.form = { studentName: '', studentEmail: '', course: '', laName: '', feedback: '' };
+                    const feedbackData = {
+                        ...this.form,
+                        type: 'student-feedback',
+                        timestamp: new Date().toISOString(),
+                        id: Date.now()
+                    };
+
+                    this.$emit('submit-feedback', feedbackData);
+
+                    // Reset form
+                    this.form = {
+                        studentName: '',
+                        studentEmail: '',
+                        course: '',
+                        laName: '',
+                        feedback: '',
+                        feedbackType: '',
+                        rating: 0
+                    };
+                    this.availableLAs = [];
                 }
             }
         });
 
+        // Staff Management Component
+        Vue.component('staff-management', {
+            props: ['staffList', 'currentUser'],
+            template: `
+                <div class="p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Staff Management</h2>
+                        <button @click="showAddModal = true" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                            Add Staff Member
+                        </button>
+                    </div>
+
+                    <!-- Staff List -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full border border-gray-300 rounded-lg">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">NUID</th>
+                                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Name</th>
+                                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Role</th>
+                                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Courses</th>
+                                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr v-for="staff in staffList" :key="staff.nuid" class="hover:bg-gray-50">
+                                    <td class="px-4 py-3 text-sm">{{ staff.nuid }}</td>
+                                    <td class="px-4 py-3 text-sm">{{ staff.name }}</td>
+                                    <td class="px-4 py-3 text-sm">
+                                        <span :class="['px-2 py-1 rounded-full text-xs', staff.role === 'A' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800']">
+                                            {{ staff.role === 'A' ? 'Admin' : 'Staff' }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm">{{ (staff.courses || []).join(', ') }}</td>
+                                    <td class="px-4 py-3 text-sm">
+                                        <div class="flex gap-2">
+                                            <button @click="editStaff(staff)" class="text-blue-600 hover:text-blue-800">Edit</button>
+                                            <button @click="removeStaff(staff.nuid)" class="text-red-600 hover:text-red-800">Remove</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Add/Edit Staff Modal -->
+                    <div v-if="showAddModal || editingStaff" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+                            <h3 class="text-xl font-bold mb-4">{{ editingStaff ? 'Edit Staff Member' : 'Add Staff Member' }}</h3>
+                            <form @submit.prevent="saveStaff">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">NUID</label>
+                                        <input v-model="staffForm.nuid" 
+                                               :disabled="editingStaff"
+                                               class="w-full p-2 border rounded" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                        <input v-model="staffForm.name" class="w-full p-2 border rounded" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                        <select v-model="staffForm.role" class="w-full p-2 border rounded" required>
+                                            <option value="S">Staff</option>
+                                            <option value="A">Admin</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Courses (select multiple)</label>
+                                        <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border p-2 rounded">
+                                            <label v-for="course in availableCourses" :key="course" class="flex items-center">
+                                                <input type="checkbox" 
+                                                       :value="course" 
+                                                       v-model="staffForm.courses" 
+                                                       class="mr-2">
+                                                <span class="text-sm">{{ course }}</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-3 mt-6">
+                                    <button type="submit" class="flex-1 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+                                        {{ editingStaff ? 'Update' : 'Add' }}
+                                    </button>
+                                    <button type="button" @click="cancelEdit" class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `,
+            data() {
+                return {
+                    showAddModal: false,
+                    editingStaff: null,
+                    staffForm: {
+                        nuid: '',
+                        name: '',
+                        role: 'S',
+                        courses: []
+                    },
+                    availableCourses: ['CSCE 101', 'CSCE 155A', 'CSCE 155E', 'CSCE 155H', 'CSCE 155N', 'CSCE 156', 'CSCE 230', 'CSCE 235']
+                };
+            },
+            methods: {
+                editStaff(staff) {
+                    this.editingStaff = staff;
+                    this.staffForm = {
+                        nuid: staff.nuid,
+                        name: staff.name,
+                        role: staff.role,
+                        courses: [...(staff.courses || [])]
+                    };
+                },
+                removeStaff(nuid) {
+                    if (confirm('Are you sure you want to remove this staff member?')) {
+                        this.$emit('remove-staff', nuid);
+                    }
+                },
+                saveStaff() {
+                    if (this.editingStaff) {
+                        this.$emit('update-staff', this.staffForm);
+                    } else {
+                        this.$emit('add-staff', this.staffForm);
+                    }
+                    this.cancelEdit();
+                },
+                cancelEdit() {
+                    this.showAddModal = false;
+                    this.editingStaff = null;
+                    this.staffForm = {
+                        nuid: '',
+                        name: '',
+                        role: 'S',
+                        courses: []
+                    };
+                }
+            }
+        });
+
+        // Staff Feedback Component
+        Vue.component('staff-feedback', {
+            template: `
+                <div class="p-8">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-800">Report Staff or Submit Ideas</h2>
+                    <form @submit.prevent="submitReport" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                            <input v-model="form.subject" class="w-full p-3 border rounded-lg" required />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Details</label>
+                            <textarea v-model="form.details" rows="6" class="w-full p-3 border rounded-lg" required></textarea>
+                        </div>
+                        <button type="submit" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700">
+                            Submit Report
+                        </button>
+                    </form>
+                </div>
+            `,
+            data() {
+                return {
+                    form: { subject: '', details: '' }
+                };
+            },
+            methods: {
+                submitReport() {
+                    const report = {
+                        ...this.form,
+                        type: 'staff-feedback',
+                        reporter: this.$root.currentUser.name,
+                        timestamp: new Date().toISOString(),
+                        id: Date.now()
+                    };
+                    this.$emit('submit-feedback', report);
+                    this.form.subject = '';
+                    this.form.details = '';
+                    alert("Report submitted successfully.");
+                }
+            }
+        });
+
+        // Admin Dashboard Component
+        Vue.component('admin-dashboard', {
+            props: ['submissions'],
+            template: `
+                <div class="p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Admin Dashboard</h2>
+                        <div class="flex gap-4 items-center">
+                            <span class="text-sm text-gray-600">Total Feedback: {{ submissions.length }}</span>
+                            <button @click="exportData" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                                Export CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="bg-gray-50 p-4 rounded-lg mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Course</label>
+                                <select v-model="filters.course" class="w-full p-2 border border-gray-300 rounded">
+                                    <option value="">All Courses</option>
+                                    <option v-for="course in uniqueCourses" :key="course">{{ course }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Filter by LA</label>
+                                <select v-model="filters.la" class="w-full p-2 border border-gray-300 rounded">
+                                    <option value="">All LAs</option>
+                                    <option v-for="la in uniqueLAs" :key="la">{{ la }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Type</label>
+                                <select v-model="filters.type" class="w-full p-2 border border-gray-300 rounded">
+                                    <option value="">All Types</option>
+                                    <option>Positive Feedback</option>
+                                    <option>Constructive Feedback</option>
+                                    <option>Issue/Concern</option>
+                                    <option>Suggestion</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Rating</label>
+                                <select v-model="filters.rating" class="w-full p-2 border border-gray-300 rounded">
+                                    <option value="">All Ratings</option>
+                                    <option value="5">5 Stars</option>
+                                    <option value="4">4 Stars</option>
+                                    <option value="3">3 Stars</option>
+                                    <option value="2">2 Stars</option>
+                                    <option value="1">1 Star</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Feedback List -->
+                    <div class="space-y-4">
+                        <div v-if="filteredSubmissions.length === 0" class="text-center py-12 text-gray-500">
+                            <p class="text-lg">No feedback submissions yet.</p>
+                            <p class="text-sm">Feedback will appear here once students submit their responses.</p>
+                        </div>
+                        
+                        <div v-for="item in filteredSubmissions" 
+                             :key="item.id" 
+                             class="bg-gray-50 border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="font-semibold text-lg text-gray-800">{{ item.studentName || item.reporter }}</h3>
+                                    <p class="text-sm text-gray-600">{{ item.studentEmail || 'Staff Report' }}</p>
+                                    <p class="text-sm text-gray-600">{{ formatDate(item.timestamp) }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <span v-if="item.course" class="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                                        {{ item.course }}
+                                    </span>
+                                    <span v-else class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                                        Staff Report
+                                    </span>
+                                    <div v-if="item.rating" class="mt-2">
+                                        <span class="text-yellow-400">
+                                            {{ '★'.repeat(item.rating) }}{{ '☆'.repeat(5 - item.rating) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div v-if="item.type === 'student-feedback'" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <span class="text-sm font-medium text-gray-700">Learning Assistant:</span>
+                                    <span class="ml-2 text-gray-800">{{ item.laName }}</span>
+                                </div>
+                                <div>
+                                    <span class="text-sm font-medium text-gray-700">Feedback Type:</span>
+                                    <span class="ml-2 text-gray-800">{{ item.feedbackType }}</span>
+                                </div>
+                            </div>
+                            
+                            <div v-if="item.type === 'staff-feedback'" class="mb-4">
+                                <span class="text-sm font-medium text-gray-700">Subject:</span>
+                                <span class="ml-2 text-gray-800">{{ item.subject }}</span>
+                            </div>
+                            
+                            <div>
+                                <span class="text-sm font-medium text-gray-700">{{ item.type === 'staff-feedback' ? 'Details:' : 'Feedback:' }}</span>
+                                <p class="mt-2 text-gray-800 bg-white p-4 rounded border">{{ item.feedback || item.details }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            data() {
+                return {
+                    filters: {
+                        course: '',
+                        la: '',
+                        type: '',
+                        rating: ''
+                    }
+                };
+            },
+            computed: {
+                uniqueCourses() {
+                    return [...new Set(this.submissions.map(s => s.course).filter(c => c))].sort();
+                },
+                uniqueLAs() {
+                    return [...new Set(this.submissions.map(s => s.laName).filter(l => l))].sort();
+                },
+                filteredSubmissions() {
+                    return this.submissions.filter(item => {
+                        return (!this.filters.course || item.course === this.filters.course) &&
+                            (!this.filters.la || item.laName === this.filters.la) &&
+                            (!this.filters.type || item.feedbackType === this.filters.type) &&
+                            (!this.filters.rating || item.rating == this.filters.rating);
+                    }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                }
+            },
+            methods: {
+                formatDate(timestamp) {
+                    return new Date(timestamp).toLocaleString();
+                },
+                exportData() {
+                    const csvContent = this.generateCSV(this.filteredSubmissions);
+                    const blob = new Blob([csvContent], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `lap_feedback_${new Date().toISOString().split('T')[0]}.csv`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                },
+                generateCSV(data) {
+                    const headers = ['Timestamp', 'Type', 'Name/Reporter', 'Email', 'Course', 'LA Name', 'Feedback Type', 'Rating', 'Subject', 'Content'];
+                    const rows = data.map(item => [
+                        this.formatDate(item.timestamp),
+                        item.type === 'student-feedback' ? 'Student Feedback' : 'Staff Report',
+                        item.studentName || item.reporter || '',
+                        item.studentEmail || '',
+                        item.course || '',
+                        item.laName || '',
+                        item.feedbackType || '',
+                        item.rating || '',
+                        item.subject || '',
+                        `"${(item.feedback || item.details || '').replace(/"/g, '""')}"`
+                    ]);
+                    return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+                }
+            }
+        });
+
+        // Main Vue App
         new Vue({
             el: '#app',
             data: {
                 activeTab: 'student-feedback',
-                tabs: [
-                    { label: 'Student Feedback', value: 'student-feedback' },
-                    // Add additional components for staff-idea, candidate-nomination, issue-report if needed
+                isStaff: false,
+                showLogin: false,
+                loginForm: { nuid: '' },
+                currentUser: null,
+                submissions: [],
+                staffList: [
+                    // Default admin account
+                    { nuid: '12345678', name: 'System Admin', role: 'A', courses: [] }
+                ],
+                publicTabs: [
+                    { label: 'Submit Feedback', value: 'student-feedback' }
+                ],
+                adminTabs: [
+                    { label: 'Admin Dashboard', value: 'admin-dashboard' },
+                    { label: 'Staff Management', value: 'staff-management' },
+                    { label: 'Submit Feedback', value: 'student-feedback' }
+                ],
+                staffTabs: [
+                    { label: 'Staff Feedback', value: 'staff-feedback' },
+                    { label: 'Submit Feedback', value: 'student-feedback' }
                 ]
+            },
+            mounted() {
+                this.loadStoredData();
+            },
+            methods: {
+                loadStaffFile(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const content = e.target.result;
+                        this.parseStaffFile(content);
+                    };
+                    reader.readAsText(file);
+                },
+                parseStaffFile(content) {
+                    const lines = content.split('\n').filter(line => line.trim());
+                    const newStaff = lines.map(line => {
+                        const parts = line.trim().split(/\s+/);
+                        if (parts.length < 3) return null;
+
+                        const nuid = parts[0];
+                        const role = parts[parts.length - 1]; // 'A' or 'S'
+                        const coursesStr = parts[parts.length - 2];
+                        const name = parts.slice(1, parts.length - 2).join(' ');
+
+                        const courses = coursesStr.split(',').map(c => c.trim()).filter(c => c);
+
+                        return { nuid, name, role, courses };
+                    }).filter(staff => staff !== null);
+
+                    // Merge with existing staff, avoiding duplicates
+                    newStaff.forEach(staff => {
+                        const existingIndex = this.staffList.findIndex(s => s.nuid === staff.nuid);
+                        if (existingIndex >= 0) {
+                            this.staffList.splice(existingIndex, 1, staff);
+                        } else {
+                            this.staffList.push(staff);
+                        }
+                    });
+
+                    this.saveToStorage();
+                    alert(`Loaded ${newStaff.length} staff members`);
+                },
+                addStaffMember(staffData) {
+                    const existingIndex = this.staffList.findIndex(s => s.nuid === staffData.nuid);
+                    if (existingIndex >= 0) {
+                        alert('Staff member with this NUID already exists!');
+                        return;
+                    }
+
+                    this.staffList.push({ ...staffData });
+                    this.saveToStorage();
+                    alert('Staff member added successfully!');
+                },
+                removeStaffMember(nuid) {
+                    // Prevent removing the last admin
+                    const admins = this.staffList.filter(s => s.role === 'A');
+                    const staffToRemove = this.staffList.find(s => s.nuid === nuid);
+
+                    if (staffToRemove && staffToRemove.role === 'A' && admins.length === 1) {
+                        alert('Cannot remove the last admin account!');
+                        return;
+                    }
+
+                    this.staffList = this.staffList.filter(s => s.nuid !== nuid);
+                    this.saveToStorage();
+                    alert('Staff member removed successfully!');
+                },
+                updateStaffMember(staffData) {
+                    const index = this.staffList.findIndex(s => s.nuid === staffData.nuid);
+                    if (index >= 0) {
+                        this.staffList.splice(index, 1, { ...staffData });
+                        this.saveToStorage();
+                        alert('Staff member updated successfully!');
+                    }
+                },
+                checkLogin() {
+                    const staff = this.staffList.find(s => s.nuid === this.loginForm.nuid);
+                    if (staff) {
+                        this.isStaff = true;
+                        this.currentUser = staff;
+                        this.activeTab = staff.role === 'A' ? 'admin-dashboard' : 'staff-feedback';
+                        this.showLogin = false;
+                        this.loginForm.nuid = '';
+                    } else {
+                        alert('Invalid NUID. Please check your credentials or ensure the staff file is loaded.');
+                    }
+                },
+                logout() {
+                    this.isStaff = false;
+                    this.currentUser = null;
+                    this.activeTab = 'student-feedback';
+                },
+                handleFeedbackSubmission(feedbackData) {
+                    this.submissions.push(feedbackData);
+                    this.saveToStorage();
+                    this.sendEmailNotification(feedbackData);
+                    alert('Thank you for your feedback! It has been submitted successfully.');
+                },
+                sendEmailNotification(feedbackData) {
+                    // EmailJS template parameters
+                    const templateParams = {
+                        to_email: 'sbenford2@huskers.unl.edu',
+                        subject: `New LAP Feedback - ${feedbackData.course || 'Staff Report'}`,
+                        student_name: feedbackData.studentName || feedbackData.reporter,
+                        student_email: feedbackData.studentEmail || 'N/A',
+                        course: feedbackData.course || 'N/A',
+                        la_name: feedbackData.laName || 'N/A',
+                        feedback_type: feedbackData.feedbackType || feedbackData.subject || 'N/A',
+                        rating: feedbackData.rating || 'N/A',
+                        feedback: feedbackData.feedback || feedbackData.details,
+                        timestamp: new Date(feedbackData.timestamp).toLocaleString()
+                    };
+
+                    // Note: You'll need to set up EmailJS with your own service ID and template ID
+                    // emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
+                    //     .then(function(response) {
+                    //         console.log('Email sent successfully!', response.status, response.text);
+                    //     }, function(error) {
+                    //         console.log('Email failed to send.', error);
+                    //     });
+
+                    console.log('Email notification would be sent to sbenford2@huskers.unl.edu with data:', templateParams);
+                },
+                saveToStorage() {
+                    const data = {
+                        submissions: this.submissions,
+                        staffList: this.staffList
+                    };
+                    // Save to session storage for persistence during the session
+                    sessionStorage.setItem('lapFeedbackData', JSON.stringify(data));
+                    console.log('Data saved to storage:', data);
+                },
+                loadStoredData() {
+                    try {
+                        const storedData = sessionStorage.getItem('lapFeedbackData');
+                        if (storedData) {
+                            const data = JSON.parse(storedData);
+                            this.submissions = data.submissions || [];
+
+                            // Merge stored staff with default admin, avoiding duplicates
+                            if (data.staffList && data.staffList.length > 0) {
+                                const defaultAdmin = this.staffList[0];
+                                this.staffList = data.staffList;
+
+                                // Ensure default admin exists
+                                if (!this.staffList.find(s => s.nuid === defaultAdmin.nuid)) {
+                                    this.staffList.unshift(defaultAdmin);
+                                }
+                            }
+
+                            console.log('Data loaded from storage:', data);
+                        }
+                    } catch (error) {
+                        console.error('Error loading stored data:', error);
+                    }
+                }
             }
         });
     </script>
