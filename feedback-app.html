@@ -510,106 +510,111 @@
 
         // API Helper Functions (simplified for demo)
         async function apiCall(endpoint, method = 'GET', data = null) {
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 500));
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
 
-            // Mock responses for demo
-            if (endpoint === '/feedback') {
-                if (method === 'POST') {
-                    const newFeedback = {
-                        ...data,
-                        id: Date.now(),
-                        timestamp: new Date().toISOString()
-                    };
-                    feedbackData.push(newFeedback);
-                    return newFeedback;
-                } else {
-                    return feedbackData;
+                if (data) {
+                    options.body = JSON.stringify(data);
                 }
+
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                return await response.json();
             }
 
-            throw new Error('API endpoint not found');
-        }
-
         // Login function - now accepts any NUID
-        function loginUser(nuid) {
-            // Check if NUID exists in our mock database, otherwise create a generic user
-            const userName = userDatabase[nuid] || `User ${nuid.slice(-4)}`;
-
-            return {
-                success: true,
-                user: {
-                    nuid: nuid,
-                    name: userName
+        async function loginUser(nuid) {
+                try {
+                    const response = await apiCall('/staff/login', 'POST', { nuid });
+                    return response;
+                } catch (error) {
+                    return { success: false, message: 'Invalid NUID or server error' };
                 }
-            };
-        }
+            }
 
         // Load feedback
         async function loadFeedback() {
-            try {
-                feedbackData = await apiCall('/feedback');
-                updateDashboard();
-            } catch (error) {
-                // For demo purposes, use mock data
-                feedbackData = [
-                    {
-                        id: 1,
-                        course: 'CSCE 155E',
-                        type: 'TA Performance',
-                        rating: 4,
-                        text: 'Great help during lab sessions!',
-                        submitter: 'Anonymous',
-                        timestamp: new Date(Date.now() - 86400000).toISOString()
-                    },
-                    {
-                        id: 2,
-                        course: 'CSCE 156',
-                        type: 'Office Hours',
-                        rating: 5,
-                        text: 'Very helpful and patient with questions.',
-                        submitter: 'John S.',
-                        timestamp: new Date(Date.now() - 172800000).toISOString()
-                    }
-                ];
-                updateDashboard();
+                try {
+                    console.log('Attempting to load feedback from:', `${API_BASE_URL}/feedback`);
+                    feedbackData = await apiCall('/feedback');
+                    console.log('Feedback loaded successfully:', feedbackData);
+                    updateDashboard();
+                } catch (error) {
+                    console.error('Failed to load feedback:', error);
+
+                    // Show the actual error to help debug
+                    showAlert(`Failed to load feedback: ${error.message}`, 'error');
+
+                    // Use empty array as fallback
+                    feedbackData = [];
+                    updateDashboard();
+                }
             }
-        }
 
         // Submit feedback
         async function submitFeedback(feedbackObj) {
-            try {
-                const response = await apiCall('/feedback', 'POST', feedbackObj);
-                return response;
-            } catch (error) {
-                // For demo, just add to local array
-                const newFeedback = {
-                    ...feedbackObj,
-                    id: Date.now(),
-                    timestamp: new Date().toISOString()
-                };
-                feedbackData.push(newFeedback);
-                return newFeedback;
+                try {
+                    const response = await apiCall('/feedback', 'POST', feedbackObj);
+                    return response;
+                } catch (error) {
+                    console.error('Failed to submit feedback:', error);
+                    throw error;
+                }
             }
-        }
 
         // Tab switching
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
+            function showTab(tabName, clickedElement = null) {
+                // Hide all tab contents
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
 
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
+                // Remove active class from all tabs
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
 
-            // Load data when switching to dashboard
-            if (tabName === 'dashboard') {
-                loadFeedback();
+                // Show the selected tab content
+                document.getElementById(tabName).classList.add('active');
+
+                // If we have the clicked element, make it active
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                } else {
+                    // Find the tab button by matching onclick attribute
+                    document.querySelectorAll('.tab').forEach(tab => {
+                        if (tab.getAttribute('onclick') && tab.getAttribute('onclick').includes(tabName)) {
+                            tab.classList.add('active');
+                        }
+                    });
+                }
+
+                // Load data when switching to dashboard
+                if (tabName === 'dashboard') {
+                    loadFeedback();
+                }
             }
-        }
+
+            // Add event listeners for tabs instead of inline onclick
+            document.addEventListener('DOMContentLoaded', function () {
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.addEventListener('click', function () {
+                        const onclick = this.getAttribute('onclick');
+                        if (onclick) {
+                            const tabName = onclick.match(/showTab\('([^']+)'\)/)[1];
+                            showTab(tabName, this);
+                        }
+                    });
+                });
+            });
 
         // Rating system
         document.querySelectorAll('.star').forEach(star => {
@@ -696,7 +701,7 @@
                 // Simulate API call delay
                 await new Promise(resolve => setTimeout(resolve, 1000));
 
-                const response = loginUser(nuid);
+                const response = await loginUser(nuid);
 
                 if (response.success) {
                     currentUser = response.user;
@@ -787,63 +792,73 @@
         }
 
         function updateDashboard() {
-            const filterCourse = document.getElementById('filter-course').value;
-            let filteredFeedback = feedbackData;
+                console.log("Running updateDashboard...");
+                console.log("Feedback Data:", feedbackData);
 
-            if (filterCourse) {
-                filteredFeedback = filteredFeedback.filter(fb => fb.course === filterCourse);
-            }
+                // Get the filter value and feedback container
+                const filterCourse = document.getElementById('filter-course').value;
+                const feedbackContainer = document.getElementById('all-feedback');
 
-            // Update stats
-            document.getElementById('total-feedback').textContent = filteredFeedback.length;
+                // Start with all feedback data
+                let filteredFeedback = [...feedbackData];
 
-            const ratedFeedback = filteredFeedback.filter(fb => fb.rating);
-            const avgRating = ratedFeedback.length > 0
-                ? (ratedFeedback.reduce((sum, fb) => sum + fb.rating, 0) / ratedFeedback.length).toFixed(1)
-                : '0.0';
-            document.getElementById('avg-rating').textContent = avgRating;
+                // Apply course filter if selected
+                if (filterCourse) {
+                    filteredFeedback = filteredFeedback.filter(fb => fb.course === filterCourse);
+                }
 
-            const oneWeekAgo = new Date();
-            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            const thisWeekCount = filteredFeedback.filter(fb => new Date(fb.timestamp) > oneWeekAgo).length;
-            document.getElementById('this-week').textContent = thisWeekCount;
+                // Update stats
+                document.getElementById('total-feedback').textContent = filteredFeedback.length;
 
-            // Display feedback
-            const feedbackContainer = document.getElementById('all-feedback');
-            feedbackContainer.innerHTML = '';
+                const ratedFeedback = filteredFeedback.filter(fb => fb.rating);
+                const avgRating = ratedFeedback.length > 0
+                    ? (ratedFeedback.reduce((sum, fb) => sum + fb.rating, 0) / ratedFeedback.length).toFixed(1)
+                    : '0.0';
+                document.getElementById('avg-rating').textContent = avgRating;
 
-            filteredFeedback.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                const thisWeekCount = filteredFeedback.filter(fb => new Date(fb.timestamp) > oneWeekAgo).length;
+                document.getElementById('this-week').textContent = thisWeekCount;
 
-            filteredFeedback.forEach(feedback => {
-                const card = document.createElement('div');
-                card.className = 'feedback-card';
+                // Display feedback
+                feedbackContainer.innerHTML = '';
 
-                const stars = feedback.rating ?
-                    '★'.repeat(feedback.rating) + '☆'.repeat(5 - feedback.rating) :
-                    'No rating';
+                // Sort by timestamp (newest first)
+                filteredFeedback.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                card.innerHTML = `
-                    <div class="feedback-header">
-                        <div>
-                            <strong>${feedback.course || feedback.type}</strong>
-                            <div class="feedback-meta">
-                                ${feedback.type} | ${new Date(feedback.timestamp).toLocaleDateString()} 
-                                ${feedback.rating ? `| Rating: ${stars}` : ''}
-                                ${feedback.submitter ? `| By: ${feedback.submitter}` : ''}
-                                ${feedback.year ? `| Year: ${feedback.year}` : ''}
-                            </div>
-                        </div>
+                console.log("Filtered Feedback:", filteredFeedback);
+
+                filteredFeedback.forEach(feedback => {
+                    const card = document.createElement('div');
+                    card.className = 'feedback-card';
+
+                    const stars = feedback.rating ?
+                        '★'.repeat(feedback.rating) + '☆'.repeat(5 - feedback.rating) :
+                        'No rating';
+
+                    card.innerHTML = `
+            <div class="feedback-header">
+                <div>
+                    <strong>${feedback.course || feedback.type}</strong>
+                    <div class="feedback-meta">
+                        ${feedback.type} | ${new Date(feedback.timestamp).toLocaleDateString()} 
+                        ${feedback.rating ? `| Rating: ${stars}` : ''}
+                        ${feedback.submitter ? `| By: ${feedback.submitter}` : ''}
+                        ${feedback.year ? `| Year: ${feedback.year}` : ''}
                     </div>
-                    <div class="feedback-content">${feedback.text}</div>
-                `;
+                </div>
+            </div>
+            <div class="feedback-content">${feedback.text}</div>
+        `;
 
-                feedbackContainer.appendChild(card);
-            });
+                    feedbackContainer.appendChild(card);
+                });
 
-            if (filteredFeedback.length === 0) {
-                feedbackContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No feedback available.</p>';
+                if (filteredFeedback.length === 0) {
+                    feedbackContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No feedback available.</p>';
+                }
             }
-        }
 
         // Initialize the application
         window.addEventListener('load', function () {
