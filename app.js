@@ -12,8 +12,9 @@ app.use(cors()); // if you’ll ever split FE/BE to different domains
 app.use(express.static(path.join(__dirname, 'feedback')));
 
 // API routes
-app.use('/api/staff', require('./backend/routes/staff'));
-app.use('/api/feedback', require('./backend/routes/feedback'));
+app.use('/api/staff', require('./routes/staff'));
+app.use('/api/feedback', require('./routes/feedback'));
+
 
 // healthcheck (Render uses this to know your app is up)
 app.get('/healthz', (_req, res) => res.send('ok'));
