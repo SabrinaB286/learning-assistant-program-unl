@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 const staffPath = path.join(__dirname, '../data/staff.json');
+const { supabase } = require('../lib/supabase');
+
 
 // Get staff list
 router.get('/', (req, res) => {

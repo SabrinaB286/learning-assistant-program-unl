@@ -1,24 +1,27 @@
-// backend/app.js
+// server.js (or app.js)
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
-const bodyParser = require('body-parser');
-
-const staffRoutes = require('./routes/staff');
-const feedbackRoutes = require('./routes/feedback');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.use(express.json());
+app.use(cors()); // if you’ll ever split FE/BE to different domains
 
-// Middleware
-console.log('Applying middleware...');
-app.use(cors());
-app.use(bodyParser.json());
+// serve your frontend (adjust "public" to your actual folder)
+// e.g., feedback/ or dist/
+app.use(express.static(path.join(__dirname, 'feedback')));
 
-// Routes
-console.log('Registering routes...');
-app.use('/staff', staffRoutes);
-app.use('/feedback', feedbackRoutes);
-// Start Server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+// API routes
+app.use('/api/staff', require('./backend/routes/staff'));
+app.use('/api/feedback', require('./backend/routes/feedback'));
+
+// healthcheck (Render uses this to know your app is up)
+app.get('/healthz', (_req, res) => res.send('ok'));
+
+// fallback to index.html for SPA-style routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'feedback', 'index.html'));
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server on :${PORT}`));

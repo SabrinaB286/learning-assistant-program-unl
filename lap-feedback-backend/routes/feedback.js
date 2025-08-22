@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 const feedbackPath = path.join(__dirname, '../data/feedback.json');
+const { supabase } = require('../lib/supabase');
+
 
 // Get feedback list
 router.get('/', (req, res) => {
