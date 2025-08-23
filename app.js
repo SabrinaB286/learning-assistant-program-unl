@@ -3,20 +3,23 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const helmet = require('helmet');
 
 const app = express();
 
-/* ---------- Core middleware ---------- */
-app.set('trust proxy', 1);                 // good default on Render
-app.use(express.json());
-app.use(cors());                           // relax if FE/BE are same origin
+/* ---------- Security & core middleware ---------- */
+app.set('trust proxy', 1);
+app.use(helmet({
+  contentSecurityPolicy: false // keep simple for now; tighten later if you want
+}));
+app.use(express.json({ limit: '200kb' }));
+app.use(cors());
 
 /* ---------- Static frontend ---------- */
-/* Adjust 'feedback' if your index.html lives elsewhere */
 app.use(express.static(path.join(__dirname, 'feedback')));
 
 /* ---------- API routes ---------- */
-/* Make sure these files exist at ./routes/staff.js and ./routes/feedback.js */
+app.use('/api/auth', require('./routes/auth'));        // NEW
 app.use('/api/staff', require('./routes/staff'));
 app.use('/api/feedback', require('./routes/feedback'));
 
@@ -24,20 +27,17 @@ app.use('/api/feedback', require('./routes/feedback'));
 app.get('/healthz', (_req, res) => res.send('ok'));
 
 /* ---------- SPA fallback (Express 5 safe) ---------- */
-/* Serve index.html for any non-API path */
 app.get(/.*/, (req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
   res.sendFile(path.join(__dirname, 'feedback', 'index.html'));
 });
 
-/* ---------- Error handler (last) ---------- */
+/* ---------- Error handler ---------- */
 app.use((err, _req, res, _next) => {
   console.error(err);
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
-/* ---------- Start server ---------- */
+/* ---------- Start ---------- */
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server listening on :${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server listening on :${PORT}`));
