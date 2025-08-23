@@ -7,7 +7,6 @@
   <title>UNL Learning Assistant Feedback System</title>
 
   <style>
-    /* ====== Base / Theme (kept crimson → dark red gradient) ====== */
     * {
       margin: 0;
       padding: 0;
@@ -41,14 +40,8 @@
       margin-bottom: 10px;
     }
 
-    .header p {
-      font-size: 1.1em;
-      opacity: .95;
-    }
-
     .main-content {
       padding: 32px;
-      position: relative;
     }
 
     .user-info {
@@ -60,10 +53,6 @@
       padding: 10px 14px;
       border-radius: 10px;
       margin-bottom: 16px;
-    }
-
-    .user-info .user-welcome {
-      font-weight: 600;
     }
 
     .btn {
@@ -195,13 +184,7 @@
       border-radius: 12px;
       background: #fff;
       padding: 12px;
-      transition: .2s;
       box-shadow: 0 2px 10px rgba(0, 0, 0, .03);
-    }
-
-    .feedback-card:hover {
-      box-shadow: 0 6px 16px rgba(0, 0, 0, .08);
-      transform: translateY(-2px);
     }
 
     .feedback-header {
@@ -263,7 +246,6 @@
 </head>
 
 <body>
-
   <div class="container">
     <div class="header">
       <h1>Learning Assistant Feedback System</h1>
@@ -273,8 +255,25 @@
     <div class="main-content">
       <!-- whoami / logout -->
       <div id="user-info" class="user-info">
-        <div class="user-welcome">Welcome, <span id="user-name"></span>!</div>
         <div>
+          <span class="user-welcome">Welcome, <b id="user-name"></b>!</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <details id="change-pw-panel">
+            <summary class="btn-ghost" style="padding:6px 10px;">Change Password</summary>
+            <div
+              style="background:#fff; border:1px solid #eee; padding:10px; border-radius:10px; margin-top:8px; width:320px;">
+              <div class="form-group">
+                <label for="cpw-current">Current password</label>
+                <input id="cpw-current" type="password" autocomplete="current-password">
+              </div>
+              <div class="form-group">
+                <label for="cpw-new">New password (min 8)</label>
+                <input id="cpw-new" type="password" autocomplete="new-password">
+              </div>
+              <button id="btn-change-password" class="btn" style="width:100%;">Update password</button>
+            </div>
+          </details>
           <button id="logout-btn" class="btn btn-secondary">Log Out</button>
         </div>
       </div>
@@ -283,7 +282,9 @@
       <div class="tab-container">
         <button class="tab active" onclick="showTab('student', this)">Feedback</button>
         <button class="tab" onclick="showTab('login', this)">Login</button>
-        <button class="tab" id="dashboard-tab" onclick="showTab('dashboard', this)">Dashboard</button>
+        <!-- Dashboard tab starts hidden until login -->
+        <button class="tab" id="dashboard-tab" onclick="showTab('dashboard', this)"
+          style="display:none;">Dashboard</button>
       </div>
 
       <!-- Student feedback tab -->
@@ -295,21 +296,21 @@
             <label for="course">Course</label>
             <select id="course">
               <option value="">Select Course</option>
-              <option value="CSCE 101">CSCE 101 - Intro to Computer Science</option>
-              <option value="CSCE 155A">CSCE 155A - Computer Science I (Python)</option>
-              <option value="CSCE 155E">CSCE 155E - Computer Science I (MATLAB)</option>
-              <option value="CSCE 155H">CSCE 155H - Computer Science I (Honors)</option>
-              <option value="CSCE 155N">CSCE 155N - Computer Science I (Engineering)</option>
-              <option value="CSCE 156">CSCE 156 - Computer Science II</option>
+              <option>CSCE 101</option>
+              <option>CSCE 155A</option>
+              <option>CSCE 155E</option>
+              <option>CSCE 155H</option>
+              <option>CSCE 155N</option>
+              <option>CSCE 156</option>
             </select>
           </div>
 
           <div class="form-group">
             <label for="feedback-type">Type</label>
             <select id="feedback-type">
-              <option value="General">General</option>
-              <option value="Course">Course</option>
-              <option value="TA">TA</option>
+              <option>General</option>
+              <option>Course</option>
+              <option>TA</option>
             </select>
           </div>
 
@@ -385,7 +386,15 @@
             </div>
             <div class="form-group">
               <label for="su-year">Class year</label>
-              <input id="su-year" type="text" placeholder="Sophomore">
+              <!-- DROPDOWN instead of text -->
+              <select id="su-year">
+                <option value="">Select Year</option>
+                <option>Freshman</option>
+                <option>Sophomore</option>
+                <option>Junior</option>
+                <option>Senior</option>
+                <option>Graduate</option>
+              </select>
             </div>
             <div class="form-group">
               <label for="su-courses">Courses (comma-separated)</label>
@@ -396,7 +405,7 @@
         </div>
       </div>
 
-      <!-- Dashboard tab -->
+      <!-- Dashboard tab (hidden until login) -->
       <div id="dashboard" class="tab-content">
         <h2 style="margin-bottom:10px;">Dashboard</h2>
 
@@ -419,18 +428,18 @@
           <label for="filter-course">Filter by Course</label>
           <select id="filter-course">
             <option value="">All Courses</option>
-            <option value="CSCE 101">CSCE 101</option>
-            <option value="CSCE 155A">CSCE 155A</option>
-            <option value="CSCE 155E">CSCE 155E</option>
-            <option value="CSCE 155H">CSCE 155H</option>
-            <option value="CSCE 155N">CSCE 155N</option>
-            <option value="CSCE 156">CSCE 156</option>
+            <option>CSCE 101</option>
+            <option>CSCE 155A</option>
+            <option>CSCE 155E</option>
+            <option>CSCE 155H</option>
+            <option>CSCE 155N</option>
+            <option>CSCE 156</option>
           </select>
         </div>
 
         <div class="feedback-list" id="feedback-list"></div>
 
-        <!-- Staff schedule (visible to logged-in staff) -->
+        <!-- Staff schedule -->
         <div id="schedule-panel" class="hidden" style="margin-top: 22px;">
           <h3>My Schedule</h3>
           <table id="schedule-table" style="width:100%; border-collapse:collapse;">
@@ -480,7 +489,7 @@
   </div>
 
   <script>
-    // ===== Helpers =====
+    // ===== Helper UI bits =====
     function showAlert(message, kind = 'success') {
       const div = document.createElement('div');
       div.className = 'alert ' + (kind === 'success' ? 'alert-success' : 'alert-error');
@@ -501,7 +510,7 @@
       el.style.display = on ? '' : 'none';
     }
 
-    // ===== Auth state (JWT via backend) =====
+    // ===== Auth state (JWT) =====
     let authToken = localStorage.getItem('authToken') || null;
     let currentUser = null;
     try { currentUser = JSON.parse(localStorage.getItem('user') || 'null'); } catch { currentUser = null; }
@@ -515,23 +524,24 @@
       const dashTab = document.getElementById('dashboard-tab');
       const isLogged = !!(authToken && currentUser);
       setVisible(userInfo, isLogged);
+      setVisible(dashTab, isLogged); // show Dashboard tab only if logged in
       if (isLogged && nameEl) {
         nameEl.textContent = currentUser.name + (currentUser.kind === 'staff' ? ` (${currentUser.role})` : ' (student)');
       }
-      // Always show Dashboard tab (data is public, admin widgets are gated)
-      if (dashTab) dashTab.classList.add('active');
     }
 
-    // ===== Rating stars =====
-    document.querySelectorAll('.star').forEach(star => {
-      star.addEventListener('click', () => {
-        const val = Number(star.dataset.rating);
-        document.getElementById('rating-value').value = String(val);
-        document.querySelectorAll('.star').forEach(s => s.classList.toggle('active', Number(s.dataset.rating) <= val));
+    // ===== Rating stars (Feedback tab) =====
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.star').forEach(star => {
+        star.addEventListener('click', () => {
+          const val = Number(star.dataset.rating);
+          document.getElementById('rating-value').value = String(val);
+          document.querySelectorAll('.star').forEach(s => s.classList.toggle('active', Number(s.dataset.rating) <= val));
+        });
       });
     });
 
-    // ===== Feedback data (dashboard) =====
+    // ===== Dashboard data =====
     let feedbackData = [];
     async function loadFeedback() {
       try {
@@ -547,7 +557,6 @@
       }
     }
     function updateDashboard() {
-      // stats
       const total = feedbackData.length;
       const rated = feedbackData.filter(x => (x.rating ?? null) !== null);
       const avg = rated.length ? (rated.reduce((a, b) => a + (b.rating || 0), 0) / rated.length) : 0;
@@ -557,7 +566,6 @@
       document.getElementById('avg-rating').textContent = avg.toFixed(1);
       document.getElementById('this-week').textContent = thisWeek;
 
-      // list
       const filterCourse = document.getElementById('filter-course')?.value || '';
       const list = document.getElementById('feedback-list');
       if (!list) return;
@@ -574,8 +582,7 @@
           item.type || 'General',
           item.created_at ? new Date(item.created_at).toLocaleString() : ''
         ].filter(Boolean).join(' • ');
-        const rating = document.createElement('div');
-        rating.textContent = item.rating ? `★ ${item.rating}/5` : '';
+        const rating = document.createElement('div'); rating.textContent = item.rating ? `★ ${item.rating}/5` : '';
         head.append(meta, rating);
         const body = document.createElement('div'); body.className = 'feedback-content';
         body.textContent = item.text || '';
@@ -606,9 +613,7 @@
         document.getElementById('feedback-form').reset();
         document.getElementById('rating-value').value = '0';
         document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
-        // refresh dashboard list
-        await loadFeedback();
-        showTab('dashboard', document.getElementById('dashboard-tab'));
+        // (We keep dashboard hidden until login; data still refreshes when they do)
       } catch (e) {
         if (/401/.test(String(e))) showAlert('Please sign in first.', 'error');
         else showAlert(e.message, 'error');
@@ -632,15 +637,21 @@
         localStorage.setItem('authToken', authToken);
         localStorage.setItem('user', JSON.stringify(currentUser));
         refreshWhoAmI();
-        showAlert(`Welcome, ${currentUser.name}!`);
+
+        // Show Dashboard tab on login, load data, and switch to it
+        setVisible(document.getElementById('dashboard-tab'), true);
+        await loadFeedback();
+        showTab('dashboard', document.getElementById('dashboard-tab'));
+
         // Load protected bits
         if (currentUser.kind === 'staff') {
           await loadMySchedule();
           const isSL = currentUser.role === 'SL';
           setVisible(document.getElementById('admin-pending'), isSL);
           setVisible(document.getElementById('admin-add-staff'), isSL);
+          if (isSL) loadPendingStudents();
         }
-        showTab('dashboard', document.getElementById('dashboard-tab'));
+        showAlert(`Welcome, ${currentUser.name}!`);
       } catch (e) {
         showAlert(e.message, 'error');
       }
@@ -650,11 +661,13 @@
       localStorage.removeItem('authToken'); localStorage.removeItem('user');
       authToken = null; currentUser = null;
       refreshWhoAmI();
+      // Hide dashboard tab & content again
+      setVisible(document.getElementById('dashboard-tab'), false);
+      showTab('student', document.querySelector('.tab-container .tab')); // back to Feedback
       setVisible(document.getElementById('schedule-panel'), false);
       setVisible(document.getElementById('admin-pending'), false);
       setVisible(document.getElementById('admin-add-staff'), false);
       showAlert('You have been logged out.');
-      showTab('student', document.querySelector('.tab-container .tab'));
     });
 
     // ===== Student signup =====
@@ -663,7 +676,7 @@
       const email = document.getElementById('su-email').value.trim().toLowerCase();
       const nuid = document.getElementById('su-nuid').value.trim();
       const password = document.getElementById('su-pw').value;
-      const class_year = document.getElementById('su-year').value.trim();
+      const class_year = document.getElementById('su-year').value.trim();  // dropdown value
       const courses = (document.getElementById('su-courses').value || '')
         .split(',').map(s => s.trim()).filter(Boolean);
       if (!name || !email || !password) return showAlert('Name, email, and password are required.', 'error');
@@ -678,7 +691,33 @@
       } catch (e) { showAlert(e.message, 'error'); }
     });
 
-    // ===== SL: pending approvals & add staff =====
+    // ===== Change password (auth) =====
+    document.getElementById('btn-change-password')?.addEventListener('click', async () => {
+      const oldPw = document.getElementById('cpw-current').value;
+      const newPw = document.getElementById('cpw-new').value;
+      if (!oldPw || !newPw) return showAlert('Enter both current and new password.', 'error');
+      if (newPw.length < 8) return showAlert('New password must be at least 8 characters.', 'error');
+      try {
+        const r = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ current_password: oldPw, new_password: newPw })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Could not change password');
+        showAlert('Password updated. Please log in again.');
+        // Force logout after password change
+        localStorage.removeItem('authToken'); localStorage.removeItem('user');
+        authToken = null; currentUser = null;
+        refreshWhoAmI();
+        setVisible(document.getElementById('dashboard-tab'), false);
+        showTab('login', document.querySelector('.tab-container .tab:nth-child(2)'));
+      } catch (e) {
+        showAlert(e.message, 'error');
+      }
+    });
+
+    // ===== Admin & Schedule helpers =====
     async function loadPendingStudents() {
       try {
         const r = await fetch('/api/auth/students/pending', { headers: authHeaders() });
@@ -711,27 +750,6 @@
       } catch (e) { showAlert(e.message, 'error'); }
     }
 
-    document.getElementById('btn-add-staff')?.addEventListener('click', async () => {
-      const nuid = document.getElementById('st-nuid').value.trim();
-      const name = document.getElementById('st-name').value.trim();
-      const role = document.getElementById('st-role').value.trim();
-      const email = document.getElementById('st-email').value.trim();
-      const password = document.getElementById('st-pass').value;
-      const courses = (document.getElementById('st-courses').value || '')
-        .split(',').map(s => s.trim()).filter(Boolean);
-      if (!nuid || !name || !role) return showAlert('NUID, name, role required.', 'error');
-      try {
-        const r = await fetch('/api/staff', {
-          method: 'POST', headers: authHeaders(),
-          body: JSON.stringify({ nuid, name, role, email, password, courses })
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Create failed');
-        showAlert('Staff created.');
-      } catch (e) { showAlert(e.message, 'error'); }
-    });
-
-    // ===== Staff schedule =====
     async function loadMySchedule() {
       if (!currentUser || currentUser.kind !== 'staff') return;
       const tBody = document.querySelector('#schedule-table tbody');
@@ -758,15 +776,21 @@
     // ===== Init =====
     window.addEventListener('DOMContentLoaded', async () => {
       refreshWhoAmI();
-      await loadFeedback();
+      // Dashboard remains hidden until login (tab button hidden)
       document.getElementById('filter-course')?.addEventListener('change', updateDashboard);
-      // If SL already logged in, show admin panels
-      if (currentUser?.kind === 'staff' && currentUser.role === 'SL') {
-        setVisible(document.getElementById('admin-pending'), true);
-        setVisible(document.getElementById('admin-add-staff'), true);
-        loadPendingStudents();
+
+      if (authToken && currentUser) {
+        // If already logged in (persisted), reveal dashboard and load data
+        setVisible(document.getElementById('dashboard-tab'), true);
+        await loadFeedback();
+        if (currentUser.kind === 'staff') {
+          await loadMySchedule();
+          const isSL = currentUser.role === 'SL';
+          setVisible(document.getElementById('admin-pending'), isSL);
+          setVisible(document.getElementById('admin-add-staff'), isSL);
+          if (isSL) loadPendingStudents();
+        }
       }
-      if (currentUser?.kind === 'staff') loadMySchedule();
     });
   </script>
 </body>
