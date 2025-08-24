@@ -9,6 +9,7 @@ const { supabase } = require('../lib/supabase');
 const { requireAuth, requireRole, JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
+const HUSKERS_RE = /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i;
 
 /* ---------- rate limits ---------- */
 const loginLimiter   = rateLimit({ windowMs: 10 * 60 * 1000, max: 50 });
@@ -26,18 +27,26 @@ function s(v, max = 200) { return String(v || '').trim().slice(0, max); }
 
 /* ---------- POST /api/auth/login ---------- */
 router.post('/login', loginLimiter, async (req, res) => {
-  const login = s(req.body.login, 120);  // NUID or email
+  const login = s(req.body.login, 200).toLowerCase();
   const password = String(req.body.password || '');
   if (!login || !password) return res.status(400).json({ error: 'login and password required' });
 
+  const isEmail = login.includes('@');
+  if (isEmail && !HUSKERS_RE.test(login)) {
+    return res.status(400).json({ error: 'Use your @huskers.unl.edu email (or your NUID).' });
+  }
+
   // STAFF: try NUID then email
   {
-    let { data: staffRow } = await supabase
-      .from('staff').select('nuid,name,role,password_hash,is_active').eq('nuid', login).single();
-    if (!staffRow) {
+    let staffRow = null;
+    if (!isEmail) {
+      const r = await supabase
+        .from('staff').select('nuid,name,role,password_hash,is_active').eq('nuid', login).single();
+      staffRow = r.data || null;
+    } else {
       const r = await supabase
         .from('staff').select('nuid,name,role,password_hash,is_active').eq('email', login).single();
-      staffRow = r.data;
+      staffRow = r.data || null;
     }
     if (staffRow && staffRow.is_active !== false && staffRow.password_hash) {
       const ok = await bcrypt.compare(password, staffRow.password_hash);
@@ -51,16 +60,19 @@ router.post('/login', loginLimiter, async (req, res) => {
     }
   }
 
-  // STUDENT: email then nuid
+  // STUDENT: email (only huskers) then NUID
   {
-    let { data: row } = await supabase
-      .from('students').select('id,email,name,status,password_hash').eq('email', login).single();
-    if (!row) {
+    let row = null;
+    if (isEmail) {
+      const r = await supabase
+        .from('students').select('id,email,name,status,password_hash').eq('email', login).single();
+      row = r.data || null;
+    } else {
       const r = await supabase
         .from('students').select('id,email,name,status,password_hash').eq('nuid', login).single();
-      row = r.data;
+      row = r.data || null;
     }
-    if (row && row.status === 'approved') {
+    if (row && row.status === 'approved' && row.password_hash) {
       const ok = await bcrypt.compare(password, row.password_hash);
       if (ok) {
         return res.json({
@@ -79,11 +91,12 @@ router.post('/student/signup', signupLimiter, async (req, res) => {
   const email = s(req.body.email, 200).toLowerCase();
   const name  = s(req.body.name, 120);
   const nuid  = s(req.body.nuid, 32);
-  const class_year = s(req.body.class_year, 40);  // now dropdown on the front-end
+  const class_year = s(req.body.class_year, 40);
   const password   = String(req.body.password || '');
   const courses    = Array.isArray(req.body.courses) ? req.body.courses.map(c => s(c, 120)).filter(Boolean) : [];
 
   if (!email || !name || !password) return res.status(400).json({ error: 'email, name, password required' });
+  if (!HUSKERS_RE.test(email)) return res.status(400).json({ error: 'Email must be @huskers.unl.edu' });
   if (password.length < 8) return res.status(400).json({ error: 'password must be at least 8 chars' });
 
   const password_hash = await bcrypt.hash(password, 12);

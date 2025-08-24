@@ -5,6 +5,8 @@ const router = express.Router();
 const { supabase } = require('../lib/supabase');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
+const HUSKERS_RE = /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i;
+
 // helpers
 async function getRole(nuid) {
   if (!nuid) return null;
@@ -58,8 +60,11 @@ router.get('/:nuid/schedule', requireAuth, async (req, res) => {
 router.post('/', requireAuth, requireRole('SL'), async (req, res) => {
   const { nuid, name, role, email, password, courses = [] } = req.body || {};
   if (!nuid || !name || !role) return res.status(400).json({ error: 'nuid, name, role required' });
+  if (email && !HUSKERS_RE.test(String(email).toLowerCase())) {
+    return res.status(400).json({ error: 'email must be @huskers.unl.edu' });
+  }
 
-  let patch = { nuid, name, role, email: email || null };
+  let patch = { nuid, name, role, email: email ? String(email).toLowerCase() : null };
   if (password) {
     const bcrypt = require('bcryptjs');
     patch.password_hash = await bcrypt.hash(String(password), 12);
@@ -86,7 +91,12 @@ router.put('/:nuid', requireAuth, requireRole('SL'), async (req, res) => {
   const patch = {};
   if (name) patch.name = name;
   if (role) patch.role = role;
-  if (email !== undefined) patch.email = email || null;
+  if (email !== undefined) {
+    if (email && !HUSKERS_RE.test(String(email).toLowerCase())) {
+      return res.status(400).json({ error: 'email must be @huskers.unl.edu' });
+    }
+    patch.email = email ? String(email).toLowerCase() : null;
+  }
   if (reset_password_to) {
     const bcrypt = require('bcryptjs');
     patch.password_hash = await bcrypt.hash(String(reset_password_to), 12);
@@ -168,6 +178,7 @@ router.post('/bulk/upsert', requireAuth, requireRole('SL'), async (req, res) => 
 
     const bcrypt = require('bcryptjs');
     const rows = [];
+    const invalid = [];
 
     for (const it of list) {
       const nuid = String(it.nuid || '').trim();
@@ -177,9 +188,12 @@ router.post('/bulk/upsert', requireAuth, requireRole('SL'), async (req, res) => 
 
       if (it.name)  row.name  = String(it.name).trim();
       if (it.role)  row.role  = String(it.role).trim();     // LA | CL | SL
-      if (it.email) row.email = String(it.email).trim() || null;
+      if (it.email) {
+        const e = String(it.email).toLowerCase().trim();
+        if (!HUSKERS_RE.test(e)) { invalid.push({ nuid, email: e }); continue; }
+        row.email = e;
+      }
 
-      // Hash the provided temp password (if any)
       if (it.password) {
         row.password_hash = await bcrypt.hash(String(it.password), 12);
       }
@@ -187,6 +201,9 @@ router.post('/bulk/upsert', requireAuth, requireRole('SL'), async (req, res) => 
       rows.push(row);
     }
 
+    if (!rows.length && invalid.length) {
+      return res.status(400).json({ error: 'All rows invalid (email must be @huskers.unl.edu)', invalid });
+    }
     if (!rows.length) return res.status(400).json({ error: 'No valid rows' });
 
     const chunkSize = 100;
@@ -197,11 +214,11 @@ router.post('/bulk/upsert', requireAuth, requireRole('SL'), async (req, res) => 
         .from('staff')
         .upsert(chunk, { onConflict: 'nuid' })
         .select('nuid');
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) return res.status(500).json({ error: error.message, invalid });
       upserted = upserted.concat(data.map(d => d.nuid));
     }
 
-    res.json({ ok: true, count: upserted.length, nuids: upserted });
+    res.json({ ok: true, count: upserted.length, nuids: upserted, invalid });
   } catch (e) {
     res.status(500).json({ error: e.message || 'Bulk upsert failed' });
   }

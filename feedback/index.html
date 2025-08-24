@@ -364,7 +364,8 @@
           <h2 style="text-align:center; margin-bottom: 20px;">Sign in</h2>
           <div class="form-group">
             <label for="login-id">NUID or Email</label>
-            <input id="login-id" type="text" placeholder="e.g., 64636271 or student@unl.edu" autocomplete="username">
+            <input id="login-id" type="text" placeholder="e.g., 64636271 or user@huskers.unl.edu"
+              autocomplete="username">
           </div>
           <div class="form-group">
             <label for="login-pw">Password</label>
@@ -379,8 +380,8 @@
               <input id="su-name" type="text" placeholder="First Last">
             </div>
             <div class="form-group">
-              <label for="su-email">Email</label>
-              <input id="su-email" type="email" placeholder="you@unl.edu">
+              <label for="su-email">Email (<code>@huskers.unl.edu</code>)</label>
+              <input id="su-email" type="email" placeholder="you@huskers.unl.edu">
             </div>
             <div class="form-group">
               <label for="su-nuid">NUID (optional)</label>
@@ -483,7 +484,8 @@
                 <option>SL</option>
               </select>
             </div>
-            <div class="form-group"><label>Email (optional)</label><input id="st-email" type="email"></div>
+            <div class="form-group"><label>Email (optional, @huskers.unl.edu)</label><input id="st-email" type="email"
+                placeholder="user@huskers.unl.edu"></div>
             <div class="form-group"><label>Temp password (optional)</label><input id="st-pass" type="password"></div>
             <div class="form-group"><label>Courses (comma-separated)</label><input id="st-courses" type="text"></div>
           </div>
@@ -537,6 +539,7 @@
       el.classList[on ? 'remove' : 'add']('hidden');
       el.style.display = on ? '' : 'none';
     }
+    function isHuskersEmail(e) { return /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i.test((e || '').trim()); }
 
     // ===== Auth state (JWT) =====
     let authToken = localStorage.getItem('authToken') || null;
@@ -652,6 +655,9 @@
       const login = document.getElementById('login-id').value.trim();
       const password = document.getElementById('login-pw').value;
       if (!login || !password) return showAlert('Enter login and password.', 'error');
+      if (login.includes('@') && !isHuskersEmail(login)) {
+        return showAlert('Use your @huskers.unl.edu email (or your NUID).', 'error');
+      }
       try {
         const r = await fetch('/api/auth/login', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -704,6 +710,7 @@
       const courses = (document.getElementById('su-courses').value || '')
         .split(',').map(s => s.trim()).filter(Boolean);
       if (!name || !email || !password) return showAlert('Name, email, and password are required.', 'error');
+      if (!isHuskersEmail(email)) return showAlert('Email must be @huskers.unl.edu', 'error');
       try {
         const r = await fetch('/api/auth/student/signup', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -802,6 +809,30 @@
       }
     }
 
+    // Add staff
+    document.getElementById('btn-add-staff')?.addEventListener('click', async () => {
+      const nuid = (document.getElementById('st-nuid')?.value || '').trim();
+      const name = (document.getElementById('st-name')?.value || '').trim();
+      const role = (document.getElementById('st-role')?.value || '').trim();
+      const email = (document.getElementById('st-email')?.value || '').trim().toLowerCase();
+      const password = (document.getElementById('st-pass')?.value || '');
+      const courses = (document.getElementById('st-courses')?.value || '')
+        .split(',').map(s => s.trim()).filter(Boolean);
+      if (!nuid || !name || !role) return showAlert('NUID, name, and role are required.', 'error');
+      if (email && !isHuskersEmail(email)) return showAlert('Staff email must be @huskers.unl.edu', 'error');
+      try {
+        const r = await fetch('/api/staff', {
+          method: 'POST', headers: authHeaders(),
+          body: JSON.stringify({ nuid, name, role, email: email || null, password: password || null, courses })
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || 'Add staff failed');
+        showAlert('Staff added.');
+        // clear inputs
+        ['st-nuid', 'st-name', 'st-email', 'st-pass', 'st-courses'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      } catch (e) { showAlert(e.message, 'error'); }
+    });
+
     // Bulk CSV helpers
     function csvToItems(csv) {
       return (csv || '')
@@ -819,6 +850,13 @@
       const txt = document.getElementById('bulk-csv')?.value || '';
       const items = csvToItems(txt);
       if (!items.length) return showAlert('Paste CSV: nuid,name,role,email,password', 'error');
+
+      const bad = items.filter(x => x.email && !isHuskersEmail(x.email));
+      if (bad.length) {
+        const list = bad.slice(0, 5).map(b => `${b.nuid} (${b.email})`).join(', ') + (bad.length > 5 ? '…' : '');
+        return showAlert(`Invalid email domain for: ${list}. Emails must be @huskers.unl.edu`, 'error');
+      }
+
       try {
         const r = await fetch('/api/staff/bulk/upsert', {
           method: 'POST',
@@ -827,7 +865,11 @@
         });
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Bulk import failed');
-        showAlert(`Imported/updated ${data.count} staff.`);
+        if (data.invalid?.length) {
+          showAlert(`Imported ${data.count}. Skipped ${data.invalid.length} with non-huskers emails.`, 'error');
+        } else {
+          showAlert(`Imported/updated ${data.count} staff.`);
+        }
         document.getElementById('bulk-csv').value = ''; // clear plaintext
       } catch (e) {
         showAlert(e.message, 'error');
@@ -861,7 +903,6 @@
     // ===== Init =====
     window.addEventListener('DOMContentLoaded', async () => {
       refreshWhoAmI();
-      // Dashboard remains hidden until login (tab button hidden)
       document.getElementById('filter-course')?.addEventListener('change', updateDashboard);
 
       if (authToken && currentUser) {
