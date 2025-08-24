@@ -242,6 +242,12 @@
       color: #9f1239;
       border: 1px solid #fecdd3;
     }
+
+    code {
+      background: #f6f6f6;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
   </style>
 </head>
 
@@ -386,7 +392,6 @@
             </div>
             <div class="form-group">
               <label for="su-year">Class year</label>
-              <!-- DROPDOWN instead of text -->
               <select id="su-year">
                 <option value="">Select Year</option>
                 <option>Freshman</option>
@@ -484,6 +489,29 @@
           </div>
           <button id="btn-add-staff" class="btn">Add staff</button>
         </div>
+
+        <!-- SL Admin: reset staff password -->
+        <div id="admin-reset-staff" class="hidden" style="margin-top:22px;">
+          <h3>Reset staff password</h3>
+          <div class="grid" style="grid-template-columns: repeat(2,minmax(0,1fr));">
+            <div class="form-group"><label>Staff NUID</label><input id="rst-nuid" type="text"
+                placeholder="e.g., 64636271"></div>
+            <div class="form-group"><label>New temp password</label><input id="rst-pass" type="password"></div>
+          </div>
+          <button id="btn-reset-staff" class="btn">Reset password</button>
+        </div>
+
+        <!-- SL Admin: bulk import staff -->
+        <div id="admin-bulk" class="hidden" style="margin-top:22px;">
+          <h3>Bulk import staff (CSV)</h3>
+          <p style="margin:6px 0 8px;">Format (no header needed): <code>nuid,name,role,email,password</code></p>
+          <textarea id="bulk-csv" rows="6" style="width:100%;"></textarea>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button id="btn-bulk-upload" class="btn">Upload</button>
+            <button id="btn-bulk-clear" class="btn btn-secondary" type="button">Clear</button>
+          </div>
+          <small>Tip: paste from your spreadsheet. We hash on the server; plaintext never gets stored.</small>
+        </div>
       </div>
     </div>
   </div>
@@ -530,7 +558,7 @@
       }
     }
 
-    // ===== Rating stars (Feedback tab) =====
+    // ===== Rating stars =====
     document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.star').forEach(star => {
         star.addEventListener('click', () => {
@@ -613,7 +641,6 @@
         document.getElementById('feedback-form').reset();
         document.getElementById('rating-value').value = '0';
         document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
-        // (We keep dashboard hidden until login; data still refreshes when they do)
       } catch (e) {
         if (/401/.test(String(e))) showAlert('Please sign in first.', 'error');
         else showAlert(e.message, 'error');
@@ -638,17 +665,16 @@
         localStorage.setItem('user', JSON.stringify(currentUser));
         refreshWhoAmI();
 
-        // Show Dashboard tab on login, load data, and switch to it
+        // Show Dashboard on login, load data, and switch to it
         setVisible(document.getElementById('dashboard-tab'), true);
         await loadFeedback();
         showTab('dashboard', document.getElementById('dashboard-tab'));
 
-        // Load protected bits
+        // Protected bits
         if (currentUser.kind === 'staff') {
           await loadMySchedule();
           const isSL = currentUser.role === 'SL';
-          setVisible(document.getElementById('admin-pending'), isSL);
-          setVisible(document.getElementById('admin-add-staff'), isSL);
+          showSLPanels(isSL);
           if (isSL) loadPendingStudents();
         }
         showAlert(`Welcome, ${currentUser.name}!`);
@@ -661,12 +687,10 @@
       localStorage.removeItem('authToken'); localStorage.removeItem('user');
       authToken = null; currentUser = null;
       refreshWhoAmI();
-      // Hide dashboard tab & content again
       setVisible(document.getElementById('dashboard-tab'), false);
       showTab('student', document.querySelector('.tab-container .tab')); // back to Feedback
+      showSLPanels(false);
       setVisible(document.getElementById('schedule-panel'), false);
-      setVisible(document.getElementById('admin-pending'), false);
-      setVisible(document.getElementById('admin-add-staff'), false);
       showAlert('You have been logged out.');
     });
 
@@ -676,7 +700,7 @@
       const email = document.getElementById('su-email').value.trim().toLowerCase();
       const nuid = document.getElementById('su-nuid').value.trim();
       const password = document.getElementById('su-pw').value;
-      const class_year = document.getElementById('su-year').value.trim();  // dropdown value
+      const class_year = document.getElementById('su-year').value.trim();
       const courses = (document.getElementById('su-courses').value || '')
         .split(',').map(s => s.trim()).filter(Boolean);
       if (!name || !email || !password) return showAlert('Name, email, and password are required.', 'error');
@@ -691,7 +715,7 @@
       } catch (e) { showAlert(e.message, 'error'); }
     });
 
-    // ===== Change password (auth) =====
+    // ===== Change-my-password (auth) =====
     document.getElementById('btn-change-password')?.addEventListener('click', async () => {
       const oldPw = document.getElementById('cpw-current').value;
       const newPw = document.getElementById('cpw-new').value;
@@ -718,6 +742,11 @@
     });
 
     // ===== Admin & Schedule helpers =====
+    function showSLPanels(isSL) {
+      ['admin-pending', 'admin-add-staff', 'admin-reset-staff', 'admin-bulk']
+        .forEach(id => setVisible(document.getElementById(id), !!isSL));
+    }
+
     async function loadPendingStudents() {
       try {
         const r = await fetch('/api/auth/students/pending', { headers: authHeaders() });
@@ -773,6 +802,62 @@
       }
     }
 
+    // Bulk CSV helpers
+    function csvToItems(csv) {
+      return (csv || '')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(Boolean)
+        .map(line => {
+          const [nuid, name, role, email, password] = line.split(',').map(s => (s ?? '').trim());
+          return { nuid, name, role, email, password };
+        })
+        .filter(r => r.nuid);
+    }
+
+    document.getElementById('btn-bulk-upload')?.addEventListener('click', async () => {
+      const txt = document.getElementById('bulk-csv')?.value || '';
+      const items = csvToItems(txt);
+      if (!items.length) return showAlert('Paste CSV: nuid,name,role,email,password', 'error');
+      try {
+        const r = await fetch('/api/staff/bulk/upsert', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify(items)
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Bulk import failed');
+        showAlert(`Imported/updated ${data.count} staff.`);
+        document.getElementById('bulk-csv').value = ''; // clear plaintext
+      } catch (e) {
+        showAlert(e.message, 'error');
+      }
+    });
+
+    document.getElementById('btn-bulk-clear')?.addEventListener('click', () => {
+      const ta = document.getElementById('bulk-csv');
+      if (ta) ta.value = '';
+    });
+
+    document.getElementById('btn-reset-staff')?.addEventListener('click', async () => {
+      const nuid = (document.getElementById('rst-nuid')?.value || '').trim();
+      const pw = (document.getElementById('rst-pass')?.value || '');
+      if (!nuid || !pw) return showAlert('Enter NUID and a new temp password.', 'error');
+      try {
+        const r = await fetch(`/api/staff/${nuid}`, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify({ reset_password_to: pw })
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || 'Reset failed');
+        showAlert('Password reset. Tell the staff member to log in and change it.');
+        document.getElementById('rst-pass').value = '';
+      } catch (e) {
+        showAlert(e.message, 'error');
+      }
+    });
+
     // ===== Init =====
     window.addEventListener('DOMContentLoaded', async () => {
       refreshWhoAmI();
@@ -780,14 +865,12 @@
       document.getElementById('filter-course')?.addEventListener('change', updateDashboard);
 
       if (authToken && currentUser) {
-        // If already logged in (persisted), reveal dashboard and load data
         setVisible(document.getElementById('dashboard-tab'), true);
         await loadFeedback();
         if (currentUser.kind === 'staff') {
           await loadMySchedule();
           const isSL = currentUser.role === 'SL';
-          setVisible(document.getElementById('admin-pending'), isSL);
-          setVisible(document.getElementById('admin-add-staff'), isSL);
+          showSLPanels(isSL);
           if (isSL) loadPendingStudents();
         }
       }

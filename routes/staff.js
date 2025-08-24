@@ -5,39 +5,28 @@ const router = express.Router();
 const { supabase } = require('../lib/supabase');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
-// ----- helpers -----
+// helpers
 async function getRole(nuid) {
   if (!nuid) return null;
-  const { data, error } = await supabase
-    .from('staff')
-    .select('role')
-    .eq('nuid', nuid)
-    .single();
+  const { data, error } = await supabase.from('staff').select('role').eq('nuid', nuid).single();
   if (error) return null;
   return data?.role || null;
 }
 async function getStaffByNUID(nuid) {
-  const { data, error } = await supabase
-    .from('v_staff_with_courses')
-    .select('*')
-    .eq('nuid', nuid)
-    .single();
+  const { data, error } = await supabase.from('v_staff_with_courses').select('*').eq('nuid', nuid).single();
   if (error) throw error;
   return data;
 }
 function forbid(res) { return res.status(403).json({ error: 'Forbidden' }); }
 
-// ----- directory (public read) -----
+// public: directory
 router.get('/', async (_req, res) => {
-  const { data, error } = await supabase
-    .from('v_staff_with_courses')
-    .select('*')
-    .order('name', { ascending: true });
+  const { data, error } = await supabase.from('v_staff_with_courses').select('*').order('name', { ascending: true });
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
-// ----- schedule viewing (auth required for private viewing rules) -----
+// auth: view schedule with role rules
 router.get('/:nuid/schedule', requireAuth, async (req, res) => {
   const target = req.params.nuid;
   const requester = req.user;
@@ -49,24 +38,15 @@ router.get('/:nuid/schedule', requireAuth, async (req, res) => {
     if (role === 'SL') canView = true;
     if (!canView && role === 'CL') {
       const { data: pairs, error } = await supabase
-        .from('cl_assigned_las')
-        .select('la_nuid')
-        .eq('cl_nuid', requester.nuid);
+        .from('cl_assigned_las').select('la_nuid').eq('cl_nuid', requester.nuid);
       if (!error && pairs?.some(r => r.la_nuid === target)) canView = true;
     }
-  }
-  if (requester.kind === 'student') {
-    // students can only view their own data; they don't have a staff NUID
-    canView = false;
   }
   if (!canView) return forbid(res);
 
   const { data, error } = await supabase
-    .from('schedule')
-    .select('*')
-    .eq('staff_nuid', target)
-    .order('day', { ascending: true })
-    .order('start_time', { ascending: true });
+    .from('schedule').select('*').eq('staff_nuid', target)
+    .order('day', { ascending: true }).order('start_time', { ascending: true });
 
   if (error) return res.status(500).json({ error: error.message });
   res.json(data || []);
@@ -74,18 +54,18 @@ router.get('/:nuid/schedule', requireAuth, async (req, res) => {
 
 // ===== SL ADMIN OPS =====
 
-// create staff
+// create staff (can include initial password & courses)
 router.post('/', requireAuth, requireRole('SL'), async (req, res) => {
   const { nuid, name, role, email, password, courses = [] } = req.body || {};
   if (!nuid || !name || !role) return res.status(400).json({ error: 'nuid, name, role required' });
 
-  let password_hash = null;
+  let patch = { nuid, name, role, email: email || null };
   if (password) {
     const bcrypt = require('bcryptjs');
-    password_hash = await bcrypt.hash(String(password), 12);
+    patch.password_hash = await bcrypt.hash(String(password), 12);
   }
 
-  const { error } = await supabase.from('staff').insert([{ nuid, name, role, email: email || null, password_hash }]);
+  const { error } = await supabase.from('staff').insert([patch]);
   if (error) return res.status(500).json({ error: error.message });
 
   if (courses.length) {
@@ -98,7 +78,7 @@ router.post('/', requireAuth, requireRole('SL'), async (req, res) => {
   res.status(201).json(created);
 });
 
-// update staff (role/name/email/courses; optionally reset password)
+// update staff (name/role/email/courses/reset password)
 router.put('/:nuid', requireAuth, requireRole('SL'), async (req, res) => {
   const nuid = req.params.nuid;
   const { name, role, email, courses, reset_password_to } = req.body || {};
@@ -107,7 +87,6 @@ router.put('/:nuid', requireAuth, requireRole('SL'), async (req, res) => {
   if (name) patch.name = name;
   if (role) patch.role = role;
   if (email !== undefined) patch.email = email || null;
-
   if (reset_password_to) {
     const bcrypt = require('bcryptjs');
     patch.password_hash = await bcrypt.hash(String(reset_password_to), 12);
@@ -179,6 +158,53 @@ router.put('/cl/:clNuid/assign', requireAuth, requireRole('SL'), async (req, res
   const { data, error } = await supabase.from('cl_assigned_las').select('*').eq('cl_nuid', clNuid);
   if (error) return res.status(500).json({ error: error.message });
   res.json(data || []);
+});
+
+// ===== SL: bulk upsert staff + set temp passwords (CSV -> JSON) =====
+router.post('/bulk/upsert', requireAuth, requireRole('SL'), async (req, res) => {
+  try {
+    const list = Array.isArray(req.body) ? req.body : [];
+    if (!list.length) return res.status(400).json({ error: 'No items provided' });
+
+    const bcrypt = require('bcryptjs');
+    const rows = [];
+
+    for (const it of list) {
+      const nuid = String(it.nuid || '').trim();
+      if (!nuid) continue;
+
+      const row = { nuid };
+
+      if (it.name)  row.name  = String(it.name).trim();
+      if (it.role)  row.role  = String(it.role).trim();     // LA | CL | SL
+      if (it.email) row.email = String(it.email).trim() || null;
+
+      // Hash the provided temp password (if any)
+      if (it.password) {
+        row.password_hash = await bcrypt.hash(String(it.password), 12);
+      }
+
+      rows.push(row);
+    }
+
+    if (!rows.length) return res.status(400).json({ error: 'No valid rows' });
+
+    const chunkSize = 100;
+    let upserted = [];
+    for (let i = 0; i < rows.length; i += chunkSize) {
+      const chunk = rows.slice(i, i + chunkSize);
+      const { data, error } = await supabase
+        .from('staff')
+        .upsert(chunk, { onConflict: 'nuid' })
+        .select('nuid');
+      if (error) return res.status(500).json({ error: error.message });
+      upserted = upserted.concat(data.map(d => d.nuid));
+    }
+
+    res.json({ ok: true, count: upserted.length, nuids: upserted });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Bulk upsert failed' });
+  }
 });
 
 module.exports = router;
