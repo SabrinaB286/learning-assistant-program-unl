@@ -4,436 +4,254 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UNL Learning Assistant Feedback System</title>
-
+  <title>UNL Learning Assistant Feedback</title>
   <style>
+    :root {
+      --unl-red: #d00000;
+      /* main */
+      --unl-red-dark: #9b0000;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --ring: #e5e7eb;
+      --ok: #16a34a;
+      --bad: #b91c1c;
+      --chip: #f1f5f9;
+    }
+
     * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+      box-sizing: border-box
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f6f7fb;
-      color: #222;
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', 'Noto Sans', Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+      color: var(--ink);
+      background: var(--bg)
     }
 
-    .container {
+    a {
+      color: var(--unl-red)
+    }
+
+    .shell {
       max-width: 1100px;
-      margin: 40px auto;
-      background: #fff;
-      border-radius: 15px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, .1);
-      overflow: hidden;
+      margin: 24px auto;
+      padding: 0 16px
     }
 
-    .header {
-      background: linear-gradient(135deg, #dc143c 0%, #8b0000 100%);
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: linear-gradient(135deg, var(--unl-red), var(--unl-red-dark));
       color: #fff;
-      padding: 30px;
-      text-align: center;
+      padding: 14px
     }
 
-    .header h1 {
-      font-size: 2.5em;
-      margin-bottom: 10px;
+    .brand {
+      font-weight: 800;
+      letter-spacing: .3px
     }
 
-    .main-content {
-      padding: 32px;
+    .sub {
+      opacity: .85;
+      font-size: .95rem
     }
 
-    .user-info {
-      display: none;
-      justify-content: space-between;
-      align-items: center;
-      background: #f1f3f6;
-      border: 1px solid #e3e6eb;
-      padding: 10px 14px;
-      border-radius: 10px;
-      margin-bottom: 16px;
+    .nav {
+      display: flex;
+      gap: 10px;
+      margin: 14px 0 0
+    }
+
+    .chip {
+      border: 1px solid rgba(255, 255, 255, .7);
+      background: transparent;
+      color: #fff;
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer
+    }
+
+    .chip.active {
+      background: #fff;
+      color: var(--unl-red);
+      border-color: #fff
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center
+    }
+
+    .push {
+      margin-left: auto
     }
 
     .btn {
-      background: #dc143c;
+      background: var(--unl-red);
       color: #fff;
       border: none;
-      padding: 10px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: transform .15s ease, box-shadow .15s ease;
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer
     }
 
     .btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 14px rgba(220, 20, 60, .25);
-    }
-
-    .btn-secondary {
-      background: #666;
+      filter: brightness(.95)
     }
 
     .btn-ghost {
-      background: transparent;
-      color: #dc143c;
-      border: 1px solid #dc143c;
-    }
-
-    .tab-container {
-      display: flex;
-      gap: 10px;
-      margin: 18px 0 20px;
-    }
-
-    .tab {
-      padding: 10px 16px;
-      border-radius: 999px;
-      border: 1px solid #eee;
       background: #fff;
-      cursor: pointer;
-      transition: .2s;
+      color: var(--unl-red);
+      border: 1px solid var(--unl-red)
     }
 
-    .tab.active {
-      background: #dc143c;
-      color: #fff;
-      transform: translateY(-2px);
+    .btn-muted {
+      background: #e5e7eb;
+      color: #111
     }
 
-    .tab-content {
-      display: none;
-      animation: fadeIn .35s ease;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    .wrap {
+      background: var(--card);
+      border: 1px solid var(--ring);
+      border-radius: 14px;
+      padding: 18px;
+      margin-top: 16px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .06)
     }
 
     .grid {
       display: grid;
-      gap: 16px;
+      gap: 14px
     }
 
-    .grid-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+    .g-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr))
     }
 
-    .stat-card {
-      border: 1px solid #eee;
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--ring);
       border-radius: 12px;
-      padding: 14px;
-      background: #fafafa;
+      padding: 16px
     }
 
-    .stat-number {
+    .stat .n {
       font-size: 2rem;
-      font-weight: 700;
-    }
-
-    .form-group {
-      margin: 12px 0;
+      font-weight: 800
     }
 
     label {
-      display: block;
       font-weight: 600;
       margin-bottom: 6px;
+      display: block
     }
 
-    input[type="text"],
-    input[type="password"],
-    input[type="email"],
+    input,
     select,
     textarea {
       width: 100%;
       padding: 10px;
-      border: 1px solid #ddd;
+      border: 1px solid var(--ring);
       border-radius: 10px;
-      background: #fff;
+      background: #fff
     }
 
     textarea {
-      min-height: 110px;
+      min-height: 110px
     }
 
-    details {
-      margin-top: 10px;
+    table {
+      width: 100%;
+      border-collapse: collapse
     }
 
-    .feedback-list {
-      display: grid;
-      gap: 12px;
-      margin-top: 16px;
+    th,
+    td {
+      padding: 10px;
+      border-bottom: 1px solid var(--ring);
+      text-align: left;
+      font-size: .95rem
     }
 
-    .feedback-card {
-      border: 1px solid #eee;
-      border-radius: 12px;
-      background: #fff;
-      padding: 12px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, .03);
+    th {
+      color: var(--muted);
+      font-weight: 700
     }
 
-    .feedback-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-
-    .feedback-meta {
-      font-size: .9rem;
-      color: #666;
-    }
-
-    .feedback-content {
-      line-height: 1.5;
-      color: #333;
-      margin-top: 6px;
-    }
-
-    .rating {
-      display: flex;
-      gap: 6px;
-    }
-
-    .star {
-      font-size: 20px;
-      cursor: pointer;
-      color: #ccc;
-    }
-
-    .star.active {
-      color: #ffbf00;
+    .muted {
+      color: var(--muted)
     }
 
     .hidden {
-      display: none !important;
+      display: none !important
     }
 
     .alert {
       padding: 12px 14px;
       border-radius: 10px;
       margin: 12px 0;
-      font-weight: 600;
+      font-weight: 600
     }
 
     .alert-success {
-      background: #e8fff1;
-      color: #166534;
-      border: 1px solid #bbf7d0;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0
     }
 
     .alert-error {
       background: #fff1f2;
       color: #9f1239;
-      border: 1px solid #fecdd3;
+      border: 1px solid #fecdd3
     }
 
-    code {
-      background: #f6f6f6;
-      padding: 2px 6px;
-      border-radius: 6px;
+    .badge {
+      display: inline-block;
+      background: var(--chip);
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: .85rem
     }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>Learning Assistant Feedback System</h1>
-      <p>Computer Science & Computer Engineering — University of Nebraska–Lincoln</p>
-    </div>
-
-    <div class="main-content">
-      <!-- whoami / logout -->
-      <div id="user-info" class="user-info">
+  <div class="topbar">
+    <div class="shell">
+      <div class="row">
         <div>
-          <span class="user-welcome">Welcome, <b id="user-name"></b>!</span>
+          <div class="brand">Learning Assistant Feedback</div>
+          <div class="sub">Computer Science &amp; Engineering – University of Nebraska–Lincoln</div>
         </div>
-        <div style="display:flex; gap:8px;">
-          <details id="change-pw-panel">
-            <summary class="btn-ghost" style="padding:6px 10px;">Change Password</summary>
-            <div
-              style="background:#fff; border:1px solid #eee; padding:10px; border-radius:10px; margin-top:8px; width:320px;">
-              <div class="form-group">
-                <label for="cpw-current">Current password</label>
-                <input id="cpw-current" type="password" autocomplete="current-password">
-              </div>
-              <div class="form-group">
-                <label for="cpw-new">New password (min 8)</label>
-                <input id="cpw-new" type="password" autocomplete="new-password">
-              </div>
-              <button id="btn-change-password" class="btn" style="width:100%;">Update password</button>
-            </div>
-          </details>
-          <button id="logout-btn" class="btn btn-secondary">Log Out</button>
+        <div class="push row" id="who-bar" style="gap:8px;display:none;">
+          <span id="who-name" class="badge"></span>
+          <button id="logout-btn" class="btn btn-ghost">Log out</button>
         </div>
       </div>
-
-      <!-- tabs -->
-      <div class="tab-container">
-        <button class="tab active" onclick="showTab('student', this)">Feedback</button>
-        <button class="tab" onclick="showTab('login', this)">Login</button>
-        <!-- Dashboard tab starts hidden until login -->
-        <button class="tab" id="dashboard-tab" onclick="showTab('dashboard', this)"
-          style="display:none;">Dashboard</button>
+      <div class="nav">
+        <button class="chip active" data-tab="feedback">Feedback</button>
+        <button class="chip" data-tab="login">Login</button>
+        <button id="tab-dashboard" class="chip" data-tab="dashboard" style="display:none;">Dashboard</button>
       </div>
+    </div>
+  </div>
 
-      <!-- Student feedback tab -->
-      <div id="student" class="tab-content active">
-        <h2 style="margin-bottom:10px;">Submit Feedback</h2>
+  <div class="shell">
+    <div id="alerts"></div>
 
-        <form id="feedback-form">
-          <div class="form-group">
-            <label for="course">Course</label>
-            <select id="course">
-              <option value="">Select Course</option>
-              <option>CSCE 101</option>
-              <option>CSCE 155A</option>
-              <option>CSCE 155E</option>
-              <option>CSCE 155H</option>
-              <option>CSCE 155N</option>
-              <option>CSCE 156</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="feedback-type">Type</label>
-            <select id="feedback-type">
-              <option>General</option>
-              <option>Course</option>
-              <option>TA</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Overall Rating</label>
-            <div class="rating">
-              <span class="star" data-rating="1">★</span>
-              <span class="star" data-rating="2">★</span>
-              <span class="star" data-rating="3">★</span>
-              <span class="star" data-rating="4">★</span>
-              <span class="star" data-rating="5">★</span>
-            </div>
-            <input type="hidden" id="rating-value" value="0">
-          </div>
-
-          <div class="form-group">
-            <label for="feedback-text">Feedback Details</label>
-            <textarea id="feedback-text" placeholder="Please provide detailed feedback..." required></textarea>
-          </div>
-
-          <div class="form-group">
-            <label for="student-name">Your Name (Optional)</label>
-            <input id="student-name" type="text" placeholder="Leave blank to stay anonymous" />
-          </div>
-
-          <div class="form-group">
-            <label for="student-year">Academic Year</label>
-            <select id="student-year">
-              <option value="">Select Year (Optional)</option>
-              <option>Freshman</option>
-              <option>Sophomore</option>
-              <option>Junior</option>
-              <option>Senior</option>
-              <option>Graduate</option>
-            </select>
-          </div>
-
-          <button type="submit" class="btn">Submit Feedback</button>
-        </form>
-      </div>
-
-      <!-- Login / Signup tab -->
-      <div id="login" class="tab-content">
-        <div class="login-form" style="max-width:460px; margin:0 auto;">
-          <h2 style="text-align:center; margin-bottom: 20px;">Sign in</h2>
-          <div class="form-group">
-            <label for="login-id">NUID or Email</label>
-            <input id="login-id" type="text" placeholder="e.g., 12345678 or user@huskers.unl.edu"
-              autocomplete="username">
-          </div>
-          <div class="form-group">
-            <label for="login-pw">Password</label>
-            <input id="login-pw" type="password" placeholder="Your password" autocomplete="current-password">
-          </div>
-          <button id="btn-login" class="btn" style="width:100%;">Sign in</button>
-
-          <details style="margin-top:16px;">
-            <summary><b>New student?</b> Create an account</summary>
-            <div class="form-group" style="margin-top:10px;">
-              <label for="su-name">Full name</label>
-              <input id="su-name" type="text" placeholder="First Last">
-            </div>
-            <div class="form-group">
-              <label for="su-email">Email (<code>@huskers.unl.edu</code>)</label>
-              <input id="su-email" type="email" placeholder="you@huskers.unl.edu">
-            </div>
-            <div class="form-group">
-              <label for="su-nuid">NUID (optional)</label>
-              <input id="su-nuid" type="text" placeholder="e.g.,12345678">
-            </div>
-            <div class="form-group">
-              <label for="su-pw">Password (min 8)</label>
-              <input id="su-pw" type="password" placeholder="Create a password">
-            </div>
-            <div class="form-group">
-              <label for="su-year">Class year</label>
-              <select id="su-year">
-                <option value="">Select Year</option>
-                <option>Freshman</option>
-                <option>Sophomore</option>
-                <option>Junior</option>
-                <option>Senior</option>
-                <option>Graduate</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="su-courses">Courses (comma-separated)</label>
-              <input id="su-courses" type="text" placeholder="CSCE 155A, CSCE 156">
-            </div>
-            <button id="btn-student-signup" class="btn" style="width:100%;">Create account</button>
-          </details>
-        </div>
-      </div>
-
-      <!-- Dashboard tab (hidden until login) -->
-      <div id="dashboard" class="tab-content">
-        <h2 style="margin-bottom:10px;">Dashboard</h2>
-
-        <div class="grid grid-3" style="margin: 8px 0 16px;">
-          <div class="stat-card">
-            <div class="stat-number" id="total-feedback">0</div>
-            <div>Total Feedback</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-number" id="avg-rating">0.0</div>
-            <div>Average Rating</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-number" id="this-week">0</div>
-            <div>This Week</div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="filter-course">Filter by Course</label>
-          <select id="filter-course">
-            <option value="">All Courses</option>
+    <!-- FEEDBACK -->
+    <section id="tab-feedback" class="wrap">
+      <h2 style="margin-top:0">Submit Feedback</h2>
+      <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">
+        <div>
+          <label for="course">Course</label>
+          <select id="course">
+            <option value="">Select Course</option>
             <option>CSCE 101</option>
             <option>CSCE 155A</option>
             <option>CSCE 155E</option>
@@ -442,478 +260,481 @@
             <option>CSCE 156</option>
           </select>
         </div>
-
-        <div class="feedback-list" id="feedback-list"></div>
-
-        <!-- Staff schedule -->
-        <div id="schedule-panel" class="hidden" style="margin-top: 22px;">
-          <h3>My Schedule</h3>
-          <table id="schedule-table" style="width:100%; border-collapse:collapse;">
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Day</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Location</th>
-                <th>Course</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-
-        <!-- SL Admin: pending student approvals -->
-        <div id="admin-pending" class="hidden" style="margin-top:22px;">
-          <h3>Pending student signups</h3>
-          <div id="pending-rows"></div>
-        </div>
-
-        <!-- SL Admin: quick add staff -->
-        <div id="admin-add-staff" class="hidden" style="margin-top:22px;">
-          <h3>Add staff</h3>
-          <div class="grid" style="grid-template-columns: repeat(2,minmax(0,1fr));">
-            <div class="form-group"><label>NUID</label><input id="st-nuid" type="text" placeholder="e.g., 12345678">
-            </div>
-            <div class="form-group"><label>Name</label><input id="st-name" type="text" placeholder="Full name"></div>
-            <div class="form-group">
-              <label>Role</label>
-              <select id="st-role">
-                <option>LA</option>
-                <option>CL</option>
-                <option>SL</option>
-              </select>
-            </div>
-            <div class="form-group"><label>Email (optional, @huskers.unl.edu)</label><input id="st-email" type="email"
-                placeholder="user@huskers.unl.edu"></div>
-            <div class="form-group"><label>Temp password (optional)</label><input id="st-pass" type="password"></div>
-            <div class="form-group"><label>Courses (comma-separated)</label><input id="st-courses" type="text"></div>
-          </div>
-          <button id="btn-add-staff" class="btn">Add staff</button>
-        </div>
-
-        <!-- SL Admin: reset staff password -->
-        <div id="admin-reset-staff" class="hidden" style="margin-top:22px;">
-          <h3>Reset staff password</h3>
-          <div class="grid" style="grid-template-columns: repeat(2,minmax(0,1fr));">
-            <div class="form-group"><label>Staff NUID</label><input id="rst-nuid" type="text"
-                placeholder="e.g., 12345678"></div>
-            <div class="form-group"><label>New temp password</label><input id="rst-pass" type="password"></div>
-          </div>
-          <button id="btn-reset-staff" class="btn">Reset password</button>
-        </div>
-
-        <!-- SL Admin: bulk import staff -->
-        <div id="admin-bulk" class="hidden" style="margin-top:22px;">
-          <h3>Bulk import staff (CSV)</h3>
-          <p style="margin:6px 0 8px;">Format (no header needed): <code>nuid,name,role,email,password</code></p>
-          <textarea id="bulk-csv" rows="6" style="width:100%;"></textarea>
-          <div style="display:flex; gap:8px; margin-top:8px;">
-            <button id="btn-bulk-upload" class="btn">Upload</button>
-            <button id="btn-bulk-clear" class="btn btn-secondary" type="button">Clear</button>
-          </div>
-          <small>Tip: paste from your spreadsheet. We hash on the server; plaintext never gets stored.</small>
+        <div>
+          <label for="feedback-type">Type</label>
+          <select id="feedback-type">
+            <option>General</option>
+            <option>Course</option>
+            <option>TA</option>
+          </select>
         </div>
       </div>
-    </div>
+
+      <div style="margin-top:10px;">
+        <label>Overall Rating</label>
+        <div id="stars" style="display:flex;gap:6px;font-size:22px;cursor:pointer;">
+          <span data-rating="1">★</span><span data-rating="2">★</span><span data-rating="3">★</span><span
+            data-rating="4">★</span><span data-rating="5">★</span>
+        </div>
+        <input type="hidden" id="rating-value" value="0">
+      </div>
+
+      <div style="margin-top:12px;">
+        <label for="feedback-text">Feedback Details</label>
+        <textarea id="feedback-text" placeholder="Please provide detailed feedback…" required></textarea>
+      </div>
+
+      <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:12px;">
+        <div>
+          <label for="student-name">Your Name (Optional)</label>
+          <input id="student-name" type="text" placeholder="Leave blank to stay anonymous" />
+        </div>
+        <div>
+          <label for="student-year">Academic Year (Optional)</label>
+          <select id="student-year">
+            <option value="">Select Year</option>
+            <option>Freshman</option>
+            <option>Sophomore</option>
+            <option>Junior</option>
+            <option>Senior</option>
+            <option>Graduate</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="btn-submit-feedback" class="btn" style="margin-top:14px;">Submit Feedback</button>
+    </section>
+
+    <!-- LOGIN -->
+    <section id="tab-login" class="wrap hidden">
+      <h2 style="margin-top:0;text-align:center">Sign in</h2>
+      <div style="max-width:460px;margin:0 auto;">
+        <label for="login-id">NUID or Email</label>
+        <input id="login-id" type="text" placeholder="e.g., 12345678 or user@huskers.unl.edu" autocomplete="username">
+
+        <div style="height:8px"></div>
+        <label for="login-pw">Password</label>
+        <input id="login-pw" type="password" placeholder="Your password" autocomplete="current-password">
+
+        <button id="btn-login" class="btn" style="width:100%;margin-top:14px;">Sign in</button>
+
+        <details style="margin-top:18px;">
+          <summary><b>New student?</b> Create an account</summary>
+          <div style="height:10px"></div>
+          <label for="su-name">Full name</label>
+          <input id="su-name" type="text" placeholder="First Last">
+          <div style="height:8px"></div>
+          <label for="su-email">Email (<code>@huskers.unl.edu</code>)</label>
+          <input id="su-email" type="email" placeholder="you@huskers.unl.edu">
+          <div style="height:8px"></div>
+          <label for="su-nuid">NUID (optional)</label>
+          <input id="su-nuid" type="text" placeholder="e.g., 12345678">
+          <div style="height:8px"></div>
+          <label for="su-pw">Password (min 8)</label>
+          <input id="su-pw" type="password" placeholder="Create a password">
+          <div style="height:8px"></div>
+          <label for="su-year">Class year</label>
+          <select id="su-year">
+            <option value="">Select Year</option>
+            <option>Freshman</option>
+            <option>Sophomore</option>
+            <option>Junior</option>
+            <option>Senior</option>
+            <option>Graduate</option>
+          </select>
+          <div style="height:8px"></div>
+          <label for="su-courses">Courses (comma-separated)</label>
+          <input id="su-courses" type="text" placeholder="CSCE 155A, CSCE 156">
+          <button id="btn-student-signup" class="btn" style="width:100%;margin-top:12px;">Create account</button>
+        </details>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard" class="wrap hidden">
+      <h2 style="margin-top:0">Dashboard</h2>
+
+      <div class="grid g-3">
+        <div class="stat">
+          <div class="n" id="total-feedback">0</div>
+          <div class="muted">Total Feedback</div>
+        </div>
+        <div class="stat">
+          <div class="n" id="avg-rating">0.0</div>
+          <div class="muted">Average Rating</div>
+        </div>
+        <div class="stat">
+          <div class="n" id="this-week">0</div>
+          <div class="muted">This Week</div>
+        </div>
+      </div>
+
+      <div class="wrap" style="margin-top:16px;">
+        <label for="filter-course">Filter by Course</label>
+        <select id="filter-course">
+          <option value="">All Courses</option>
+          <option>CSCE 101</option>
+          <option>CSCE 155A</option>
+          <option>CSCE 155E</option>
+          <option>CSCE 155H</option>
+          <option>CSCE 155N</option>
+          <option>CSCE 156</option>
+        </select>
+        <div id="feedback-list" style="margin-top:12px;"></div>
+      </div>
+
+      <!-- Schedule (with self-service add/delete) -->
+      <div class="wrap" id="schedule-panel" style="margin-top:16px;display:none;">
+        <div class="row" style="align-items:flex-end;">
+          <div>
+            <h3 style="margin:0">My Schedule</h3>
+            <div class="muted">Add office hours or lab times</div>
+          </div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: repeat(6,minmax(0,1fr)); gap:10px; margin-top:12px;">
+          <div>
+            <label>Type</label>
+            <select id="sc-type">
+              <option value="office_hour">Office Hour</option>
+              <option value="lab_time">Lab Time</option>
+            </select>
+          </div>
+          <div>
+            <label>Day</label>
+            <select id="sc-day">
+              <option>Mon</option>
+              <option>Tue</option>
+              <option>Wed</option>
+              <option>Thu</option>
+              <option>Fri</option>
+              <option>Sat</option>
+              <option>Sun</option>
+            </select>
+          </div>
+          <div>
+            <label>Start</label>
+            <input id="sc-start" type="time">
+          </div>
+          <div>
+            <label>End</label>
+            <input id="sc-end" type="time">
+          </div>
+          <div>
+            <label>Location</label>
+            <input id="sc-location" type="text" placeholder="Avery 19">
+          </div>
+          <div>
+            <label>Course</label>
+            <input id="sc-course" type="text" placeholder="CSCE 155A">
+          </div>
+        </div>
+        <button id="sc-add" class="btn" style="margin-top:10px;">Add entry</button>
+
+        <table style="margin-top:14px;">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Day</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Location</th>
+              <th>Course</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="schedule-body"></tbody>
+        </table>
+      </div>
+
+      <!-- SL admin panels (pending + add staff). Bulk import removed. -->
+      <div class="wrap" id="admin-pending" style="margin-top:16px;display:none;">
+        <h3 style="margin:0">Pending student signups</h3>
+        <div id="pending-rows" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="wrap" id="admin-add-staff" style="margin-top:16px;display:none;">
+        <h3 style="margin:0">Add staff</h3>
+        <div class="grid" style="grid-template-columns: repeat(2,minmax(0,1fr)); margin-top:10px;">
+          <div><label>NUID</label><input id="st-nuid" type="text" placeholder="e.g., 12345678"></div>
+          <div><label>Name</label><input id="st-name" type="text" placeholder="Full name"></div>
+          <div>
+            <label>Role</label>
+            <select id="st-role">
+              <option>LA</option>
+              <option>CL</option>
+              <option>SL</option>
+            </select>
+          </div>
+          <div><label>Email (optional, @huskers.unl.edu)</label><input id="st-email" type="email"
+              placeholder="user@huskers.unl.edu"></div>
+          <div><label>Temp password (optional)</label><input id="st-pass" type="password"></div>
+          <div><label>Courses (comma-separated)</label><input id="st-courses" type="text"
+              placeholder="CSCE 155A, CSCE 156"></div>
+        </div>
+        <button id="btn-add-staff" class="btn" style="margin-top:10px;">Add staff</button>
+      </div>
+    </section>
   </div>
 
   <script>
-    // ===== Helper UI bits =====
-    function showAlert(message, kind = 'success') {
-      const div = document.createElement('div');
-      div.className = 'alert ' + (kind === 'success' ? 'alert-success' : 'alert-error');
-      div.textContent = message;
-      const cont = document.querySelector('.main-content') || document.body;
-      cont.prepend(div);
-      setTimeout(() => div.remove(), 4500);
-    }
-    function showTab(id, clicked) {
-      document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-      document.getElementById(id)?.classList.add('active');
-      clicked?.classList.add('active');
-    }
-    function setVisible(el, on) {
-      if (!el) return;
-      el.classList[on ? 'remove' : 'add']('hidden');
-      el.style.display = on ? '' : 'none';
-    }
-    function isHuskersEmail(e) { return /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i.test((e || '').trim()); }
-
-    // ===== Auth state (JWT) =====
+    /* ===== helpers ===== */
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const HUSKERS_RE = /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i;
+    function isHuskers(e) { return HUSKERS_RE.test((e || '').trim()); }
     let authToken = localStorage.getItem('authToken') || null;
-    let currentUser = null;
-    try { currentUser = JSON.parse(localStorage.getItem('user') || 'null'); } catch { currentUser = null; }
-    function authHeaders() {
-      const t = authToken || localStorage.getItem('authToken');
-      return t ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` } : { 'Content-Type': 'application/json' };
+    let currentUser = null; try { currentUser = JSON.parse(localStorage.getItem('user') || 'null'); } catch { }
+    const headers = () => authToken ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken } : { 'Content-Type': 'application/json' };
+    function alertUI(msg, ok = true) {
+      const box = document.createElement('div');
+      box.className = 'alert ' + (ok ? 'alert-success' : 'alert-error');
+      box.textContent = msg;
+      $('#alerts').prepend(box);
+      setTimeout(() => box.remove(), 4500);
     }
-    function refreshWhoAmI() {
-      const userInfo = document.getElementById('user-info');
-      const nameEl = document.getElementById('user-name');
-      const dashTab = document.getElementById('dashboard-tab');
-      const isLogged = !!(authToken && currentUser);
-      setVisible(userInfo, isLogged);
-      setVisible(dashTab, isLogged); // show Dashboard tab only if logged in
-      if (isLogged && nameEl) {
-        nameEl.textContent = currentUser.name + (currentUser.kind === 'staff' ? ` (${currentUser.role})` : ' (student)');
+    function showTab(name) {
+      $$('.chip').forEach(c => c.classList.toggle('active', c.dataset.tab === name));
+      ['feedback', 'login', 'dashboard'].forEach(id => {
+        const el = $('#tab-' + id);
+        if (!el) return;
+        el.classList.toggle('hidden', id !== name);
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function refreshTopBar() {
+      const who = $('#who-bar'), nm = $('#who-name');
+      const logged = !!(authToken && currentUser);
+      who.style.display = logged ? 'flex' : 'none';
+      const dashChip = $('#tab-dashboard')?.closest('.chip') || $('#tab-dashboard');
+      if (dashChip) dashChip.style.display = logged ? 'inline-block' : 'none';
+      if (logged && nm) {
+        nm.textContent = `${currentUser.name} — ${currentUser.kind === 'staff' ? currentUser.role : 'student'}`;
       }
     }
 
-    // ===== Rating stars =====
-    document.addEventListener('DOMContentLoaded', () => {
-      document.querySelectorAll('.star').forEach(star => {
-        star.addEventListener('click', () => {
-          const val = Number(star.dataset.rating);
-          document.getElementById('rating-value').value = String(val);
-          document.querySelectorAll('.star').forEach(s => s.classList.toggle('active', Number(s.dataset.rating) <= val));
-        });
+    /* ===== stars ===== */
+    $('#stars')?.addEventListener('click', e => {
+      const s = e.target.closest('[data-rating]'); if (!s) return;
+      const val = Number(s.dataset.rating);
+      $('#rating-value').value = String(val);
+      $$('#stars [data-rating]').forEach(x => {
+        x.style.color = Number(x.dataset.rating) <= val ? '#ffbf00' : '#999';
       });
     });
 
-    // ===== Dashboard data =====
-    let feedbackData = [];
+    /* ===== submit feedback ===== */
+    $('#btn-submit-feedback')?.addEventListener('click', async () => {
+      const course = $('#course').value.trim() || null;
+      const type = $('#feedback-type').value.trim() || 'General';
+      const rating = Number($('#rating-value').value || 0) || null;
+      const text = $('#feedback-text').value.trim();
+      const submitter = $('#student-name').value.trim() || null;
+      const year = $('#student-year').value.trim() || null;
+      if (!text) return alertUI('Please enter feedback text.', false);
+      try {
+        const r = await fetch('/api/feedback', { method: 'POST', headers: headers(), body: JSON.stringify({ course, type, rating, text, submitter, year }) });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || 'Could not submit');
+        alertUI('Thanks for your feedback!');
+        $('#feedback-text').value = ''; $('#rating-value').value = '0'; $$('#stars [data-rating]').forEach(x => x.style.color = '#999');
+      } catch (e) { alertUI(e.message, false); }
+    });
+
+    /* ===== login & logout ===== */
+    $('#btn-login')?.addEventListener('click', async () => {
+      const login = $('#login-id').value.trim(), password = $('#login-pw').value;
+      if (!login || !password) return alertUI('Enter login and password.', false);
+      if (login.includes('@') && !isHuskers(login)) return alertUI('Use your @huskers.unl.edu email (or your NUID).', false);
+      try {
+        const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || 'Login failed');
+        authToken = j.token; currentUser = j.user;
+        localStorage.setItem('authToken', authToken); localStorage.setItem('user', JSON.stringify(currentUser));
+        refreshTopBar(); alertUI(`Welcome, ${currentUser.name}!`);
+        await loadFeedback();
+        if (currentUser.kind === 'staff') { await loadSchedule(); const isSL = currentUser.role === 'SL'; showSL(isSL); if (isSL) loadPending(); }
+        showTab('dashboard');
+      } catch (e) { alertUI(e.message, false); }
+    });
+
+    $('#logout-btn')?.addEventListener('click', () => {
+      localStorage.removeItem('authToken'); localStorage.removeItem('user');
+      authToken = null; currentUser = null; refreshTopBar(); showSL(false);
+      showTab('feedback'); alertUI('Signed out.');
+    });
+
+    /* ===== student signup ===== */
+    $('#btn-student-signup')?.addEventListener('click', async () => {
+      const name = $('#su-name').value.trim(), email = $('#su-email').value.trim().toLowerCase(),
+        nuid = $('#su-nuid').value.trim(), password = $('#su-pw').value,
+        class_year = $('#su-year').value.trim(),
+        courses = ($('#su-courses').value || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (!name || !email || !password) return alertUI('Name, email, and password are required.', false);
+      if (!isHuskers(email)) return alertUI('Email must be @huskers.unl.edu', false);
+      try {
+        const r = await fetch('/api/auth/student/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, nuid, password, class_year, courses }) });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || 'Signup failed');
+        alertUI('Submitted for SL approval. You can log in after approval.');
+      } catch (e) { alertUI(e.message, false); }
+    });
+
+    /* ===== dashboard feedback ===== */
+    let FEED = [];
     async function loadFeedback() {
       try {
         const r = await fetch('/api/feedback');
         const data = await r.json();
         if (!r.ok) throw new Error(data.error || 'Failed to load feedback');
-        feedbackData = data || [];
-        updateDashboard();
-      } catch (e) {
-        feedbackData = [];
-        updateDashboard();
-        showAlert(e.message || 'Failed to load feedback', 'error');
-      }
+        FEED = data || [];
+        renderFeedback();
+      } catch (e) { FEED = []; renderFeedback(); }
     }
-    function updateDashboard() {
-      const total = feedbackData.length;
-      const rated = feedbackData.filter(x => (x.rating ?? null) !== null);
+    function renderFeedback() {
+      const total = FEED.length;
+      const rated = FEED.filter(x => x.rating != null);
       const avg = rated.length ? (rated.reduce((a, b) => a + (b.rating || 0), 0) / rated.length) : 0;
-      const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
-      const thisWeek = feedbackData.filter(x => new Date(x.created_at || Date.now()).getTime() >= weekAgo).length;
-      document.getElementById('total-feedback').textContent = total;
-      document.getElementById('avg-rating').textContent = avg.toFixed(1);
-      document.getElementById('this-week').textContent = thisWeek;
+      const wk = Date.now() - 7 * 24 * 3600 * 1000;
+      const week = FEED.filter(x => new Date(x.created_at || Date.now()).getTime() >= wk).length;
+      $('#total-feedback').textContent = total;
+      $('#avg-rating').textContent = avg.toFixed(1);
+      $('#this-week').textContent = week;
 
-      const filterCourse = document.getElementById('filter-course')?.value || '';
-      const list = document.getElementById('feedback-list');
-      if (!list) return;
+      const course = $('#filter-course').value || '';
+      const list = $('#feedback-list');
       list.innerHTML = '';
-      const items = feedbackData.filter(x => !filterCourse || x.course === filterCourse);
-      if (!items.length) { list.innerHTML = '<div class="feedback-card">No feedback yet.</div>'; return; }
-
-      items.forEach(item => {
-        const card = document.createElement('div'); card.className = 'feedback-card';
-        const head = document.createElement('div'); head.className = 'feedback-header';
-        const meta = document.createElement('div'); meta.className = 'feedback-meta';
-        meta.textContent = [
-          item.course || 'General',
-          item.type || 'General',
-          item.created_at ? new Date(item.created_at).toLocaleString() : ''
-        ].filter(Boolean).join(' • ');
-        const rating = document.createElement('div'); rating.textContent = item.rating ? `★ ${item.rating}/5` : '';
-        head.append(meta, rating);
-        const body = document.createElement('div'); body.className = 'feedback-content';
-        body.textContent = item.text || '';
-        card.append(head, body);
+      const items = FEED.filter(x => !course || x.course === course);
+      if (!items.length) { list.innerHTML = '<div class="muted">No feedback yet.</div>'; return; }
+      items.forEach(it => {
+        const card = document.createElement('div'); card.className = 'wrap';
+        card.innerHTML = `<div class="row" style="justify-content:space-between;">
+          <div class="muted">${(it.course || 'General')} • ${(it.type || 'General')}</div>
+          <div>${it.rating ? `★ ${it.rating}/5` : ''}</div></div>
+          <div style="margin-top:6px;">${(it.text || '')}</div>
+          <div class="muted" style="margin-top:6px;font-size:.85rem;">${it.created_at ? new Date(it.created_at).toLocaleString() : ''}</div>`;
         list.append(card);
       });
     }
+    $('#filter-course')?.addEventListener('change', renderFeedback);
 
-    // ===== Submit feedback (auth required) =====
-    document.getElementById('feedback-form')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const course = document.getElementById('course').value.trim();
-      const type = document.getElementById('feedback-type').value.trim() || 'General';
-      const rating = Number(document.getElementById('rating-value').value || 0) || null;
-      const text = document.getElementById('feedback-text').value.trim();
-      const submitter = document.getElementById('student-name').value.trim();
-      const year = document.getElementById('student-year').value.trim();
-      if (!text) return showAlert('Please enter feedback text.', 'error');
+    /* ===== schedule self-service ===== */
+    async function loadSchedule() {
+      if (!currentUser || currentUser.kind !== 'staff') return;
+      const tBody = $('#schedule-body'); if (!tBody) return;
+      $('#schedule-panel').style.display = 'block';
+      tBody.innerHTML = '<tr><td colspan="7" class="muted">Loading…</td></tr>';
       try {
-        const r = await fetch('/api/feedback', {
-          method: 'POST',
-          headers: authHeaders(),
-          body: JSON.stringify({ course: course || null, type, rating, text, submitter: submitter || null, year: year || null })
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Could not submit');
-        showAlert('Thanks for your feedback!');
-        document.getElementById('feedback-form').reset();
-        document.getElementById('rating-value').value = '0';
-        document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
-      } catch (e) {
-        if (/401/.test(String(e))) showAlert('Please sign in first.', 'error');
-        else showAlert(e.message, 'error');
-      }
-    });
-
-    // ===== Login / Logout =====
-    document.getElementById('btn-login')?.addEventListener('click', async () => {
-      const login = document.getElementById('login-id').value.trim();
-      const password = document.getElementById('login-pw').value;
-      if (!login || !password) return showAlert('Enter login and password.', 'error');
-      if (login.includes('@') && !isHuskersEmail(login)) {
-        return showAlert('Use your @huskers.unl.edu email (or your NUID).', 'error');
-      }
-      try {
-        const r = await fetch('/api/auth/login', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ login, password })
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Login failed');
-        authToken = data.token;
-        currentUser = data.user;
-        localStorage.setItem('authToken', authToken);
-        localStorage.setItem('user', JSON.stringify(currentUser));
-        refreshWhoAmI();
-
-        // Show Dashboard on login, load data, and switch to it
-        setVisible(document.getElementById('dashboard-tab'), true);
-        await loadFeedback();
-        showTab('dashboard', document.getElementById('dashboard-tab'));
-
-        // Protected bits
-        if (currentUser.kind === 'staff') {
-          await loadMySchedule();
-          const isSL = currentUser.role === 'SL';
-          showSLPanels(isSL);
-          if (isSL) loadPendingStudents();
-        }
-        showAlert(`Welcome, ${currentUser.name}!`);
-      } catch (e) {
-        showAlert(e.message, 'error');
-      }
-    });
-
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
-      localStorage.removeItem('authToken'); localStorage.removeItem('user');
-      authToken = null; currentUser = null;
-      refreshWhoAmI();
-      setVisible(document.getElementById('dashboard-tab'), false);
-      showTab('student', document.querySelector('.tab-container .tab')); // back to Feedback
-      showSLPanels(false);
-      setVisible(document.getElementById('schedule-panel'), false);
-      showAlert('You have been logged out.');
-    });
-
-    // ===== Student signup =====
-    document.getElementById('btn-student-signup')?.addEventListener('click', async () => {
-      const name = document.getElementById('su-name').value.trim();
-      const email = document.getElementById('su-email').value.trim().toLowerCase();
-      const nuid = document.getElementById('su-nuid').value.trim();
-      const password = document.getElementById('su-pw').value;
-      const class_year = document.getElementById('su-year').value.trim();
-      const courses = (document.getElementById('su-courses').value || '')
-        .split(',').map(s => s.trim()).filter(Boolean);
-      if (!name || !email || !password) return showAlert('Name, email, and password are required.', 'error');
-      if (!isHuskersEmail(email)) return showAlert('Email must be @huskers.unl.edu', 'error');
-      try {
-        const r = await fetch('/api/auth/student/signup', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, nuid, password, class_year, courses })
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Signup failed');
-        showAlert('Submitted for SL approval. You can log in after approval.');
-      } catch (e) { showAlert(e.message, 'error'); }
-    });
-
-    // ===== Change-my-password (auth) =====
-    document.getElementById('btn-change-password')?.addEventListener('click', async () => {
-      const oldPw = document.getElementById('cpw-current').value;
-      const newPw = document.getElementById('cpw-new').value;
-      if (!oldPw || !newPw) return showAlert('Enter both current and new password.', 'error');
-      if (newPw.length < 8) return showAlert('New password must be at least 8 characters.', 'error');
-      try {
-        const r = await fetch('/api/auth/change-password', {
-          method: 'POST',
-          headers: authHeaders(),
-          body: JSON.stringify({ current_password: oldPw, new_password: newPw })
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Could not change password');
-        showAlert('Password updated. Please log in again.');
-        // Force logout after password change
-        localStorage.removeItem('authToken'); localStorage.removeItem('user');
-        authToken = null; currentUser = null;
-        refreshWhoAmI();
-        setVisible(document.getElementById('dashboard-tab'), false);
-        showTab('login', document.querySelector('.tab-container .tab:nth-child(2)'));
-      } catch (e) {
-        showAlert(e.message, 'error');
-      }
-    });
-
-    // ===== Admin & Schedule helpers =====
-    function showSLPanels(isSL) {
-      ['admin-pending', 'admin-add-staff', 'admin-reset-staff', 'admin-bulk']
-        .forEach(id => setVisible(document.getElementById(id), !!isSL));
-    }
-
-    async function loadPendingStudents() {
-      try {
-        const r = await fetch('/api/auth/students/pending', { headers: authHeaders() });
+        const r = await fetch(`/api/staff/${currentUser.nuid}/schedule`, { headers: headers() });
         const rows = await r.json();
-        const box = document.getElementById('pending-rows');
         if (!r.ok) throw new Error(rows.error || 'Failed');
-        if (!rows.length) { box.innerHTML = '<div class="feedback-card">No pending students.</div>'; return; }
-        box.innerHTML = rows.map(r => `
-          <div class="feedback-card">
-            <div class="feedback-header">
-              <div class="feedback-meta"><b>${r.name}</b> — ${r.email} ${r.nuid ? `(${r.nuid})` : ''} ${r.class_year ? `— ${r.class_year}` : ''}</div>
-              <div>
-                <button class="btn-ghost" data-act="approve" data-id="${r.id}">Approve</button>
-                <button class="btn-ghost" data-act="reject"  data-id="${r.id}">Reject</button>
-              </div>
+        renderSchedule(rows || []);
+      } catch (e) {
+        $('#schedule-panel').style.display = 'none';
+        alertUI(e.message, false);
+      }
+    }
+    function renderSchedule(rows) {
+      const tBody = $('#schedule-body'); tBody.innerHTML = '';
+      if (!rows.length) { tBody.innerHTML = '<tr><td colspan="7" class="muted">No entries</td></tr>'; return; }
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.type === 'office_hour' ? 'Office Hour' : 'Lab Time'}</td>
+          <td>${r.day}</td>
+          <td>${r.start_time}</td>
+          <td>${r.end_time}</td>
+          <td>${r.location || ''}</td>
+          <td>${r.course || ''}</td>
+          <td><button class="btn btn-muted" data-del="${r.id}">Delete</button></td>`;
+        tBody.append(tr);
+      });
+      tBody.querySelectorAll('button[data-del]').forEach(b => {
+        b.onclick = async () => {
+          const id = b.getAttribute('data-del');
+          if (!confirm('Delete this entry?')) return;
+          try {
+            const r = await fetch(`/api/staff/me/schedule/${id}`, { method: 'DELETE', headers: headers() });
+            if (!r.ok) throw new Error((await r.json()).error || 'Delete failed');
+            await loadSchedule(); alertUI('Entry deleted.');
+          } catch (e) { alertUI(e.message, false); }
+        };
+      });
+    }
+    $('#sc-add')?.addEventListener('click', async () => {
+      const type = $('#sc-type').value, day = $('#sc-day').value, start = $('#sc-start').value, end = $('#sc-end').value,
+        location = $('#sc-location').value.trim(), course = $('#sc-course').value.trim();
+      if (!type || !day || !start || !end) return alertUI('Type, day, start and end are required.', false);
+      try {
+        const r = await fetch('/api/staff/me/schedule', { method: 'POST', headers: headers(), body: JSON.stringify({ type, day, start, end, location, course }) });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || 'Add failed');
+        ['#sc-start', '#sc-end', '#sc-location', '#sc-course'].forEach(sel => $(sel).value = '');
+        await loadSchedule(); alertUI('Entry added.');
+      } catch (e) { alertUI(e.message, false); }
+    });
+
+    /* ===== SL panels ===== */
+    function showSL(is) { $('#admin-pending').style.display = is ? 'block' : 'none'; $('#admin-add-staff').style.display = is ? 'block' : 'none'; }
+    async function loadPending() {
+      try {
+        const r = await fetch('/api/auth/students/pending', { headers: headers() });
+        const rows = await r.json(); const box = $('#pending-rows');
+        if (!r.ok) throw new Error(rows.error || 'Failed');
+        if (!rows.length) { box.innerHTML = '<div class="muted">No pending students.</div>'; return; }
+        box.innerHTML = rows.map(x => `
+          <div class="row wrap" style="align-items:center;justify-content:space-between;">
+            <div><b>${x.name}</b> — ${x.email} ${x.nuid ? `(${x.nuid})` : ''} ${x.class_year ? `• ${x.class_year}` : ''}</div>
+            <div class="row" style="gap:8px;">
+              <button class="btn btn-muted" data-a="reject" data-id="${x.id}">Reject</button>
+              <button class="btn" data-a="approve" data-id="${x.id}">Approve</button>
             </div>
-          </div>
-        `).join('');
-        box.querySelectorAll('button[data-act]').forEach(btn => {
+          </div>`).join('');
+        box.querySelectorAll('button[data-a]').forEach(btn => {
           btn.onclick = async () => {
-            const id = btn.getAttribute('data-id');
-            const act = btn.getAttribute('data-act');
-            const r2 = await fetch(`/api/auth/students/${id}/${act}`, { method: 'POST', headers: authHeaders() });
+            const id = btn.getAttribute('data-id'), a = btn.getAttribute('data-a');
+            const r2 = await fetch(`/api/auth/students/${id}/${a}`, { method: 'POST', headers: headers() });
             const j = await r2.json().catch(() => ({}));
-            if (!r2.ok) return showAlert(j.error || 'Action failed', 'error');
-            showAlert('Updated.');
-            loadPendingStudents();
+            if (!r2.ok) return alertUI(j.error || 'Action failed', false);
+            alertUI('Updated.'); loadPending();
           };
         });
-      } catch (e) { showAlert(e.message, 'error'); }
+      } catch (e) { alertUI(e.message, false); }
     }
 
-    async function loadMySchedule() {
-      if (!currentUser || currentUser.kind !== 'staff') return;
-      const tBody = document.querySelector('#schedule-table tbody');
-      if (!tBody) return;
-      tBody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
+    $('#btn-add-staff')?.addEventListener('click', async () => {
+      const nuid = $('#st-nuid').value.trim(), name = $('#st-name').value.trim(),
+        role = $('#st-role').value.trim(), email = $('#st-email').value.trim().toLowerCase(),
+        password = $('#st-pass').value, courses = ($('#st-courses').value || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (!nuid || !name || !role) return alertUI('NUID, name, and role are required.', false);
+      if (email && !isHuskers(email)) return alertUI('Staff email must be @huskers.unl.edu', false);
       try {
-        const r = await fetch(`/api/staff/${currentUser.nuid}/schedule`, { headers: authHeaders() });
-        const rows = await r.json();
-        if (!r.ok) throw new Error(rows.error || 'Failed');
-        setVisible(document.getElementById('schedule-panel'), true);
-        if (!rows.length) { tBody.innerHTML = '<tr><td colspan="6">No entries</td></tr>'; return; }
-        tBody.innerHTML = rows.map(x => `
-          <tr>
-            <td>${x.type}</td><td>${x.day}</td><td>${x.start_time}</td>
-            <td>${x.end_time}</td><td>${x.location || ''}</td><td>${x.course || ''}</td>
-          </tr>
-        `).join('');
-      } catch (e) {
-        setVisible(document.getElementById('schedule-panel'), false);
-        showAlert(e.message, 'error');
-      }
-    }
-
-    // Add staff
-    document.getElementById('btn-add-staff')?.addEventListener('click', async () => {
-      const nuid = (document.getElementById('st-nuid')?.value || '').trim();
-      const name = (document.getElementById('st-name')?.value || '').trim();
-      const role = (document.getElementById('st-role')?.value || '').trim();
-      const email = (document.getElementById('st-email')?.value || '').trim().toLowerCase();
-      const password = (document.getElementById('st-pass')?.value || '');
-      const courses = (document.getElementById('st-courses')?.value || '')
-        .split(',').map(s => s.trim()).filter(Boolean);
-      if (!nuid || !name || !role) return showAlert('NUID, name, and role are required.', 'error');
-      if (email && !isHuskersEmail(email)) return showAlert('Staff email must be @huskers.unl.edu', 'error');
-      try {
-        const r = await fetch('/api/staff', {
-          method: 'POST', headers: authHeaders(),
-          body: JSON.stringify({ nuid, name, role, email: email || null, password: password || null, courses })
-        });
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(data.error || 'Add staff failed');
-        showAlert('Staff added.');
-        // clear inputs
-        ['st-nuid', 'st-name', 'st-email', 'st-pass', 'st-courses'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-      } catch (e) { showAlert(e.message, 'error'); }
+        const r = await fetch('/api/staff', { method: 'POST', headers: headers(), body: JSON.stringify({ nuid, name, role, email: email || null, password: password || null, courses }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || 'Add staff failed');
+        alertUI('Staff added.');['#st-nuid', '#st-name', '#st-email', '#st-pass', '#st-courses'].forEach(sel => $(sel).value = '');
+      } catch (e) { alertUI(e.message, false); }
     });
 
-    // Bulk CSV helpers
-    function csvToItems(csv) {
-      return (csv || '')
-        .split('\n')
-        .map(l => l.trim())
-        .filter(Boolean)
-        .map(line => {
-          const [nuid, name, role, email, password] = line.split(',').map(s => (s ?? '').trim());
-          return { nuid, name, role, email, password };
-        })
-        .filter(r => r.nuid);
-    }
-
-    document.getElementById('btn-bulk-upload')?.addEventListener('click', async () => {
-      const txt = document.getElementById('bulk-csv')?.value || '';
-      const items = csvToItems(txt);
-      if (!items.length) return showAlert('Paste CSV: nuid,name,role,email,password', 'error');
-
-      const bad = items.filter(x => x.email && !isHuskersEmail(x.email));
-      if (bad.length) {
-        const list = bad.slice(0, 5).map(b => `${b.nuid} (${b.email})`).join(', ') + (bad.length > 5 ? '…' : '');
-        return showAlert(`Invalid email domain for: ${list}. Emails must be @huskers.unl.edu`, 'error');
-      }
-
-      try {
-        const r = await fetch('/api/staff/bulk/upsert', {
-          method: 'POST',
-          headers: authHeaders(),
-          body: JSON.stringify(items)
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Bulk import failed');
-        if (data.invalid?.length) {
-          showAlert(`Imported ${data.count}. Skipped ${data.invalid.length} with non-huskers emails.`, 'error');
-        } else {
-          showAlert(`Imported/updated ${data.count} staff.`);
-        }
-        document.getElementById('bulk-csv').value = ''; // clear plaintext
-      } catch (e) {
-        showAlert(e.message, 'error');
-      }
+    /* ===== tab nav ===== */
+    $$('.chip').forEach(btn => {
+      btn.addEventListener('click', () => showTab(btn.dataset.tab));
     });
 
-    document.getElementById('btn-bulk-clear')?.addEventListener('click', () => {
-      const ta = document.getElementById('bulk-csv');
-      if (ta) ta.value = '';
-    });
-
-    document.getElementById('btn-reset-staff')?.addEventListener('click', async () => {
-      const nuid = (document.getElementById('rst-nuid')?.value || '').trim();
-      const pw = (document.getElementById('rst-pass')?.value || '');
-      if (!nuid || !pw) return showAlert('Enter NUID and a new temp password.', 'error');
-      try {
-        const r = await fetch(`/api/staff/${nuid}`, {
-          method: 'PUT',
-          headers: authHeaders(),
-          body: JSON.stringify({ reset_password_to: pw })
-        });
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(data.error || 'Reset failed');
-        showAlert('Password reset. Tell the staff member to log in and change it.');
-        document.getElementById('rst-pass').value = '';
-      } catch (e) {
-        showAlert(e.message, 'error');
-      }
-    });
-
-    // ===== Init =====
+    /* ===== init ===== */
     window.addEventListener('DOMContentLoaded', async () => {
-      refreshWhoAmI();
-      document.getElementById('filter-course')?.addEventListener('change', updateDashboard);
-
+      refreshTopBar();
+      showTab('feedback');
+      await loadFeedback();
       if (authToken && currentUser) {
-        setVisible(document.getElementById('dashboard-tab'), true);
-        await loadFeedback();
         if (currentUser.kind === 'staff') {
-          await loadMySchedule();
+          await loadSchedule();
           const isSL = currentUser.role === 'SL';
-          showSLPanels(isSL);
-          if (isSL) loadPendingStudents();
+          showSL(isSL);
+          if (isSL) loadPending();
         }
+        showTab('dashboard');
       }
     });
   </script>
