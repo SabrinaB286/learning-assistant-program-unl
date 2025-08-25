@@ -5,591 +5,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UNL Learning Assistant Feedback</title>
+
+  <!-- All styles live ONLY inside this one <style> -->
   <style>
     :root {
       --unl-red: #d00000;
-      /* main */
       --unl-red-dark: #9b0000;
       --ink: #1f2937;
       --muted: #6b7280;
       --bg: #f6f7fb;
       --card: #ffffff;
-      --ring: #e5e7eb;<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>UNL Learning Assistant Feedback</title>
-  <style>
-    :root{
-      --unl-red:#d00000;
-      --unl-red-dark:#9b0000;
-      --ink:#1f2937;
-      --muted:#6b7280;
-      --bg:#f6f7fb;
-      --card:#ffffff;
-      --ring:#e5e7eb;
-      --ok:#16a34a;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue','Noto Sans',Arial;color:var(--ink);background:var(--bg)}
-    a{color:var(--unl-red)}
-    .shell{max-width:1100px;margin:24px auto;padding:0 16px}
-    .topbar{position:sticky;top:0;z-index:40;background:linear-gradient(135deg,var(--unl-red),var(--unl-red-dark));color:#fff;padding:14px}
-    .brand{font-weight:800;letter-spacing:.3px}
-    .sub{opacity:.85;font-size:.95rem}
-    .nav{display:flex;gap:10px;margin:14px 0 0}
-    .chip{border:1px solid rgba(255,255,255,.7);background:transparent;color:#fff;border-radius:999px;padding:8px 14px;cursor:pointer}
-    .chip.active{background:#fff;color:var(--unl-red);border-color:#fff}
-    .row{display:flex;gap:10px;align-items:center}
-    .push{margin-left:auto}
-    .btn{background:var(--unl-red);color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer}
-    .btn:hover{filter:brightness(.95)}
-    .btn-ghost{background:#fff;color:var(--unl-red);border:1px solid var(--unl-red)}
-    .wrap{background:var(--card);border:1px solid var(--ring);border-radius:14px;padding:18px;margin-top:16px;box-shadow:0 6px 20px rgba(0,0,0,.06)}
-    .grid{display:grid;gap:14px}
-    .g-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-    .stat{background:var(--card);border:1px solid var(--ring);border-radius:12px;padding:16px}
-    .stat .n{font-size:2rem;font-weight:800}
-    label{font-weight:600;margin-bottom:6px;display:block}
-    input,select,textarea{width:100%;padding:10px;border:1px solid var(--ring);border-radius:10px;background:#fff}
-    textarea{min-height:110px}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid var(--ring);text-align:left;font-size:.95rem}
-    th{color:var(--muted);font-weight:700}
-    .muted{color:var(--muted)}
-    .hidden{display:none!important}
-    .alert{padding:12px 14px;border-radius:10px;margin:12px 0;font-weight:600}
-    .alert-success{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
-    .alert-error{background:#fff1f2;color:#9f1239;border:1px solid #fecdd3}
-    .badge{display:inline-block;background:#fff;color:var(--unl-red);padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.7)}
-  </style>
-  </head>
-  
-  <body>
-    <div class="topbar">
-      <div class="shell">
-        <div class="row">
-          <div>
-            <div class="brand">Learning Assistant Feedback</div>
-            <div class="sub">Computer Science &amp; Engineering – University of Nebraska–Lincoln</div>
-          </div>
-          <div class="push row" id="who-bar" style="gap:8px;display:none;">
-            <span id="who-name" class="badge"></span>
-            <button id="logout-btn" class="btn btn-ghost">Log out</button>
-          </div>
-        </div>
-        <div class="nav">
-          <button id="nav-feedback" class="chip active" data-tab="feedback">Feedback</button>
-          <button id="nav-login" class="chip" data-tab="login">Login</button>
-          <button id="nav-dashboard" class="chip" data-tab="dashboard" style="display:none;">Dashboard</button>
-        </div>
-      </div>
-    </div>
-  
-    <div class="shell">
-      <div id="alerts"></div>
-  
-      <!-- FEEDBACK -->
-      <section id="tab-feedback" class="wrap">
-        <h2 style="margin-top:0">Submit Feedback</h2>
-        <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">
-          <div>
-            <label for="course">Course</label>
-            <select id="course">
-              <option value="">Select Course</option>
-              <option>CSCE 101</option>
-              <option>CSCE 155A</option>
-              <option>CSCE 155E</option>
-              <option>CSCE 155H</option>
-              <option>CSCE 155N</option>
-              <option>CSCE 156</option>
-            </select>
-          </div>
-          <div>
-            <label for="feedback-type">Type</label>
-            <select id="feedback-type">
-              <option>General</option>
-              <option>Course</option>
-              <option>TA</option>
-            </select>
-          </div>
-        </div>
-  
-        <div style="margin-top:10px;">
-          <label>Overall Rating</label>
-          <div id="stars" style="display:flex;gap:6px;font-size:22px;cursor:pointer;">
-            <span data-rating="1">★</span><span data-rating="2">★</span><span data-rating="3">★</span><span
-              data-rating="4">★</span><span data-rating="5">★</span>
-          </div>
-          <input type="hidden" id="rating-value" value="0">
-        </div>
-  
-        <div style="margin-top:12px;">
-          <label for="feedback-text">Feedback Details</label>
-          <textarea id="feedback-text" placeholder="Please provide detailed feedback…" required></textarea>
-        </div>
-  
-        <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:12px;">
-          <div>
-            <label for="student-name">Your Name (Optional)</label>
-            <input id="student-name" type="text" placeholder="Leave blank to stay anonymous" />
-          </div>
-          <div>
-            <label for="student-year">Academic Year (Optional)</label>
-            <select id="student-year">
-              <option value="">Select Year</option>
-              <option>Freshman</option>
-              <option>Sophomore</option>
-              <option>Junior</option>
-              <option>Senior</option>
-              <option>Graduate</option>
-            </select>
-          </div>
-        </div>
-  
-        <button id="btn-submit-feedback" class="btn" style="margin-top:14px;">Submit Feedback</button>
-      </section>
-  
-      <!-- LOGIN -->
-      <section id="tab-login" class="wrap hidden">
-        <h2 style="margin-top:0;text-align:center">Sign in</h2>
-        <div style="max-width:460px;margin:0 auto;">
-          <label for="login-id">NUID or Email</label>
-          <input id="login-id" type="text" placeholder="e.g., 12345678 or user@huskers.unl.edu" autocomplete="username">
-  
-          <div style="height:8px"></div>
-          <label for="login-pw">Password</label>
-          <input id="login-pw" type="password" placeholder="Your password" autocomplete="current-password">
-  
-          <button id="btn-login" class="btn" style="width:100%;margin-top:14px;">Sign in</button>
-  
-          <details style="margin-top:18px;">
-            <summary><b>New student?</b> Create an account</summary>
-            <div style="height:10px"></div>
-            <label for="su-name">Full name</label>
-            <input id="su-name" type="text" placeholder="First Last">
-            <div style="height:8px"></div>
-            <label for="su-email">Email (<code>@huskers.unl.edu</code>)</label>
-            <input id="su-email" type="email" placeholder="you@huskers.unl.edu">
-            <div style="height:8px"></div>
-            <label for="su-nuid">NUID (optional)</label>
-            <input id="su-nuid" type="text" placeholder="e.g., 12345678">
-            <div style="height:8px"></div>
-            <label for="su-pw">Password (min 8)</label>
-            <input id="su-pw" type="password" placeholder="Create a password">
-            <div style="height:8px"></div>
-            <label for="su-year">Class year</label>
-            <select id="su-year">
-              <option value="">Select Year</option>
-              <option>Freshman</option>
-              <option>Sophomore</option>
-              <option>Junior</option>
-              <option>Senior</option>
-              <option>Graduate</option>
-            </select>
-            <div style="height:8px"></div>
-            <label for="su-courses">Courses (comma-separated)</label>
-            <input id="su-courses" type="text" placeholder="CSCE 155A, CSCE 156">
-            <button id="btn-student-signup" class="btn" style="width:100%;margin-top:12px;">Create account</button>
-          </details>
-        </div>
-      </section>
-  
-      <!-- DASHBOARD -->
-      <section id="tab-dashboard" class="wrap hidden">
-        <h2 style="margin-top:0">Dashboard</h2>
-  
-        <div class="grid g-3">
-          <div class="stat">
-            <div class="n" id="total-feedback">0</div>
-            <div class="muted">Total Feedback</div>
-          </div>
-          <div class="stat">
-            <div class="n" id="avg-rating">0.0</div>
-            <div class="muted">Average Rating</div>
-          </div>
-          <div class="stat">
-            <div class="n" id="this-week">0</div>
-            <div class="muted">This Week</div>
-          </div>
-        </div>
-  
-        <div class="wrap" style="margin-top:16px;">
-          <label for="filter-course">Filter by Course</label>
-          <select id="filter-course">
-            <option value="">All Courses</option>
-            <option>CSCE 101</option>
-            <option>CSCE 155A</option>
-            <option>CSCE 155E</option>
-            <option>CSCE 155H</option>
-            <option>CSCE 155N</option>
-            <option>CSCE 156</option>
-          </select>
-          <div id="feedback-list" style="margin-top:12px;"></div>
-        </div>
-  
-        <!-- My Schedule self-service -->
-        <div class="wrap" id="schedule-panel" style="margin-top:16px;display:none;">
-          <h3 style="margin:0">My Schedule</h3>
-          <div class="grid" style="grid-template-columns: repeat(6,minmax(0,1fr)); gap:10px; margin-top:12px;">
-            <div>
-              <label>Type</label>
-              <select id="sc-type">
-                <option value="office_hour">Office Hour</option>
-                <option value="lab_time">Lab Time</option>
-              </select>
-            </div>
-            <div>
-              <label>Day</label>
-              <select id="sc-day">
-                <option>Mon</option>
-                <option>Tue</option>
-                <option>Wed</option>
-                <option>Thu</option>
-                <option>Fri</option>
-                <option>Sat</option>
-                <option>Sun</option>
-              </select>
-            </div>
-            <div>
-              <label>Start</label>
-              <input id="sc-start" type="time">
-            </div>
-            <div>
-              <label>End</label>
-              <input id="sc-end" type="time">
-            </div>
-            <div>
-              <label>Location</label>
-              <input id="sc-location" type="text" placeholder="Avery 19">
-            </div>
-            <div>
-              <label>Course</label>
-              <input id="sc-course" type="text" placeholder="CSCE 155A">
-            </div>
-          </div>
-          <button id="sc-add" class="btn" style="margin-top:10px;">Add entry</button>
-  
-          <table style="margin-top:14px;">
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Day</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Location</th>
-                <th>Course</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="schedule-body"></tbody>
-          </table>
-        </div>
-  
-        <!-- SL-only admin blocks -->
-        <div class="wrap" id="admin-pending" style="margin-top:16px;display:none;">
-          <h3 style="margin:0">Pending student signups</h3>
-          <div id="pending-rows" style="margin-top:10px;"></div>
-        </div>
-  
-        <div class="wrap" id="admin-add-staff" style="margin-top:16px;display:none;">
-          <h3 style="margin:0">Add staff</h3>
-          <div class="grid" style="grid-template-columns: repeat(2,minmax(0,1fr)); margin-top:10px;">
-            <div><label>NUID</label><input id="st-nuid" type="text" placeholder="e.g., 12345678"></div>
-            <div><label>Name</label><input id="st-name" type="text" placeholder="Full name"></div>
-            <div>
-              <label>Role</label>
-              <select id="st-role">
-                <option>LA</option>
-                <option>CL</option>
-                <option>SL</option>
-              </select>
-            </div>
-            <div><label>Email (optional, @huskers.unl.edu)</label><input id="st-email" type="email"
-                placeholder="user@huskers.unl.edu"></div>
-            <div><label>Temp password (optional)</label><input id="st-pass" type="password"></div>
-            <div><label>Courses (comma-separated)</label><input id="st-courses" type="text"
-                placeholder="CSCE 155A, CSCE 156"></div>
-          </div>
-          <button id="btn-add-staff" class="btn" style="margin-top:10px;">Add staff</button>
-        </div>
-      </section>
-    </div>
-  
-    <script>
-      /* ========= helpers ========= */
-      const $ = s => document.querySelector(s);
-      const $$ = s => Array.from(document.querySelectorAll(s));
-      const HUSKERS_RE = /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i;
-      let authToken = localStorage.getItem('authToken') || null;
-      let currentUser = null; try { currentUser = JSON.parse(localStorage.getItem('user') || 'null'); } catch { }
-      const headers = () => authToken ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken } : { 'Content-Type': 'application/json' };
-      function alertUI(msg, ok = true) {
-        const box = document.createElement('div');
-        box.className = 'alert ' + (ok ? 'alert-success' : 'alert-error');
-        box.textContent = msg;
-        $('#alerts').prepend(box);
-        setTimeout(() => box.remove(), 4500);
-      }
-      function isHuskers(e) { return HUSKERS_RE.test((e || '').trim()); }
-
-      /* ========= tabs ========= */
-      function showTab(name) {
-        // Switch section
-        ['feedback', 'login', 'dashboard'].forEach(id => {
-          const el = $('#' + `tab-${id}`);
-          if (!el) return;
-          el.classList.toggle('hidden', id !== name);
-        });
-        // Switch pills
-        [['feedback', 'nav-feedback'], ['login', 'nav-login'], ['dashboard', 'nav-dashboard']].forEach(([t, btnId]) => {
-          const btn = $('#' + btnId);
-          if (btn) btn.classList.toggle('active', t === name);
-        });
-
-        // Lazy-load dashboard content when shown
-        if (name === 'dashboard' && authToken && currentUser) {
-          loadFeedback();
-          if (currentUser.kind === 'staff') {
-            loadSchedule();
-            const isSL = currentUser.role === 'SL';
-            showSL(isSL); if (isSL) loadPending();
-          }
-        }
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-
-      function refreshTopBar() {
-        // Show who + logout only when logged in
-        const logged = !!(authToken && currentUser);
-        $('#who-bar').style.display = logged ? 'flex' : 'none';
-        const dashBtn = $('#nav-dashboard');
-        if (dashBtn) dashBtn.style.display = logged ? 'inline-block' : 'none';
-        // Fill name + role
-        if (logged) {
-          $('#who-name').textContent = `${currentUser.name} (${currentUser.role || currentUser.kind})`;
-        }
-      }
-
-      // Nav buttons
-      $('#nav-feedback')?.addEventListener('click', () => showTab('feedback'));
-      $('#nav-login')?.addEventListener('click', () => showTab('login'));
-      $('#nav-dashboard')?.addEventListener('click', () => {
-        if (!(authToken && currentUser)) { alertUI('Please sign in first.', false); showTab('login'); return; }
-        showTab('dashboard');
-      });
-
-      /* ========= stars ========= */
-      $('#stars')?.addEventListener('click', e => {
-        const s = e.target.closest('[data-rating]'); if (!s) return;
-        const val = Number(s.dataset.rating);
-        $('#rating-value').value = String(val);
-        $$('#stars [data-rating]').forEach(x => {
-          x.style.color = Number(x.dataset.rating) <= val ? '#ffbf00' : '#999';
-        });
-      });
-
-      /* ========= feedback submit ========= */
-      $('#btn-submit-feedback')?.addEventListener('click', async () => {
-        const course = $('#course').value.trim() || null;
-        const type = $('#feedback-type').value.trim() || 'General';
-        const rating = Number($('#rating-value').value || 0) || null;
-        const text = $('#feedback-text').value.trim();
-        const submitter = $('#student-name').value.trim() || null;
-        const year = $('#student-year').value.trim() || null;
-        if (!text) return alertUI('Please enter feedback text.', false);
-        try {
-          const r = await fetch('/api/feedback', { method: 'POST', headers: headers(), body: JSON.stringify({ course, type, rating, text, submitter, year }) });
-          const j = await r.json();
-          if (!r.ok) throw new Error(j.error || 'Could not submit');
-          alertUI('Thanks for your feedback!');
-          $('#feedback-text').value = ''; $('#rating-value').value = '0'; $$('#stars [data-rating]').forEach(x => x.style.color = '#999');
-        } catch (e) { alertUI(e.message, false); }
-      });
-
-      /* ========= login / logout ========= */
-      $('#btn-login')?.addEventListener('click', async () => {
-        const login = $('#login-id').value.trim(), password = $('#login-pw').value;
-        if (!login || !password) return alertUI('Enter login and password.', false);
-        if (login.includes('@') && !isHuskers(login)) return alertUI('Use your @huskers.unl.edu email (or NUID).', false);
-        try {
-          const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) });
-          const j = await r.json();
-          if (!r.ok) throw new Error(j.error || 'Login failed');
-          authToken = j.token; currentUser = j.user;
-          localStorage.setItem('authToken', authToken); localStorage.setItem('user', JSON.stringify(currentUser));
-          refreshTopBar();
-          alertUI(`Welcome, ${currentUser.name}!`);
-          showTab('dashboard'); // only jump after an explicit successful login
-        } catch (e) { alertUI(e.message, false); }
-      });
-
-      $('#logout-btn')?.addEventListener('click', () => {
-        localStorage.removeItem('authToken'); localStorage.removeItem('user');
-        authToken = null; currentUser = null; refreshTopBar();
-        showTab('feedback');
-        alertUI('Signed out.');
-      });
-
-      /* ========= student signup ========= */
-      $('#btn-student-signup')?.addEventListener('click', async () => {
-        const name = $('#su-name').value.trim(), email = $('#su-email').value.trim().toLowerCase(),
-          nuid = $('#su-nuid').value.trim(), password = $('#su-pw').value,
-          class_year = $('#su-year').value.trim(),
-          courses = ($('#su-courses').value || '').split(',').map(s => s.trim()).filter(Boolean);
-        if (!name || !email || !password) return alertUI('Name, email, and password are required.', false);
-        if (!isHuskers(email)) return alertUI('Email must be @huskers.unl.edu', false);
-        try {
-          const r = await fetch('/api/auth/student/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, nuid, password, class_year, courses }) });
-          const j = await r.json();
-          if (!r.ok) throw new Error(j.error || 'Signup failed');
-          alertUI('Submitted for SL approval. You can log in after approval.');
-        } catch (e) { alertUI(e.message, false); }
-      });
-
-      /* ========= dashboard data ========= */
-      let FEED = [];
-      async function loadFeedback() {
-        try {
-          const r = await fetch('/api/feedback');
-          const data = await r.json();
-          if (!r.ok) throw new Error(data.error || 'Failed to load feedback');
-          FEED = data || [];
-        } catch { FEED = []; }
-        renderFeedback();
-      }
-      function renderFeedback() {
-        const total = FEED.length;
-        const rated = FEED.filter(x => x.rating != null);
-        const avg = rated.length ? (rated.reduce((a, b) => a + (b.rating || 0), 0) / rated.length) : 0;
-        const wk = Date.now() - 7 * 24 * 3600 * 1000;
-        const week = FEED.filter(x => new Date(x.created_at || Date.now()).getTime() >= wk).length;
-        $('#total-feedback').textContent = total;
-        $('#avg-rating').textContent = avg.toFixed(1);
-        $('#this-week').textContent = week;
-
-        const course = $('#filter-course').value || '';
-        const list = $('#feedback-list');
-        list.innerHTML = '';
-        const items = FEED.filter(x => !course || x.course === course);
-        if (!items.length) { list.innerHTML = '<div class="muted">No feedback yet.</div>'; return; }
-        items.forEach(it => {
-          const card = document.createElement('div'); card.className = 'wrap';
-          card.innerHTML = `<div class="row" style="justify-content:space-between;">
-            <div class="muted">${(it.course || 'General')} • ${(it.type || 'General')}</div>
-            <div>${it.rating ? `★ ${it.rating}/5` : ''}</div></div>
-            <div style="margin-top:6px;">${(it.text || '')}</div>
-            <div class="muted" style="margin-top:6px;font-size:.85rem;">${it.created_at ? new Date(it.created_at).toLocaleString() : ''}</div>`;
-          list.append(card);
-        });
-      }
-      $('#filter-course')?.addEventListener('change', renderFeedback);
-
-      /* ========= schedule (self) ========= */
-      async function loadSchedule() {
-        if (!currentUser || currentUser.kind !== 'staff') return;
-        const tBody = $('#schedule-body'); if (!tBody) return;
-        $('#schedule-panel').style.display = 'block';
-        tBody.innerHTML = '<tr><td colspan="7" class="muted">Loading…</td></tr>';
-        try {
-          const r = await fetch(`/api/staff/${currentUser.nuid}/schedule`, { headers: headers() });
-          const rows = await r.json();
-          if (!r.ok) throw new Error(rows.error || 'Failed');
-          renderSchedule(rows || []);
-        } catch (e) {
-          $('#schedule-panel').style.display = 'none';
-          alertUI(e.message, false);
-        }
-      }
-      function renderSchedule(rows) {
-        const tBody = $('#schedule-body'); tBody.innerHTML = '';
-        if (!rows.length) { tBody.innerHTML = '<tr><td colspan="7" class="muted">No entries</td></tr>'; return; }
-        rows.forEach(r => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${r.type === 'office_hour' ? 'Office Hour' : 'Lab Time'}</td>
-            <td>${r.day}</td>
-            <td>${r.start_time}</td>
-            <td>${r.end_time}</td>
-            <td>${r.location || ''}</td>
-            <td>${r.course || ''}</td>
-            <td><button class="btn" style="background:#e5e7eb;color:#111" data-del="${r.id}">Delete</button></td>`;
-          tBody.append(tr);
-        });
-        tBody.querySelectorAll('button[data-del]').forEach(b => {
-          b.onclick = async () => {
-            const id = b.getAttribute('data-del');
-            if (!confirm('Delete this entry?')) return;
-            try {
-              const r = await fetch(`/api/staff/me/schedule/${id}`, { method: 'DELETE', headers: headers() });
-              if (!r.ok) throw new Error((await r.json()).error || 'Delete failed');
-              await loadSchedule(); alertUI('Entry deleted.');
-            } catch (e) { alertUI(e.message, false); }
-          };
-        });
-      }
-      $('#sc-add')?.addEventListener('click', async () => {
-        const type = $('#sc-type').value, day = $('#sc-day').value, start = $('#sc-start').value, end = $('#sc-end').value,
-          location = $('#sc-location').value.trim(), course = $('#sc-course').value.trim();
-        if (!type || !day || !start || !end) return alertUI('Type, day, start and end are required.', false);
-        try {
-          const r = await fetch('/api/staff/me/schedule', { method: 'POST', headers: headers(), body: JSON.stringify({ type, day, start, end, location, course }) });
-          const j = await r.json();
-          if (!r.ok) throw new Error(j.error || 'Add failed');
-          ['#sc-start', '#sc-end', '#sc-location', '#sc-course'].forEach(sel => $(sel).value = '');
-          await loadSchedule(); alertUI('Entry added.');
-        } catch (e) { alertUI(e.message, false); }
-      });
-
-      /* ========= SL-only blocks ========= */
-      function showSL(is) { $('#admin-pending').style.display = is ? 'block' : 'none'; $('#admin-add-staff').style.display = is ? 'block' : 'none'; }
-      async function loadPending() {
-        try {
-          const r = await fetch('/api/auth/students/pending', { headers: headers() });
-          const rows = await r.json(); const box = $('#pending-rows');
-          if (!r.ok) throw new Error(rows.error || 'Failed');
-          if (!rows.length) { box.innerHTML = '<div class="muted">No pending students.</div>'; return; }
-          box.innerHTML = rows.map(x => `
-            <div class="row wrap" style="align-items:center;justify-content:space-between;">
-              <div><b>${x.name}</b> — ${x.email} ${x.nuid ? `(${x.nuid})` : ''} ${x.class_year ? `• ${x.class_year}` : ''}</div>
-              <div class="row" style="gap:8px;">
-                <button class="btn" style="background:#e5e7eb;color:#111" data-a="reject" data-id="${x.id}">Reject</button>
-                <button class="btn" data-a="approve" data-id="${x.id}">Approve</button>
-              </div>
-            </div>`).join('');
-          box.querySelectorAll('button[data-a]').forEach(btn => {
-            btn.onclick = async () => {
-              const id = btn.getAttribute('data-id'), a = btn.getAttribute('data-a');
-              const r2 = await fetch(`/api/auth/students/${id}/${a}`, { method: 'POST', headers: headers() });
-              const j = await r2.json().catch(() => ({}));
-              if (!r2.ok) return alertUI(j.error || 'Action failed', false);
-              alertUI('Updated.'); loadPending();
-            };
-          });
-        } catch (e) { alertUI(e.message, false); }
-      }
-
-      /* ========= init ========= */
-      window.addEventListener('DOMContentLoaded', async () => {
-          // Force a clean state on initial load (never start logged in)
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('user');
-          authToken = null;
-          currentUser = null;
-
-          refreshTopBar();          // hides Logout and Dashboard tab
-          showTab('feedback');      // land on Feedback
-          loadFeedback();           // stats refresh if you later open Dashboard
-        });
-    </script>
-  </body>
-  
-  </html>
-
-      --ok: #16a34a;
-      --bad: #b91c1c;
-      --chip: #f1f5f9;
+      --ring: #e5e7eb;
     }
 
     * {
@@ -598,13 +24,14 @@
 
     body {
       margin: 0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', 'Noto Sans', Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', 'Noto Sans', Arial;
       color: var(--ink);
       background: var(--bg)
     }
 
     a {
-      color: var(--unl-red)
+      color: var(--unl-red);
+      text-decoration: none
     }
 
     .shell {
@@ -655,7 +82,7 @@
 
     .row {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       align-items: center
     }
 
@@ -680,11 +107,6 @@
       background: #fff;
       color: var(--unl-red);
       border: 1px solid var(--unl-red)
-    }
-
-    .btn-muted {
-      background: #e5e7eb;
-      color: #111
     }
 
     .wrap {
@@ -784,15 +206,17 @@
 
     .badge {
       display: inline-block;
-      background: var(--chip);
-      padding: 4px 8px;
+      background: #fff;
+      color: var(--unl-red);
+      padding: 6px 10px;
       border-radius: 999px;
-      font-size: .85rem
+      border: 1px solid rgba(255, 255, 255, .7)
     }
   </style>
 </head>
 
 <body>
+  <!-- TOP BAR -->
   <div class="topbar">
     <div class="shell">
       <div class="row">
@@ -806,9 +230,9 @@
         </div>
       </div>
       <div class="nav">
-        <button class="chip active" data-tab="feedback">Feedback</button>
-        <button class="chip" data-tab="login">Login</button>
-        <button id="tab-dashboard" class="chip" data-tab="dashboard" style="display:none;">Dashboard</button>
+        <button id="nav-feedback" class="chip active" data-tab="feedback">Feedback</button>
+        <button id="nav-login" class="chip" data-tab="login">Login</button>
+        <button id="nav-dashboard" class="chip" data-tab="dashboard" style="display:none;">Dashboard</button>
       </div>
     </div>
   </div>
@@ -883,11 +307,9 @@
       <div style="max-width:460px;margin:0 auto;">
         <label for="login-id">NUID or Email</label>
         <input id="login-id" type="text" placeholder="e.g., 12345678 or user@huskers.unl.edu" autocomplete="username">
-
         <div style="height:8px"></div>
         <label for="login-pw">Password</label>
         <input id="login-pw" type="password" placeholder="Your password" autocomplete="current-password">
-
         <button id="btn-login" class="btn" style="width:100%;margin-top:14px;">Sign in</button>
 
         <details style="margin-top:18px;">
@@ -955,26 +377,14 @@
         <div id="feedback-list" style="margin-top:12px;"></div>
       </div>
 
-      <!-- Schedule (with self-service add/delete) -->
       <div class="wrap" id="schedule-panel" style="margin-top:16px;display:none;">
-        <div class="row" style="align-items:flex-end;">
-          <div>
-            <h3 style="margin:0">My Schedule</h3>
-            <div class="muted">Add office hours or lab times</div>
-          </div>
-        </div>
-
+        <h3 style="margin:0">My Schedule</h3>
         <div class="grid" style="grid-template-columns: repeat(6,minmax(0,1fr)); gap:10px; margin-top:12px;">
-          <div>
-            <label>Type</label>
-            <select id="sc-type">
+          <div><label>Type</label><select id="sc-type">
               <option value="office_hour">Office Hour</option>
               <option value="lab_time">Lab Time</option>
-            </select>
-          </div>
-          <div>
-            <label>Day</label>
-            <select id="sc-day">
+            </select></div>
+          <div><label>Day</label><select id="sc-day">
               <option>Mon</option>
               <option>Tue</option>
               <option>Wed</option>
@@ -982,27 +392,13 @@
               <option>Fri</option>
               <option>Sat</option>
               <option>Sun</option>
-            </select>
-          </div>
-          <div>
-            <label>Start</label>
-            <input id="sc-start" type="time">
-          </div>
-          <div>
-            <label>End</label>
-            <input id="sc-end" type="time">
-          </div>
-          <div>
-            <label>Location</label>
-            <input id="sc-location" type="text" placeholder="Avery 19">
-          </div>
-          <div>
-            <label>Course</label>
-            <input id="sc-course" type="text" placeholder="CSCE 155A">
-          </div>
+            </select></div>
+          <div><label>Start</label><input id="sc-start" type="time"></div>
+          <div><label>End</label><input id="sc-end" type="time"></div>
+          <div><label>Location</label><input id="sc-location" type="text" placeholder="Avery 19"></div>
+          <div><label>Course</label><input id="sc-course" type="text" placeholder="CSCE 155A"></div>
         </div>
         <button id="sc-add" class="btn" style="margin-top:10px;">Add entry</button>
-
         <table style="margin-top:14px;">
           <thead>
             <tr>
@@ -1019,7 +415,6 @@
         </table>
       </div>
 
-      <!-- SL admin panels (pending + add staff). Bulk import removed. -->
       <div class="wrap" id="admin-pending" style="margin-top:16px;display:none;">
         <h3 style="margin:0">Pending student signups</h3>
         <div id="pending-rows" style="margin-top:10px;"></div>
@@ -1030,14 +425,11 @@
         <div class="grid" style="grid-template-columns: repeat(2,minmax(0,1fr)); margin-top:10px;">
           <div><label>NUID</label><input id="st-nuid" type="text" placeholder="e.g., 12345678"></div>
           <div><label>Name</label><input id="st-name" type="text" placeholder="Full name"></div>
-          <div>
-            <label>Role</label>
-            <select id="st-role">
+          <div><label>Role</label><select id="st-role">
               <option>LA</option>
               <option>CL</option>
               <option>SL</option>
-            </select>
-          </div>
+            </select></div>
           <div><label>Email (optional, @huskers.unl.edu)</label><input id="st-email" type="email"
               placeholder="user@huskers.unl.edu"></div>
           <div><label>Temp password (optional)</label><input id="st-pass" type="password"></div>
@@ -1049,53 +441,59 @@
     </section>
   </div>
 
+  <!-- App script -->
   <script>
-    /* ===== helpers ===== */
-    const $ = sel => document.querySelector(sel);
-    const $$ = sel => Array.from(document.querySelectorAll(sel));
-    const HUSKERS_RE = /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i;
-    function isHuskers(e) { return HUSKERS_RE.test((e || '').trim()); }
+    // Always start logged out (no auto-restore)
     let authToken = null;
     let currentUser = null;
+
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const HUSKERS_RE = /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i;
     const headers = () => authToken ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken } : { 'Content-Type': 'application/json' };
+
     function alertUI(msg, ok = true) {
       const box = document.createElement('div');
       box.className = 'alert ' + (ok ? 'alert-success' : 'alert-error');
-      box.textContent = msg;
-      $('#alerts').prepend(box);
+      box.textContent = msg; $('#alerts').prepend(box);
       setTimeout(() => box.remove(), 4500);
     }
+    function isHuskers(e) { return HUSKERS_RE.test((e || '').trim()); }
+
     function showTab(name) {
-      $$('.chip').forEach(c => c.classList.toggle('active', c.dataset.tab === name));
       ['feedback', 'login', 'dashboard'].forEach(id => {
-        const el = $('#tab-' + id);
-        if (!el) return;
+        const el = $('#tab-' + id); if (!el) return;
         el.classList.toggle('hidden', id !== name);
       });
+      [['feedback', 'nav-feedback'], ['login', 'nav-login'], ['dashboard', 'nav-dashboard']].forEach(([t, btnId]) => {
+        const btn = $('#' + btnId); if (btn) btn.classList.toggle('active', t === name);
+      });
+      if (name === 'dashboard' && authToken && currentUser) { loadFeedback(); if (currentUser.kind === 'staff') { loadSchedule(); const isSL = currentUser.role === 'SL'; showSL(isSL); if (isSL) loadPending(); } }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     function refreshTopBar() {
-      const who = $('#who-bar'), nm = $('#who-name');
       const logged = !!(authToken && currentUser);
-      who.style.display = logged ? 'flex' : 'none';
-      const dashChip = $('#tab-dashboard')?.closest('.chip') || $('#tab-dashboard');
-      if (dashChip) dashChip.style.display = logged ? 'inline-block' : 'none';
-      if (logged && nm) {
-        nm.textContent = `${currentUser.name} — ${currentUser.kind === 'staff' ? currentUser.role : 'student'}`;
-      }
+      $('#who-bar').style.display = logged ? 'flex' : 'none';
+      $('#nav-dashboard').style.display = logged ? 'inline-block' : 'none';
+      if (logged) { $('#who-name').textContent = `${currentUser.name} (${currentUser.role || currentUser.kind})`; }
     }
 
-    /* ===== stars ===== */
-    $('#stars')?.addEventListener('click', e => {
-      const s = e.target.closest('[data-rating]'); if (!s) return;
-      const val = Number(s.dataset.rating);
-      $('#rating-value').value = String(val);
-      $$('#stars [data-rating]').forEach(x => {
-        x.style.color = Number(x.dataset.rating) <= val ? '#ffbf00' : '#999';
-      });
+    // Nav
+    $('#nav-feedback')?.addEventListener('click', () => showTab('feedback'));
+    $('#nav-login')?.addEventListener('click', () => showTab('login'));
+    $('#nav-dashboard')?.addEventListener('click', () => {
+      if (!(authToken && currentUser)) { alertUI('Please sign in first.', false); showTab('login'); return; }
+      showTab('dashboard');
     });
 
-    /* ===== submit feedback ===== */
+    // Stars
+    $('#stars')?.addEventListener('click', e => {
+      const s = e.target.closest('[data-rating]'); if (!s) return;
+      const v = Number(s.dataset.rating); $('#rating-value').value = String(v);
+      $$('#stars [data-rating]').forEach(x => { x.style.color = Number(x.dataset.rating) <= v ? '#ffbf00' : '#999'; });
+    });
+
+    // Submit feedback
     $('#btn-submit-feedback')?.addEventListener('click', async () => {
       const course = $('#course').value.trim() || null;
       const type = $('#feedback-type').value.trim() || 'General';
@@ -1106,63 +504,49 @@
       if (!text) return alertUI('Please enter feedback text.', false);
       try {
         const r = await fetch('/api/feedback', { method: 'POST', headers: headers(), body: JSON.stringify({ course, type, rating, text, submitter, year }) });
-        const j = await r.json();
-        if (!r.ok) throw new Error(j.error || 'Could not submit');
-        alertUI('Thanks for your feedback!');
-        $('#feedback-text').value = ''; $('#rating-value').value = '0'; $$('#stars [data-rating]').forEach(x => x.style.color = '#999');
+        const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Could not submit');
+        alertUI('Thanks for your feedback!'); $('#feedback-text').value = ''; $('#rating-value').value = '0'; $$('#stars [data-rating]').forEach(x => x.style.color = '#999');
       } catch (e) { alertUI(e.message, false); }
     });
 
-    /* ===== login & logout ===== */
+    // Login / logout
     $('#btn-login')?.addEventListener('click', async () => {
       const login = $('#login-id').value.trim(), password = $('#login-pw').value;
       if (!login || !password) return alertUI('Enter login and password.', false);
-      if (login.includes('@') && !isHuskers(login)) return alertUI('Use your @huskers.unl.edu email (or your NUID).', false);
+      if (login.includes('@') && !isHuskers(login)) return alertUI('Use your @huskers.unl.edu email (or NUID).', false);
       try {
         const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) });
-        const j = await r.json();
-        if (!r.ok) throw new Error(j.error || 'Login failed');
+        const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Login failed');
         authToken = j.token; currentUser = j.user;
         localStorage.setItem('authToken', authToken); localStorage.setItem('user', JSON.stringify(currentUser));
-        refreshTopBar(); alertUI(`Welcome, ${currentUser.name}!`);
-        await loadFeedback();
-        if (currentUser.kind === 'staff') { await loadSchedule(); const isSL = currentUser.role === 'SL'; showSL(isSL); if (isSL) loadPending(); }
-        showTab('dashboard');
+        refreshTopBar(); alertUI(`Welcome, ${currentUser.name}!`); showTab('dashboard');
       } catch (e) { alertUI(e.message, false); }
     });
-
     $('#logout-btn')?.addEventListener('click', () => {
       localStorage.removeItem('authToken'); localStorage.removeItem('user');
-      authToken = null; currentUser = null; refreshTopBar(); showSL(false);
-      showTab('feedback'); alertUI('Signed out.');
+      authToken = null; currentUser = null; refreshTopBar(); showTab('feedback'); alertUI('Signed out.');
     });
 
-    /* ===== student signup ===== */
+    // Student signup
     $('#btn-student-signup')?.addEventListener('click', async () => {
       const name = $('#su-name').value.trim(), email = $('#su-email').value.trim().toLowerCase(),
-        nuid = $('#su-nuid').value.trim(), password = $('#su-pw').value,
-        class_year = $('#su-year').value.trim(),
+        nuid = $('#su-nuid').value.trim(), password = $('#su-pw').value, class_year = $('#su-year').value.trim(),
         courses = ($('#su-courses').value || '').split(',').map(s => s.trim()).filter(Boolean);
       if (!name || !email || !password) return alertUI('Name, email, and password are required.', false);
       if (!isHuskers(email)) return alertUI('Email must be @huskers.unl.edu', false);
       try {
         const r = await fetch('/api/auth/student/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, nuid, password, class_year, courses }) });
-        const j = await r.json();
-        if (!r.ok) throw new Error(j.error || 'Signup failed');
+        const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Signup failed');
         alertUI('Submitted for SL approval. You can log in after approval.');
       } catch (e) { alertUI(e.message, false); }
     });
 
-    /* ===== dashboard feedback ===== */
+    // Dashboard data
     let FEED = [];
     async function loadFeedback() {
-      try {
-        const r = await fetch('/api/feedback');
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || 'Failed to load feedback');
-        FEED = data || [];
-        renderFeedback();
-      } catch (e) { FEED = []; renderFeedback(); }
+      try { const r = await fetch('/api/feedback'); const data = await r.json(); if (!r.ok) throw new Error(data.error || 'Failed'); FEED = data || []; }
+      catch { FEED = []; }
+      renderFeedback();
     }
     function renderFeedback() {
       const total = FEED.length;
@@ -1170,20 +554,16 @@
       const avg = rated.length ? (rated.reduce((a, b) => a + (b.rating || 0), 0) / rated.length) : 0;
       const wk = Date.now() - 7 * 24 * 3600 * 1000;
       const week = FEED.filter(x => new Date(x.created_at || Date.now()).getTime() >= wk).length;
-      $('#total-feedback').textContent = total;
-      $('#avg-rating').textContent = avg.toFixed(1);
-      $('#this-week').textContent = week;
-
-      const course = $('#filter-course').value || '';
-      const list = $('#feedback-list');
-      list.innerHTML = '';
+      $('#total-feedback').textContent = total; $('#avg-rating').textContent = avg.toFixed(1); $('#this-week').textContent = week;
+      const course = $('#filter-course').value || ''; const list = $('#feedback-list'); list.innerHTML = '';
       const items = FEED.filter(x => !course || x.course === course);
       if (!items.length) { list.innerHTML = '<div class="muted">No feedback yet.</div>'; return; }
       items.forEach(it => {
         const card = document.createElement('div'); card.className = 'wrap';
         card.innerHTML = `<div class="row" style="justify-content:space-between;">
-          <div class="muted">${(it.course || 'General')} • ${(it.type || 'General')}</div>
-          <div>${it.rating ? `★ ${it.rating}/5` : ''}</div></div>
+            <div class="muted">${(it.course || 'General')} • ${(it.type || 'General')}</div>
+            <div>${it.rating ? `★ ${it.rating}/5` : ''}</div>
+          </div>
           <div style="margin-top:6px;">${(it.text || '')}</div>
           <div class="muted" style="margin-top:6px;font-size:.85rem;">${it.created_at ? new Date(it.created_at).toLocaleString() : ''}</div>`;
         list.append(card);
@@ -1191,44 +571,34 @@
     }
     $('#filter-course')?.addEventListener('change', renderFeedback);
 
-    /* ===== schedule self-service ===== */
+    // Schedule (self)
     async function loadSchedule() {
       if (!currentUser || currentUser.kind !== 'staff') return;
-      const tBody = $('#schedule-body'); if (!tBody) return;
       $('#schedule-panel').style.display = 'block';
-      tBody.innerHTML = '<tr><td colspan="7" class="muted">Loading…</td></tr>';
+      const body = $('#schedule-body'); body.innerHTML = '<tr><td colspan="7" class="muted">Loading…</td></tr>';
       try {
         const r = await fetch(`/api/staff/${currentUser.nuid}/schedule`, { headers: headers() });
-        const rows = await r.json();
-        if (!r.ok) throw new Error(rows.error || 'Failed');
-        renderSchedule(rows || []);
-      } catch (e) {
-        $('#schedule-panel').style.display = 'none';
-        alertUI(e.message, false);
-      }
+        const rows = await r.json(); if (!r.ok) throw new Error(rows.error || 'Failed'); renderSchedule(rows || []);
+      } catch (e) { $('#schedule-panel').style.display = 'none'; alertUI(e.message, false); }
     }
     function renderSchedule(rows) {
-      const tBody = $('#schedule-body'); tBody.innerHTML = '';
-      if (!rows.length) { tBody.innerHTML = '<tr><td colspan="7" class="muted">No entries</td></tr>'; return; }
+      const body = $('#schedule-body'); body.innerHTML = '';
+      if (!rows.length) { body.innerHTML = '<tr><td colspan="7" class="muted">No entries</td></tr>'; return; }
       rows.forEach(r => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${r.type === 'office_hour' ? 'Office Hour' : 'Lab Time'}</td>
-          <td>${r.day}</td>
-          <td>${r.start_time}</td>
-          <td>${r.end_time}</td>
-          <td>${r.location || ''}</td>
-          <td>${r.course || ''}</td>
-          <td><button class="btn btn-muted" data-del="${r.id}">Delete</button></td>`;
-        tBody.append(tr);
+        tr.innerHTML = `<td>${r.type === 'office_hour' ? 'Office Hour' : 'Lab Time'}</td>
+          <td>${r.day}</td><td>${r.start_time}</td><td>${r.end_time}</td>
+          <td>${r.location || ''}</td><td>${r.course || ''}</td>
+          <td><button class="btn" style="background:#e5e7eb;color:#111" data-del="${r.id}">Delete</button></td>`;
+        body.append(tr);
       });
-      tBody.querySelectorAll('button[data-del]').forEach(b => {
+      body.querySelectorAll('button[data-del]').forEach(b => {
         b.onclick = async () => {
           const id = b.getAttribute('data-del');
           if (!confirm('Delete this entry?')) return;
           try {
             const r = await fetch(`/api/staff/me/schedule/${id}`, { method: 'DELETE', headers: headers() });
-            if (!r.ok) throw new Error((await r.json()).error || 'Delete failed');
+            const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Delete failed');
             await loadSchedule(); alertUI('Entry deleted.');
           } catch (e) { alertUI(e.message, false); }
         };
@@ -1240,14 +610,13 @@
       if (!type || !day || !start || !end) return alertUI('Type, day, start and end are required.', false);
       try {
         const r = await fetch('/api/staff/me/schedule', { method: 'POST', headers: headers(), body: JSON.stringify({ type, day, start, end, location, course }) });
-        const j = await r.json();
-        if (!r.ok) throw new Error(j.error || 'Add failed');
+        const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Add failed');
         ['#sc-start', '#sc-end', '#sc-location', '#sc-course'].forEach(sel => $(sel).value = '');
         await loadSchedule(); alertUI('Entry added.');
       } catch (e) { alertUI(e.message, false); }
     });
 
-    /* ===== SL panels ===== */
+    // SL bits
     function showSL(is) { $('#admin-pending').style.display = is ? 'block' : 'none'; $('#admin-add-staff').style.display = is ? 'block' : 'none'; }
     async function loadPending() {
       try {
@@ -1259,7 +628,7 @@
           <div class="row wrap" style="align-items:center;justify-content:space-between;">
             <div><b>${x.name}</b> — ${x.email} ${x.nuid ? `(${x.nuid})` : ''} ${x.class_year ? `• ${x.class_year}` : ''}</div>
             <div class="row" style="gap:8px;">
-              <button class="btn btn-muted" data-a="reject" data-id="${x.id}">Reject</button>
+              <button class="btn" style="background:#e5e7eb;color:#111" data-a="reject" data-id="${x.id}">Reject</button>
               <button class="btn" data-a="approve" data-id="${x.id}">Approve</button>
             </div>
           </div>`).join('');
@@ -1275,39 +644,13 @@
       } catch (e) { alertUI(e.message, false); }
     }
 
-    $('#btn-add-staff')?.addEventListener('click', async () => {
-      const nuid = $('#st-nuid').value.trim(), name = $('#st-name').value.trim(),
-        role = $('#st-role').value.trim(), email = $('#st-email').value.trim().toLowerCase(),
-        password = $('#st-pass').value, courses = ($('#st-courses').value || '').split(',').map(s => s.trim()).filter(Boolean);
-      if (!nuid || !name || !role) return alertUI('NUID, name, and role are required.', false);
-      if (email && !isHuskers(email)) return alertUI('Staff email must be @huskers.unl.edu', false);
-      try {
-        const r = await fetch('/api/staff', { method: 'POST', headers: headers(), body: JSON.stringify({ nuid, name, role, email: email || null, password: password || null, courses }) });
-        const j = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(j.error || 'Add staff failed');
-        alertUI('Staff added.');['#st-nuid', '#st-name', '#st-email', '#st-pass', '#st-courses'].forEach(sel => $(sel).value = '');
-      } catch (e) { alertUI(e.message, false); }
-    });
-
-    /* ===== tab nav ===== */
-    $$('.chip').forEach(btn => {
-      btn.addEventListener('click', () => showTab(btn.dataset.tab));
-    });
-
-    /* ===== init ===== */
-    window.addEventListener('DOMContentLoaded', async () => {
+    // Initial load: force logged-out + Feedback tab, and prefetch public feedback list
+    window.addEventListener('DOMContentLoaded', () => {
+      localStorage.removeItem('authToken'); localStorage.removeItem('user');
+      authToken = null; currentUser = null;
       refreshTopBar();
       showTab('feedback');
-      await loadFeedback();
-      if (authToken && currentUser) {
-        if (currentUser.kind === 'staff') {
-          await loadSchedule();
-          const isSL = currentUser.role === 'SL';
-          showSL(isSL);
-          if (isSL) loadPending();
-        }
-        showTab('dashboard');
-      }
+      loadFeedback();
     });
   </script>
 </body>
