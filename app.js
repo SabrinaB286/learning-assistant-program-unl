@@ -13,33 +13,21 @@ app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
-// Health for Render
 app.get('/healthz', (_req, res) => res.type('text').send('ok'));
 
-// Mount routes but don't crash if a file is missing
+// routes
 function mount(prefix, modPath) {
-  try {
-    app.use(prefix, require(modPath));
-    console.log('[mount]', prefix, '->', modPath);
-  } catch (e) {
-    console.warn('[mount skipped]', prefix, '->', modPath, '-', e.message);
-  }
+  try { app.use(prefix, require(modPath)); console.log('[mount]', prefix, '->', modPath); }
+  catch (e) { console.warn('[mount skipped]', prefix, '->', modPath, '-', e.message); }
 }
+mount('/api/staff',    './routes/staff');
+mount('/api/auth',     './routes/auth');      // keep your existing auth routes
+mount('/api/feedback', './routes/feedback');  // keep your existing feedback routes
 
-mount('/api/auth', './routes/auth');          // should exist in your repo
-mount('/api/feedback', './routes/feedback');  // should exist in your repo
-mount('/api/staff', './routes/staff');        // you updated this one
-
-// Serve the frontend (adjust folder name if needed)
+// static site
 const FE_DIR = path.join(__dirname, 'feedback');
 app.use('/', express.static(FE_DIR, { extensions: ['html'] }));
-
-// SPA fallback
-app.get('*', (req, res) => {
-  res.sendFile(path.join(FE_DIR, 'index.html'));
-});
+app.get('*', (req, res) => res.sendFile(path.join(FE_DIR, 'index.html')));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log('server listening on', PORT);
-});
+app.listen(PORT, '0.0.0.0', () => console.log('server listening on', PORT));

@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>UNL Learning Assistant Feedback</title>
 
-  <!-- All styles live ONLY inside this one <style> -->
   <style>
     :root {
       --unl-red: #d00000;
@@ -377,6 +376,7 @@
         <div id="feedback-list" style="margin-top:12px;"></div>
       </div>
 
+      <!-- My Schedule (self-service) -->
       <div class="wrap" id="schedule-panel" style="margin-top:16px;display:none;">
         <h3 style="margin:0">My Schedule</h3>
         <div class="grid" style="grid-template-columns: repeat(6,minmax(0,1fr)); gap:10px; margin-top:12px;">
@@ -415,6 +415,7 @@
         </table>
       </div>
 
+      <!-- SL-only: Pending + Add staff -->
       <div class="wrap" id="admin-pending" style="margin-top:16px;display:none;">
         <h3 style="margin:0">Pending student signups</h3>
         <div id="pending-rows" style="margin-top:10px;"></div>
@@ -422,6 +423,7 @@
 
       <div class="wrap" id="admin-add-staff" style="margin-top:16px;display:none;">
         <h3 style="margin:0">Add staff</h3>
+
         <div class="grid" style="grid-template-columns: repeat(2,minmax(0,1fr)); margin-top:10px;">
           <div><label>NUID</label><input id="st-nuid" type="text" placeholder="e.g., 12345678"></div>
           <div><label>Name</label><input id="st-name" type="text" placeholder="Full name"></div>
@@ -432,16 +434,26 @@
             </select></div>
           <div><label>Email (optional, @huskers.unl.edu)</label><input id="st-email" type="email"
               placeholder="user@huskers.unl.edu"></div>
-          <div><label>Temp password (optional)</label><input id="st-pass" type="password"></div>
-          <div><label>Courses (comma-separated)</label><input id="st-courses" type="text"
-              placeholder="CSCE 155A, CSCE 156"></div>
+          <div><label>Temp password (optional)</label><input id="st-pass" type="password"
+              placeholder="If blank, default is used"></div>
+          <div></div>
         </div>
-        <button id="btn-add-staff" class="btn" style="margin-top:10px;">Add staff</button>
+
+        <div style="margin-top:10px;">
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <label style="margin:0">Courses</label>
+            <button id="st-add-course" class="btn" type="button" style="background:#e5e7eb;color:#111">+ Add
+              course</button>
+          </div>
+          <div id="st-courses-wrap" class="grid"
+            style="grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:10px;"></div>
+        </div>
+
+        <button id="btn-add-staff" class="btn" style="margin-top:14px;">Add staff</button>
       </div>
     </section>
   </div>
 
-  <!-- App script -->
   <script>
     // Always start logged out (no auto-restore)
     let authToken = null;
@@ -451,6 +463,13 @@
     const $$ = s => Array.from(document.querySelectorAll(s));
     const HUSKERS_RE = /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i;
     const headers = () => authToken ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken } : { 'Content-Type': 'application/json' };
+    const isHuskers = e => HUSKERS_RE.test((e || '').trim());
+    const courseOptions = () => `
+      <option value="">Select a course</option>
+      <option>CSCE 101</option><option>CSCE 155A</option><option>CSCE 155E</option>
+      <option>CSCE 155H</option><option>CSCE 155N</option><option>CSCE 156</option>
+      <option>CSCE 231</option><option>CSCE 235</option><option>CSCE 310</option>
+    `;
 
     function alertUI(msg, ok = true) {
       const box = document.createElement('div');
@@ -458,7 +477,6 @@
       box.textContent = msg; $('#alerts').prepend(box);
       setTimeout(() => box.remove(), 4500);
     }
-    function isHuskers(e) { return HUSKERS_RE.test((e || '').trim()); }
 
     function showTab(name) {
       ['feedback', 'login', 'dashboard'].forEach(id => {
@@ -468,7 +486,10 @@
       [['feedback', 'nav-feedback'], ['login', 'nav-login'], ['dashboard', 'nav-dashboard']].forEach(([t, btnId]) => {
         const btn = $('#' + btnId); if (btn) btn.classList.toggle('active', t === name);
       });
-      if (name === 'dashboard' && authToken && currentUser) { loadFeedback(); if (currentUser.kind === 'staff') { loadSchedule(); const isSL = currentUser.role === 'SL'; showSL(isSL); if (isSL) loadPending(); } }
+      if (name === 'dashboard' && authToken && currentUser) {
+        loadFeedback();
+        if (currentUser.kind === 'staff') { loadSchedule(); const isSL = currentUser.role === 'SL'; showSL(isSL); if (isSL) loadPending(); }
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     function refreshTopBar() {
@@ -588,7 +609,7 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${r.type === 'office_hour' ? 'Office Hour' : 'Lab Time'}</td>
           <td>${r.day}</td><td>${r.start_time}</td><td>${r.end_time}</td>
-          <td>${r.location || ''}</td><td>${r.course || ''}</td>
+          <td>${r.location || ''}</td><td>${r.course_code || r.course || ''}</td>
           <td><button class="btn" style="background:#e5e7eb;color:#111" data-del="${r.id}">Delete</button></td>`;
         body.append(tr);
       });
@@ -609,14 +630,55 @@
         location = $('#sc-location').value.trim(), course = $('#sc-course').value.trim();
       if (!type || !day || !start || !end) return alertUI('Type, day, start and end are required.', false);
       try {
-        const r = await fetch('/api/staff/me/schedule', { method: 'POST', headers: headers(), body: JSON.stringify({ type, day, start, end, location, course }) });
+        const r = await fetch('/api/staff/me/schedule', { method: 'POST', headers: headers(), body: JSON.stringify({ type, day, start: end ? start : start, end, location, course }) });
         const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Add failed');
         ['#sc-start', '#sc-end', '#sc-location', '#sc-course'].forEach(sel => $(sel).value = '');
         await loadSchedule(); alertUI('Entry added.');
       } catch (e) { alertUI(e.message, false); }
     });
 
-    // SL bits
+    // --- Add staff panel (dynamic courses + submit) ---
+    function addCourseRow(defaultValue = '') {
+      const row = document.createElement('div'); row.className = 'row'; row.style.gap = '8px';
+      const sel = document.createElement('select'); sel.innerHTML = courseOptions(); if (defaultValue) sel.value = defaultValue; sel.style.flex = '1 1 auto';
+      const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'btn'; rm.style.background = '#e5e7eb'; rm.style.color = '#111'; rm.textContent = 'Remove'; rm.onclick = () => row.parentElement.remove();
+      const holder = document.createElement('div'); holder.style.gridColumn = 'span 2';
+      row.append(sel, rm); holder.append(row); $('#st-courses-wrap').append(holder);
+    }
+    $('#st-add-course')?.addEventListener('click', () => addCourseRow());
+    // Seed one row when the panel first appears
+    const seedObs = new MutationObserver(() => {
+      const wrap = $('#st-courses-wrap');
+      const panel = $('#admin-add-staff');
+      if (panel && wrap && panel.style.display !== 'none' && !wrap.dataset.seeded) {
+        wrap.dataset.seeded = '1'; if (!wrap.children.length) addCourseRow();
+      }
+    });
+    seedObs.observe(document.body, { childList: true, subtree: true });
+
+    $('#btn-add-staff')?.addEventListener('click', async () => {
+      if (!currentUser || currentUser.role !== 'SL') return alertUI('Only SL can add staff.', false);
+      const nuid = $('#st-nuid').value.trim(), name = $('#st-name').value.trim(), role = $('#st-role').value.trim(),
+        email = $('#st-email').value.trim(), temp_password = $('#st-pass').value;
+      if (!nuid || !/^\d{7,9}$/.test(nuid)) return alertUI('Enter a valid NUID (7–9 digits).', false);
+      if (!name) return alertUI('Name is required.', false);
+      if (email && !isHuskers(email)) return alertUI('Email must be @huskers.unl.edu', false);
+
+      const courses = Array.from(document.querySelectorAll('#st-courses-wrap select')).map(s => (s.value || '').trim()).filter(Boolean);
+      if (!courses.length) return alertUI('Add at least one course.', false);
+
+      const btn = $('#btn-add-staff'); const label = btn.textContent; btn.disabled = true; btn.textContent = 'Adding…';
+      try {
+        const r = await fetch('/api/staff', { method: 'POST', headers: headers(), body: JSON.stringify({ nuid, name, role, email: email || null, temp_password: temp_password || null, courses }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || 'Failed to add staff');
+        alertUI('Staff added successfully.');
+        ['#st-nuid', '#st-name', '#st-email', '#st-pass'].forEach(sel => $(sel).value = '');
+        $('#st-role').value = 'LA'; $('#st-courses-wrap').innerHTML = ''; addCourseRow();
+      } catch (e) { alertUI(e.message, false); } finally { btn.disabled = false; btn.textContent = label; }
+    });
+
+    // SL panels toggle
     function showSL(is) { $('#admin-pending').style.display = is ? 'block' : 'none'; $('#admin-add-staff').style.display = is ? 'block' : 'none'; }
     async function loadPending() {
       try {
@@ -644,7 +706,7 @@
       } catch (e) { alertUI(e.message, false); }
     }
 
-    // Initial load: force logged-out + Feedback tab, and prefetch public feedback list
+    // Initial load
     window.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem('authToken'); localStorage.removeItem('user');
       authToken = null; currentUser = null;
