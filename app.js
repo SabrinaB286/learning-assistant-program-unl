@@ -1,44 +1,45 @@
+// app.js
 'use strict';
-
 const express = require('express');
 const path = require('path');
-const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
+const cors = require('cors');
 
 const app = express();
-
-/* ---------- Security & core middleware ---------- */
-app.set('trust proxy', 1);
-app.use(helmet({
-  contentSecurityPolicy: false // keep simple for now; tighten later if you want
-}));
-app.use(express.json({ limit: '200kb' }));
+app.disable('x-powered-by');
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(compression());
 app.use(cors());
+app.use(express.json({ limit: '1mb' }));
 
-/* ---------- Static frontend ---------- */
-app.use(express.static(path.join(__dirname, 'feedback')));
+// Health for Render
+app.get('/healthz', (_req, res) => res.type('text').send('ok'));
 
-/* ---------- API routes ---------- */
-app.use('/api/auth', require('./routes/auth'));        // NEW
-app.use('/api/staff', require('./routes/staff'));
-app.use('/api/feedback', require('./routes/feedback'));
+// Mount routes but don't crash if a file is missing
+function mount(prefix, modPath) {
+  try {
+    app.use(prefix, require(modPath));
+    console.log('[mount]', prefix, '->', modPath);
+  } catch (e) {
+    console.warn('[mount skipped]', prefix, '->', modPath, '-', e.message);
+  }
+}
 
+mount('/api/auth', './routes/auth');          // should exist in your repo
+mount('/api/feedback', './routes/feedback');  // should exist in your repo
+mount('/api/staff', './routes/staff');        // you updated this one
 
-/* ---------- Health check ---------- */
-app.get('/healthz', (_req, res) => res.send('ok'));
+// Serve the frontend (adjust folder name if needed)
+const FE_DIR = path.join(__dirname, 'feedback');
+app.use('/', express.static(FE_DIR, { extensions: ['html'] }));
 
-/* ---------- SPA fallback (Express 5 safe) ---------- */
-app.get(/.*/, (req, res, next) => {
-  if (req.path.startsWith('/api/')) return next();
-  res.sendFile(path.join(__dirname, 'feedback', 'index.html'));
+// SPA fallback
+app.get('*', (req, res) => {
+  res.sendFile(path.join(FE_DIR, 'index.html'));
 });
 
-/* ---------- Error handler ---------- */
-app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(500).json({ error: 'Internal Server Error' });
-});
-
-/* ---------- Start ---------- */
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server listening on :${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('server listening on', PORT);
+});
