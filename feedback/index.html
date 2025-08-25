@@ -572,13 +572,16 @@
 
       /* ========= init ========= */
       window.addEventListener('DOMContentLoaded', async () => {
-        // Do NOT auto-navigate to dashboard even if a token exists
-        refreshTopBar();
-        // default tab is feedback
-        showTab('feedback');
-        // always load feedback data (used by dashboard stats)
-        loadFeedback();
-      });
+          // Force a clean state on initial load (never start logged in)
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('user');
+          authToken = null;
+          currentUser = null;
+
+          refreshTopBar();          // hides Logout and Dashboard tab
+          showTab('feedback');      // land on Feedback
+          loadFeedback();           // stats refresh if you later open Dashboard
+        });
     </script>
   </body>
   
@@ -1052,8 +1055,8 @@
     const $$ = sel => Array.from(document.querySelectorAll(sel));
     const HUSKERS_RE = /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i;
     function isHuskers(e) { return HUSKERS_RE.test((e || '').trim()); }
-    let authToken = localStorage.getItem('authToken') || null;
-    let currentUser = null; try { currentUser = JSON.parse(localStorage.getItem('user') || 'null'); } catch { }
+    let authToken = null;
+    let currentUser = null;
     const headers = () => authToken ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken } : { 'Content-Type': 'application/json' };
     function alertUI(msg, ok = true) {
       const box = document.createElement('div');
