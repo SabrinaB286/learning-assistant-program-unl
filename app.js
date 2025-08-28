@@ -20,8 +20,9 @@ function mount(prefix, modPath) {
   try { app.use(prefix, require(modPath)); console.log('[mount]', prefix, '->', modPath); }
   catch (e) { console.warn('[mount skipped]', prefix, '->', modPath, '-', e.message); }
 }
-mount('/api/staff',    './routes/staff');
-mount('/api/auth',     './routes/auth');      // keep your existing auth routes
+mount('/api/staff', './routes/staff');
+mount('/api/auth', './routes/auth');      // keep your existing auth routes
+mount('/api/auth', './routes/password');
 mount('/api/feedback', './routes/feedback');  // keep your existing feedback routes
 
 // static site
