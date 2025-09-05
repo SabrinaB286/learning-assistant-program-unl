@@ -2,9 +2,9 @@
   "name": "lap-feedback-backend",
   "version": "1.1.1",
   "type": "module",
-  "main": "src/app.js",
+  "main": "app.js",
   "scripts": {
-    "start": "node src/app.js",
+    "start": "node app.js",
     "build": "echo \"no build step\""
   },
   "dependencies": {

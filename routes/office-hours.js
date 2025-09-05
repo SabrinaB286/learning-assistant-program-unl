@@ -1,4 +1,3 @@
-// src/routes/office-hours.js
 import { Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
 
@@ -10,14 +9,11 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
-// GET /api/schedule/office-hours  -> JSON list
 router.get('/office-hours', async (_req, res) => {
   try {
-    // Preferred: call SQL function if present
     let { data, error } = await supabase.rpc('get_office_hours');
 
     if (error && /does not exist/i.test(error.message)) {
-      // Fallback: direct table join if function isn't created yet
       const { data: sched, error: e1 } = await supabase
         .from('staff_schedules')
         .select('id,nuid,type,day,start_time,end_time,location,course_code')
