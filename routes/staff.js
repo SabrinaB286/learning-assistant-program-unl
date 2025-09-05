@@ -1,131 +1,67 @@
 // routes/staff.js
-'use strict';
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { supabase } = require('../lib/supabase');
+const { createClient } = require('@supabase/supabase-js');
+const requireAuth = require('../middleware/auth');
+const { requireRole } = require('../middleware/auth');
 
 const router = express.Router();
-const APP_JWT_SECRET = process.env.APP_JWT_SECRET || 'dev-secret';
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// --- auth helpers ---
-function requireAuth(req, res, next) {
-  const h = req.headers.authorization || '';
-  const token = h.startsWith('Bearer ') ? h.slice(7) : null;
-  if (!token) return res.status(401).json({ error: 'Missing token' });
+// GET /api/staff/me
+router.get('/me', requireAuth, async (req, res) => {
   try {
-    req.user = jwt.verify(token, APP_JWT_SECRET);
-    next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-}
-function requireSL(req, res, next) {
-  if (req.user?.role !== 'SL') return res.status(403).json({ error: 'SL only' });
-  next();
-}
-
-// --- POST /api/staff : create staff + map courses (SL only) ---
-router.post('/', requireAuth, requireSL, async (req, res) => {
-  const { nuid, name, role, email, temp_password, courses } = req.body || {};
-  if (!nuid || !name || !role || !Array.isArray(courses) || !courses.length) {
-    return res.status(400).json({ error: 'nuid, name, role, courses required' });
-  }
-  if (email && !/@huskers\.unl\.edu$/i.test(email)) {
-    return res.status(400).json({ error: 'Email must be @huskers.unl.edu' });
-  }
-
-  const pwd = temp_password && String(temp_password).length >= 6 ? String(temp_password) : 'ChangeMe!2025';
-  const password_hash = await bcrypt.hash(pwd, 10);
-
-  // 1) upsert staff
-  {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('staff')
-      .upsert([{ nuid, name, role, email: email || null, password_hash }], { onConflict: 'nuid' });
-    if (error) return res.status(500).json({ error: 'staff upsert failed: ' + error.message });
+      .select('nuid, name, role, email')
+      .eq('nuid', req.user.nuid)
+      .limit(1);
+    if (error) throw error;
+    res.json(data?.[0] || null);
+  } catch (e) {
+    console.error('[staff/me]', e);
+    res.status(500).json({ error: 'Failed to load profile' });
   }
-
-  // 2) upsert courses table (creates if new)
-  const courseRows = courses.map(code => ({ code }));
-  {
-    const { error } = await supabase.from('courses').upsert(courseRows, { onConflict: 'code' });
-    if (error) return res.status(500).json({ error: 'courses upsert failed: ' + error.message });
-  }
-
-  // 3) map staff_courses
-  const mapRows = courses.map(code => ({ nuid, course_code: code }));
-  {
-    const { error } = await supabase.from('staff_courses').upsert(mapRows, { onConflict: 'nuid,course_code' });
-    if (error) return res.status(500).json({ error: 'staff_courses upsert failed: ' + error.message });
-  }
-
-  return res.json({ ok: true });
 });
 
-// --- GET /api/staff/:nuid/schedule : read schedule entries for a staff member ---
-router.get('/:nuid/schedule', requireAuth, async (req, res) => {
-  const { nuid } = req.params;
-  if (!nuid) return res.status(400).json({ error: 'nuid required' });
-  const { data, error } = await supabase
-    .from('staff_schedules')
-    .select('*')
-    .eq('nuid', nuid)
-    .order('day', { ascending: true })
-    .order('start_time', { ascending: true });
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data || []);
-});
-
-// --- POST /api/staff/me/schedule : create schedule for the logged-in staff ---
-router.post('/me/schedule', requireAuth, async (req, res) => {
-  const u = req.user;
-  if (u.kind !== 'staff') return res.status(403).json({ error: 'staff only' });
-
-  const { type, day, start, end, location, course } = req.body || {};
-  if (!type || !day || !start || !end) return res.status(400).json({ error: 'type, day, start, end required' });
-
-  // ensure course exists if provided
-  if (course) {
-    const { error: cErr } = await supabase.from('courses').upsert([{ code: course }], { onConflict: 'code' });
-    if (cErr) return res.status(500).json({ error: 'course upsert failed: ' + cErr.message });
+// GET /api/staff/me/schedule
+router.get('/me/schedule', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('staff_schedules')
+      .select('day_of_week, start_time, end_time, location, schedule_type, nuid')
+      .eq('nuid', req.user.nuid);
+    if (error) throw error;
+    res.json(data || []);
+  } catch (e) {
+    console.error('[staff/me/schedule]', e);
+    res.status(500).json({ error: 'Failed to load schedule' });
   }
-
-  const payload = {
-    nuid: u.nuid,
-    type,
-    day,
-    start_time: start,
-    end_time: end,
-    location: location || null,
-    course_code: course || null
-  };
-
-  const { data, error } = await supabase.from('staff_schedules').insert([payload]).select().single();
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
 });
 
-// --- DELETE /api/staff/me/schedule/:id : delete one entry owned by the user ---
-router.delete('/me/schedule/:id', requireAuth, async (req, res) => {
-  const u = req.user;
-  if (u.kind !== 'staff') return res.status(403).json({ error: 'staff only' });
+// POST /api/staff/schedule  (SL can add for anyone; others only for themselves)
+router.post('/schedule', requireAuth, async (req, res) => {
+  try {
+    const { nuid, day_of_week, start_time, end_time, location, schedule_type } = req.body || {};
+    const target = nuid || req.user.nuid;
 
-  const id = Number(req.params.id);
-  if (!id) return res.status(400).json({ error: 'id required' });
+    if (target !== req.user.nuid && req.user.role !== 'SL') {
+      return res.status(403).json({ error: 'Only SL can edit other schedules' });
+    }
+    if (!day_of_week || !start_time || !end_time || !location || !schedule_type) {
+      return res.status(400).json({ error: 'Missing fields' });
+    }
 
-  // ensure the row belongs to the user
-  const { data: row, error: gErr } = await supabase
-    .from('staff_schedules')
-    .select('id,nuid')
-    .eq('id', id)
-    .single();
-  if (gErr) return res.status(404).json({ error: 'schedule not found' });
-  if (row.nuid !== u.nuid) return res.status(403).json({ error: 'forbidden' });
-
-  const { error } = await supabase.from('staff_schedules').delete().eq('id', id);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ ok: true });
+    const { data, error } = await supabase
+      .from('staff_schedules')
+      .insert([{ nuid: target, day_of_week, start_time, end_time, location, schedule_type }])
+      .select('*')
+      .limit(1);
+    if (error) throw error;
+    res.json({ ok: true, schedule: data?.[0] || null });
+  } catch (e) {
+    console.error('[staff/schedule]', e);
+    res.status(500).json({ error: 'Failed to save schedule' });
+  }
 });
 
 module.exports = router;

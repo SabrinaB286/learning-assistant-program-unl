@@ -1,50 +1,38 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UNL Learning Assistant Feedback</title>
+  <meta charset="utf-8" />
+  <title>Learning Assistant Feedback</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
       --unl-red: #d00000;
-      --unl-red-dark: #9b0000;
-      --ink: #1f2937;
-      --muted: #6b7280;
-      --bg: #f6f7fb;
-      --card: #ffffff;
-      --ring: #e5e7eb
-    }
-
-    * {
-      box-sizing: border-box
+      --ink: #111;
+      --muted: #555;
+      --card: #fff;
+      --bg: #f4f5f7;
     }
 
     body {
       margin: 0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', 'Noto Sans', Arial;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, Noto Sans, sans-serif;
       color: var(--ink);
-      background: var(--bg)
-    }
-
-    a {
-      color: var(--unl-red);
-      text-decoration: none
-    }
-
-    .shell {
-      max-width: 1100px;
-      margin: 24px auto;
-      padding: 0 16px
+      background: var(--bg);
     }
 
     .topbar {
       position: sticky;
       top: 0;
       z-index: 40;
-      background: linear-gradient(135deg, var(--unl-red), var(--unl-red-dark));
+      background: linear-gradient(135deg, var(--unl-red), #a20000);
       color: #fff;
-      padding: 14px
+    }
+
+    .shell {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px 16px;
     }
 
     .brand {
@@ -52,20 +40,16 @@
       letter-spacing: .3px
     }
 
-    .sub {
-      opacity: .85;
-      font-size: .95rem
-    }
-
-    .nav {
+    nav {
       display: flex;
       gap: 10px;
-      margin: 14px 0 0;
-      flex-wrap: wrap
+      align-items: center;
+      margin-top: 8px
     }
 
-    .chip {
-      border: 1px solid rgba(255, 255, 255, .7);
+    .chip,
+    .btn {
+      border: 1px solid rgba(255, 255, 255, .5);
       background: transparent;
       color: #fff;
       border-radius: 999px;
@@ -75,46 +59,20 @@
 
     .chip.active {
       background: #fff;
-      color: var(--unl-red);
-      border-color: #fff
-    }
-
-    .row {
-      display: flex;
-      gap: 10px;
-      align-items: center
-    }
-
-    .push {
-      margin-left: auto
-    }
-
-    .btn {
-      background: var(--unl-red);
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 14px;
-      cursor: pointer
-    }
-
-    .btn:hover {
-      filter: brightness(.95)
-    }
-
-    .btn-ghost {
-      background: #fff;
-      color: var(--unl-red);
-      border: 1px solid var(--unl-red)
+      color: var(--unl-red)
     }
 
     .wrap {
       background: var(--card);
-      border: 1px solid var(--ring);
+      border: 1px solid #e6e6e6;
       border-radius: 14px;
       padding: 18px;
-      margin-top: 16px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, .06)
+      margin: 18px 0;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, .04)
+    }
+
+    .muted {
+      color: var(--muted)
     }
 
     .grid {
@@ -126,474 +84,97 @@
       grid-template-columns: repeat(3, minmax(0, 1fr))
     }
 
-    .stat {
-      background: var(--card);
-      border: 1px solid var(--ring);
-      border-radius: 12px;
-      padding: 16px
-    }
-
-    .stat .n {
-      font-size: 2rem;
-      font-weight: 800
-    }
-
-    label {
-      font-weight: 600;
-      margin-bottom: 6px;
-      display: block
-    }
-
-    input,
-    select,
-    textarea {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid var(--ring);
-      border-radius: 10px;
-      background: #fff
-    }
-
-    textarea {
-      min-height: 110px
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse
-    }
-
-    th,
-    td {
-      padding: 10px;
-      border-bottom: 1px solid var(--ring);
-      text-align: left;
-      font-size: .95rem
-    }
-
-    th {
-      color: var(--muted);
-      font-weight: 700
-    }
-
-    .muted {
-      color: var(--muted)
+    .btn-danger {
+      background: var(--unl-red);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
     }
 
     .hidden {
       display: none !important
     }
 
-    .alert {
-      padding: 12px 14px;
-      border-radius: 10px;
-      margin: 12px 0;
-      font-weight: 600
-    }
-
-    .alert-success {
-      background: #ecfdf5;
-      color: #065f46;
-      border: 1px solid #a7f3d0
-    }
-
-    .alert-error {
-      background: #fff1f2;
-      color: #9f1239;
-      border: 1px solid #fecdd3
-    }
-
     .badge {
       display: inline-block;
       background: #fff;
       color: var(--unl-red);
+      border: 1px solid rgba(255, 255, 255, .5);
+      border-radius: 999px;
       padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, .7)
+      margin-left: auto
     }
 
-    .pillbar {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap
-    }
-
-    .pill {
-      border: 1px solid var(--ring);
-      background: #fff;
-      color: var(--ink);
-      border-radius: 999px;
-      padding: 6px 12px;
-      cursor: pointer
-    }
-
-    .pill.active {
-      background: var(--unl-red);
-      color: #fff;
-      border-color: var(--unl-red)
-    }
-
-    .oh-group {
-      margin-top: 14px
-    }
-
-    .oh-title {
-      font-weight: 800;
-      margin: 0 0 6px
-    }
-
-    .oh-card {
-      border: 1px solid var(--ring);
-      border-radius: 12px;
-      padding: 10px;
-      margin: 6px 0;
-      background: #fff
-    }
-
-    .oh-meta {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      color: var(--muted);
-      font-size: .9rem
-    }
-
-    .modal-veil {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, .35);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px
-    }
-
-    .modal {
-      max-width: 520px;
+    input,
+    select {
       width: 100%;
-      background: #fff;
-      border-radius: 14px;
-      border: 1px solid var(--ring);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, .2);
-      padding: 18px
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
     }
   </style>
-
-  <!-- API base (edit here if UI and API are on different hosts) -->
-  <script src="/public/config.js"></script>
-  
 </head>
 
 <body>
-  <div class="topbar">
+  <header class="topbar">
     <div class="shell">
-      <div class="row">
-        <div>
-          <div class="brand">Learning Assistant Feedback</div>
-          <div class="sub">Computer Science &amp; Engineering – University of Nebraska–Lincoln</div>
-        </div>
-        <div class="push row" id="who-bar" style="gap:8px;display:none;">
-          <span id="who-name" class="badge"></span>
-          <button id="pwd-open" class="btn btn-ghost">Change password</button>
-          <button id="logout-btn" class="btn btn-ghost">Log out</button>
-        </div>
-      </div>
-      <div class="nav">
-        <button id="nav-feedback" class="chip active" data-tab="feedback">Feedback</button>
-        <button id="nav-hours" class="chip" data-tab="hours">Office Hours</button>
-        <button id="nav-login" class="chip" data-tab="login">Login</button>
-        <button id="nav-dashboard" class="chip" data-tab="dashboard" style="display:none;">Dashboard</button>
-      </div>
+      <div class="brand">Learning Assistant Feedback</div>
+      <div class="muted">Computer Science & Engineering – University of Nebraska–Lincoln</div>
+      <nav>
+        <button class="chip" data-route="feedback">Feedback</button>
+        <button class="chip" data-route="hours">Office Hours</button>
+        <button class="chip" data-route="login" id="nav-login">Login</button>
+        <span class="badge hidden" id="user-badge"></span>
+        <button class="chip hidden" id="btn-logout">Log out</button>
+      </nav>
     </div>
-  </div>
+  </header>
 
-  <div class="shell">
-    <div id="alerts"></div>
+  <main class="shell">
+    <div class="wrap hidden" id="alert"></div>
 
-    <!-- FEEDBACK -->
-    <section id="tab-feedback" class="wrap">
-      <h2 style="margin-top:0">Submit Feedback</h2>
-      <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">
+    <section class="wrap" id="view-login">
+      <h2>Sign in</h2>
+      <div class="grid">
         <div>
-          <label for="course">Course</label>
-          <select id="course">
-            <option value="">Select Course</option>
-            <option>CSCE 101</option>
-            <option>CSCE 155A</option>
-            <option>CSCE 155E</option>
-            <option>CSCE 155H</option>
-            <option>CSCE 156</option>
-          </select>
+          <label>NUID or Email</label>
+          <input id="login-id" placeholder="12345678 or user@huskers.unl.edu" autocomplete="username" />
         </div>
         <div>
-          <label for="feedback-type">Type</label>
-          <select id="feedback-type">
-            <option>General</option>
-            <option>Course</option>
-            <option>TA</option>
-          </select>
+          <label>Password</label>
+          <input id="login-pass" type="password" placeholder="Your password" autocomplete="current-password" />
         </div>
       </div>
-
-      <div style="margin-top:10px;">
-        <label>Overall Rating</label>
-        <div id="stars" style="display:flex;gap:6px;font-size:22px;cursor:pointer;">
-          <span data-rating="1">★</span><span data-rating="2">★</span><span data-rating="3">★</span><span
-            data-rating="4">★</span><span data-rating="5">★</span>
-        </div>
-        <input type="hidden" id="rating-value" value="0">
-      </div>
-
-      <div style="margin-top:12px;">
-        <label for="feedback-text">Feedback Details</label>
-        <textarea id="feedback-text" placeholder="Please provide detailed feedback…" required></textarea>
-      </div>
-
-      <div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));margin-top:12px;">
-        <div>
-          <label for="student-name">Your Name (Optional)</label>
-          <input id="student-name" type="text" placeholder="Leave blank to stay anonymous" />
-        </div>
-        <div>
-          <label for="student-year">Academic Year (Optional)</label>
-          <select id="student-year">
-            <option value="">Select Year</option>
-            <option>Freshman</option>
-            <option>Sophomore</option>
-            <option>Junior</option>
-            <option>Senior</option>
-            <option>Graduate</option>
-          </select>
-        </div>
-      </div>
-
-      <button id="btn-submit-feedback" class="btn" style="margin-top:14px;">Submit Feedback</button>
-    </section>
-
-    <!-- OFFICE HOURS -->
-    <section id="tab-hours" class="wrap hidden">
-      <h2 style="margin-top:0">Office Hours</h2>
-      <p class="muted" style="margin-top:0">Browse office hours by course. Data comes from staff schedules.</p>
-      <div class="pillbar" id="oh-filter">
-        <button class="pill active" data-course="">All</button>
-        <button class="pill" data-course="CSCE 101">CSCE 101</button>
-        <button class="pill" data-course="CSCE 155A">CSCE 155A</button>
-        <button class="pill" data-course="CSCE 155E">CSCE 155E</button>
-        <button class="pill" data-course="CSCE 155H">CSCE 155H</button>
-        <button class="pill" data-course="CSCE 156">CSCE 156</button>
-      </div>
-      <div id="hours-body" style="margin-top:12px;"></div>
-    </section>
-
-    <!-- LOGIN -->
-    <section id="tab-login" class="wrap hidden">
-      <h2 style="margin-top:0;text-align:center">Sign in</h2>
-      <div style="max-width:460px;margin:0 auto;">
-        <form id="login-form" onsubmit="return false">
-          <label for="login-id">NUID or Email</label>
-          <input id="login-id" type="text" placeholder="e.g., 12345678 or user@huskers.unl.edu" autocomplete="username">
-          <div style="height:8px"></div>
-          <label for="login-pw">Password</label>
-          <input id="login-pw" type="password" placeholder="Your password" autocomplete="current-password">
-          <button id="btn-login" class="btn" style="width:100%;margin-top:14px;" type="submit">Sign in</button>
-        </form>
-
-        <details style="margin-top:18px;">
-          <summary><b>New student?</b> Create an account</summary>
-          <div style="height:10px"></div>
-          <label for="su-name">Full name</label>
-          <input id="su-name" type="text" placeholder="First Last">
-          <div style="height:8px"></div>
-          <label for="su-email">Email (<code>@huskers.unl.edu</code>)</label>
-          <input id="su-email" type="email" placeholder="you@huskers.unl.edu">
-          <div style="height:8px"></div>
-          <label for="su-nuid">NUID (optional)</label>
-          <input id="su-nuid" type="text" placeholder="e.g., 12345678">
-          <div style="height:8px"></div>
-          <label for="su-pw">Password (min 8)</label>
-          <input id="su-pw" type="password" placeholder="Create a password">
-          <div style="height:8px"></div>
-          <label for="su-year">Class year</label>
-          <select id="su-year">
-            <option value="">Select Year</option>
-            <option>Freshman</option>
-            <option>Sophomore</option>
-            <option>Junior</option>
-            <option>Senior</option>
-            <option>Graduate</option>
-          </select>
-          <div style="height:8px"></div>
-          <label for="su-courses">Courses (comma-separated)</label>
-          <input id="su-courses" type="text" placeholder="CSCE 155A, CSCE 156">
-          <button id="btn-student-signup" class="btn" style="width:100%;margin-top:12px;">Create account</button>
-        </details>
+      <div style="margin-top:12px">
+        <button class="btn-danger" id="btn-login" type="button">Sign in</button>
       </div>
     </section>
 
-    <!-- DASHBOARD (unchanged, trimmed for brevity) -->
-    <section id="tab-dashboard" class="wrap hidden">
-      <h2 style="margin-top:0">Dashboard</h2>
-      <div class="grid g-3">
-        <div class="stat">
-          <div class="n" id="total-feedback">0</div>
-          <div class="muted">Total Feedback</div>
-        </div>
-        <div class="stat">
-          <div class="n" id="avg-rating">0.0</div>
-          <div class="muted">Average Rating</div>
-        </div>
-        <div class="stat">
-          <div class="n" id="this-week">0</div>
-          <div class="muted">This Week</div>
-        </div>
+    <section class="wrap hidden" id="view-hours">
+      <h2>Office Hours</h2>
+      <div class="muted">Browse office hours by course. Data comes from staff schedules.</div>
+      <div style="margin:10px 0">
+        <button class="chip active" data-course="">All</button>
+        <button class="chip" data-course="CSCE 101">CSCE 101</button>
+        <button class="chip" data-course="CSCE 155A">CSCE 155A</button>
+        <button class="chip" data-course="CSCE 155E">CSCE 155E</button>
+        <button class="chip" data-course="CSCE 155H">CSCE 155H</button>
+        <button class="chip" data-course="CSCE 156">CSCE 156</button>
       </div>
-      <div class="wrap" style="margin-top:16px;">
-        <label for="filter-course">Filter by Course</label>
-        <select id="filter-course">
-          <option value="">All Courses</option>
-          <option>CSCE 101</option>
-          <option>CSCE 155A</option>
-          <option>CSCE 155E</option>
-          <option>CSCE 155H</option>
-          <option>CSCE 156</option>
-        </select>
-        <div id="feedback-list" style="margin-top:12px;"></div>
-      </div>
+      <div id="hours-list" class="grid g-3"></div>
     </section>
-  </div>
 
-  <!-- Change password modal -->
-  <div id="pwd-veil" class="modal-veil">
-    <div class="modal">
-      <h3 style="margin:0 0 10px">Change your password</h3>
-      <div><label>Current password</label><input id="pwd-current" type="password" autocomplete="current-password"></div>
-      <div style="margin-top:8px;"><label>New password</label><input id="pwd-new" type="password"
-          autocomplete="new-password"></div>
-      <div style="margin-top:8px;"><label>Confirm</label><input id="pwd-confirm" type="password"
-          autocomplete="new-password"></div>
-      <div class="row" style="justify-content:flex-end;margin-top:12px;">
-        <button id="pwd-cancel" class="btn" style="background:#e5e7eb;color:#111">Cancel</button>
-        <button id="pwd-save" class="btn">Save</button>
-      </div>
-    </div>
-  </div>
+    <section class="wrap hidden" id="view-feedback">
+      <h2>Feedback</h2>
+      <p class="muted">If you host a separate feedback form, link it here or render inline.</p>
+    </section>
+  </main>
 
-  <script>
-    // ---------- helpers ----------
-    const $ = s => document.querySelector(s);
-    const $$ = s => Array.from(document.querySelectorAll(s));
-    function alertUI(msg, ok = true) { const el = document.createElement('div'); el.className = 'alert ' + (ok ? 'alert-success' : 'alert-error'); el.textContent = msg; $('#alerts').prepend(el); setTimeout(() => el.remove(), 4500); }
-
-    // safe JSON reader (prevents "Unexpected token '<'")
-    async function fetchJSON(url, opts = {}) {
-      const res = await fetch(url, opts);
-      const text = await res.text();
-      const ct = (res.headers.get('content-type') || '').toLowerCase();
-
-      if (!res.ok) { console.error('HTTP', res.status, res.statusText, text.slice(0, 200)); throw new Error(`Request failed (${res.status})`); }
-      if (!ct.includes('application/json')) { console.error('Expected JSON, got:', ct, text.slice(0, 120)); throw new Error('Server did not return JSON'); }
-
-      try { return JSON.parse(text); }
-      catch (e) { console.error('Parse error', e, text.slice(0, 200)); throw new Error('Invalid JSON from server'); }
-    }
-
-    // API base & endpoints
-    const API_BASE = window.__API_BASE__ || location.origin;
-    const OFFICE_URL = API_BASE + '/api/schedule/office-hours';
-
-    // ---------- nav & session ----------
-    let authToken = null, currentUser = null;
-    function showTab(name) {
-      ['feedback', 'hours', 'login', 'dashboard'].forEach(id => $('#tab-' + id)?.classList.toggle('hidden', id !== name));
-      [['feedback', 'nav-feedback'], ['hours', 'nav-hours'], ['login', 'nav-login'], ['dashboard', 'nav-dashboard']]
-        .forEach(([t, btn]) => $('#' + btn)?.classList.toggle('active', t === name));
-      if (name === 'hours') loadOfficeHours();
-      if (name === 'dashboard') loadFeedback();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-    function refreshTopBar() {
-      const logged = !!(authToken && currentUser);
-      $('#who-bar').style.display = logged ? 'flex' : 'none';
-      $('#nav-dashboard').style.display = logged ? 'inline-block' : 'none';
-      if (logged) $('#who-name').textContent = `${currentUser.name} (${currentUser.role || currentUser.kind})`;
-    }
-    $('#nav-feedback').onclick = () => showTab('feedback');
-    $('#nav-hours').onclick = () => showTab('hours');
-    $('#nav-login').onclick = () => showTab('login');
-    $('#nav-dashboard').onclick = () => showTab('dashboard');
-
-    // ---------- login (Enter submits) ----------
-    $('#login-form')?.addEventListener('submit', (e) => { e.preventDefault(); doLogin(); });
-    $('#btn-login')?.addEventListener('click', (e) => { e.preventDefault(); doLogin(); });
-    async function doLogin() { /* your existing login handler here */ alertUI('Demo: login not wired in this snippet'); }
-
-    // ---------- feedback metrics (placeholder) ----------
-    async function loadFeedback() { /* your existing logic */ }
-
-    // ---------- office hours ----------
-    const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const dayIdx = d => { const i = DAY_ORDER.indexOf((d || '').slice(0, 3)); return i < 0 ? 99 : i; };
-
-    async function loadOfficeHours() {
-      const box = $('#hours-body'); box.innerHTML = '<div class="muted">Loading…</div>';
-      try {
-        const rows = await fetchJSON(OFFICE_URL);
-        renderOfficeHours(Array.isArray(rows) ? rows : []);
-      } catch (e) {
-        box.innerHTML = '';
-        alertUI(e.message + ' — Check your API route & Content-Type.', false);
-      }
-    }
-
-    function renderOfficeHours(data) {
-      const body = $('#hours-body'); body.innerHTML = '';
-      if (!data.length) { body.innerHTML = '<div class="muted">No office hours found.</div>'; return; }
-
-      const selected = ($$('#oh-filter .pill.active')[0]?.dataset.course) || '';
-      const filtered = data.filter(r => !selected || (r.course_code || r.course) === selected);
-
-      const byCourse = new Map();
-      filtered.forEach(r => {
-        const key = (r.course_code || r.course || 'Other').toUpperCase();
-        if (!byCourse.has(key)) byCourse.set(key, []);
-        byCourse.get(key).push(r);
-      });
-
-      [...byCourse.keys()].sort().forEach(course => {
-        const group = document.createElement('div'); group.className = 'oh-group';
-        const title = document.createElement('h3'); title.className = 'oh-title'; title.textContent = course; group.append(title);
-
-        const items = byCourse.get(course).slice().sort((a, b) => {
-          const da = dayIdx(a.day), db = dayIdx(b.day); if (da !== db) return da - db;
-          return String(a.start_time).localeCompare(String(b.start_time));
-        });
-
-        items.forEach(r => {
-          const card = document.createElement('div'); card.className = 'oh-card';
-          const who = `${r.staff_name || 'Unknown'}${r.staff_role ? ` (${r.staff_role})` : ''}`;
-          card.innerHTML = `
-            <div><b>${who}</b></div>
-            <div class="oh-meta"><span>${r.day || ''}</span><span>${r.start_time || ''}–${r.end_time || ''}</span><span>${r.location || ''}</span></div>`;
-          group.append(card);
-        });
-
-        body.append(group);
-      });
-    }
-
-    $('#oh-filter')?.addEventListener('click', e => {
-      const pill = e.target.closest('.pill'); if (!pill) return;
-      $$('#oh-filter .pill').forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      loadOfficeHours();
-    });
-
-    // ---------- init: start on Feedback, ensure logged-out ----------
-    window.addEventListener('DOMContentLoaded', () => {
-      localStorage.removeItem('authToken'); localStorage.removeItem('user');
-      authToken = null; currentUser = null; refreshTopBar(); showTab('feedback');
-    });
-  </script>
+  <!-- absolute paths + defer -->
+  <script defer src="/config.js"></script>
+  <script defer src="/lib/supabase.js"></script>
+  <script defer src="/feedback/feedback.js"></script>
 </body>
 
 </html>

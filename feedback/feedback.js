@@ -1,183 +1,141 @@
-// ===== Auth state & helpers =====
-let authToken = localStorage.getItem('authToken') || null;
-let currentUser = null;
-try { currentUser = JSON.parse(localStorage.getItem('user') || 'null'); } catch { currentUser = null; }
+// feedback/feedback.js
 
-function authHeaders() {
-  const t = authToken || localStorage.getItem('authToken');
-  return t
-    ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${t}` }
-    : { 'Content-Type': 'application/json' };
+// ---------- small helpers ----------
+const API_BASE = window.__API_BASE__ || location.origin;
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+
+function showAlert(msg, type='ok') {
+  const el = $('#alert');
+  if (!msg) return el.classList.add('hidden');
+  el.textContent = msg;
+  el.style.background = type === 'ok' ? '#ecfdf5' : '#fef2f2';
+  el.style.color = type === 'ok' ? '#065f46' : '#991b1b';
+  el.classList.remove('hidden');
 }
 
-function show(el, on) { if (!el) return; el.classList[on ? 'remove' : 'add']('hidden'); }
+function saveAuth(token, user) { localStorage.setItem('lap_jwt', token); localStorage.setItem('lap_user', JSON.stringify(user)); }
+function readAuth() { return { token: localStorage.getItem('lap_jwt'), user: JSON.parse(localStorage.getItem('lap_user') || 'null') }; }
+function clearAuth() { localStorage.removeItem('lap_jwt'); localStorage.removeItem('lap_user'); }
 
-function updateUI() {
-  const who    = document.getElementById('whoami');
-  const whoTxt = document.getElementById('whoami-text');
-  const auth   = document.getElementById('auth-panel');
-  const sched  = document.getElementById('schedule-panel');
-  const admin  = document.getElementById('admin-panel');
-  const fb     = document.getElementById('feedback-panel');
-
-  const loggedIn = !!(authToken && currentUser);
-  show(auth,   !loggedIn);
-  show(who,     loggedIn);
-  show(fb,      loggedIn);
-
-  if (loggedIn) {
-    whoTxt.textContent = currentUser.kind === 'staff'
-      ? `Logged in as ${currentUser.name} (${currentUser.role})`
-      : `Logged in as ${currentUser.name} (student)`;
+async function jsonFetch(path, options = {}) {
+  const headers = Object.assign({ 'Accept': 'application/json' }, options.headers || {});
+  const opts = Object.assign({}, options, { headers });
+  if (opts.body && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+    if (typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
   }
-
-  // Staff schedule
-  const isStaff = loggedIn && currentUser.kind === 'staff';
-  show(sched, isStaff);
-  if (isStaff) loadMySchedule();
-
-  // Admin (SL only)
-  const isSL = isStaff && currentUser.role === 'SL';
-  show(admin, isSL);
-  if (isSL) loadPendingStudents();
+  const res = await fetch(`${API_BASE}${path}`, opts);
+  const ct = res.headers.get('content-type') || '';
+  let payload;
+  if (ct.includes('application/json')) payload = await res.json();
+  else {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status} ${res.statusText} — non-JSON: ${text.slice(0,200)}`);
+  }
+  if (!res.ok) throw new Error(payload?.error || payload?.message || `HTTP ${res.status}`);
+  return payload;
 }
 
-// ===== Data loaders =====
-async function loadMySchedule() {
-  const tbody = document.querySelector('#schedule-table tbody');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
+function authFetch(path, options={}) {
+  const { token } = readAuth();
+  const headers = Object.assign({}, options.headers || {});
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return jsonFetch(path, Object.assign({}, options, { headers }));
+}
+
+// ---------- UI state ----------
+function show(id) {
+  ['view-login','view-hours','view-feedback'].forEach(v => $('#'+v).classList.add('hidden'));
+  $('#'+id).classList.remove('hidden');
+  $$('.chip[data-route]').forEach(c => c.classList.remove('active'));
+  const b = $(`.chip[data-route="${id.replace('view-','')}"]`);
+  b && b.classList.add('active');
+}
+
+function renderAuthed(user) {
+  $('#user-badge').textContent = `${user.name || 'User'} (${user.role || '—'})`;
+  $('#user-badge').classList.remove('hidden');
+  $('#btn-logout').classList.remove('hidden');
+  $('#nav-login').classList.add('hidden');
+}
+
+function renderLoggedOut() {
+  $('#user-badge').textContent = '';
+  $('#user-badge').classList.add('hidden');
+  $('#btn-logout').classList.add('hidden');
+  $('#nav-login').classList.remove('hidden');
+}
+
+// ---------- login/logout ----------
+async function doLogin() {
+  showAlert('');
+  const login = $('#login-id').value.trim();
+  const password = $('#login-pass').value;
+  if (!login || !password) return showAlert('Enter NUID/email and password', 'err');
+
   try {
-    const r = await fetch(`/api/staff/${currentUser.nuid}/schedule`, { headers: authHeaders() });
-    const rows = await r.json();
-    if (!r.ok) throw new Error(rows.error || 'Failed');
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="6">No entries</td></tr>';
-      return;
-    }
-    tbody.innerHTML = rows.map(x => `
-      <tr><td>${x.type}</td><td>${x.day}</td><td>${x.start_time}</td><td>${x.end_time}</td><td>${x.location || ''}</td><td>${x.course || ''}</td></tr>
-    `).join('');
-  } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="6">Error: ${e.message}</td></tr>`;
+    const { token, user } = await jsonFetch('/api/auth/login', { method:'POST', body:{ login, password } });
+    saveAuth(token, user);
+    renderAuthed(user);
+    show('view-hours');
+    await loadOfficeHours();
+  } catch (err) {
+    showAlert(`Login failed: ${err.message}`, 'err');
   }
 }
 
-async function loadPendingStudents() {
-  const box = document.getElementById('pending-rows');
-  if (!box) return;
-  box.textContent = 'Loading…';
+// ---------- office hours ----------
+function renderOfficeHours(items) {
+  const root = $('#hours-list');
+  root.innerHTML = items.map(i => `
+    <div class="wrap" style="border:1px solid #eee">
+      <div><strong>${i.staff_name || 'Unknown'}</strong> ${i.staff_role ? '('+i.staff_role+')' : ''}</div>
+      <div class="muted">${i.course_code || ''}</div>
+      <div>${i.day || ''} ${i.start_time || ''}–${i.end_time || ''} @ ${i.location || ''}</div>
+    </div>
+  `).join('') || '<div class="muted">No office hours yet.</div>';
+}
+
+async function loadOfficeHours(course = '') {
   try {
-    const r = await fetch('/api/auth/students/pending', { headers: authHeaders() });
-    const rows = await r.json();
-    if (!r.ok) throw new Error(rows.error || 'Failed');
-    if (!rows.length) { box.textContent = 'No pending students.'; return; }
-    box.innerHTML = rows.map(r => `
-      <div class="card">
-        <b>${r.name}</b> — ${r.email} ${r.nuid ? `(${r.nuid})` : ''} — ${r.class_year || ''}
-        <div style="margin-top:6px">
-          <button data-act="approve" data-id="${r.id}">Approve</button>
-          <button data-act="reject"  data-id="${r.id}">Reject</button>
-        </div>
-      </div>
-    `).join('');
-    box.querySelectorAll('button[data-act]').forEach(btn => {
-      btn.onclick = async () => {
-        const id = btn.getAttribute('data-id');
-        const act = btn.getAttribute('data-act');
-        const r2 = await fetch(`/api/auth/students/${id}/${act}`, { method: 'POST', headers: authHeaders() });
-        const j  = await r2.json().catch(() => ({}));
-        if (!r2.ok) return alert(j.error || 'Action failed');
-        loadPendingStudents();
-      };
-    });
-  } catch (e) {
-    box.textContent = `Error: ${e.message}`;
+    showAlert('');
+    const all = await jsonFetch('/api/schedule/office-hours');
+    const items = course ? all.filter(i => (i.course_code || '') === course) : all;
+    renderOfficeHours(items);
+  } catch (err) {
+    showAlert(`Request failed (${err.message}). Check your API route & Content-Type.`, 'err');
   }
 }
 
-// ===== Wire events =====
+// ---------- events ----------
 window.addEventListener('DOMContentLoaded', () => {
-  updateUI();
+  // nav
+  $$('.chip[data-route]').forEach(b => b.addEventListener('click', () => {
+    const r = b.dataset.route;
+    if (r === 'login') show('view-login');
+    if (r === 'hours') { show('view-hours'); loadOfficeHours(); }
+    if (r === 'feedback') show('view-feedback');
+  }));
 
-  document.getElementById('btn-login')?.addEventListener('click', async () => {
-    const login = (document.getElementById('login-id')?.value || '').trim();
-    const password = (document.getElementById('login-pw')?.value || '');
-    if (!login || !password) return alert('Please enter login and password');
-    const r = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login, password })
+  // login
+  $('#btn-login')?.addEventListener('click', doLogin);
+  $('#login-pass')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doLogin(); } });
+
+  // logout
+  $('#btn-logout')?.addEventListener('click', () => { clearAuth(); renderLoggedOut(); show('view-login'); });
+
+  // course chips
+  $$('#view-hours .chip[data-course]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      $$('#view-hours .chip[data-course]').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      loadOfficeHours(chip.dataset.course || '');
     });
-    const data = await r.json();
-    if (!r.ok) return alert(data.error || 'Login failed');
-    authToken = data.token;
-    currentUser = data.user;
-    localStorage.setItem('authToken', authToken);
-    localStorage.setItem('user', JSON.stringify(currentUser));
-    updateUI();
   });
 
-  document.getElementById('btn-logout')?.addEventListener('click', () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    authToken = null;
-    currentUser = null;
-    updateUI();
-  });
-
-  document.getElementById('btn-student-signup')?.addEventListener('click', async () => {
-    const name  = (document.getElementById('su-name')?.value || '').trim();
-    const email = (document.getElementById('su-email')?.value || '').trim().toLowerCase();
-    const nuid  = (document.getElementById('su-nuid')?.value || '').trim();
-    const password = (document.getElementById('su-pw')?.value || '');
-    const class_year = (document.getElementById('su-year')?.value || '').trim();
-    const courses = (document.getElementById('su-courses')?.value || '')
-      .split(',').map(s => s.trim()).filter(Boolean);
-
-    const r = await fetch('/api/auth/student/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, nuid, password, class_year, courses })
-    });
-    const data = await r.json();
-    if (!r.ok) return alert(data.error || 'Signup failed');
-    alert('Submitted for approval by SL. You can log in after approval.');
-  });
-
-  document.getElementById('btn-add-staff')?.addEventListener('click', async () => {
-    const nuid = (document.getElementById('st-nuid')?.value || '').trim();
-    const name = (document.getElementById('st-name')?.value || '').trim();
-    const role = (document.getElementById('st-role')?.value || 'LA');
-    const email = (document.getElementById('st-email')?.value || '').trim();
-    const password = (document.getElementById('st-pass')?.value || '');
-    const courses = (document.getElementById('st-courses')?.value || '')
-      .split(',').map(s => s.trim()).filter(Boolean);
-
-    const r = await fetch('/api/staff', {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ nuid, name, role, email, password, courses })
-    });
-    const data = await r.json();
-    if (!r.ok) return alert(data.error || 'Create failed');
-    alert('Staff created.');
-  });
-
-  document.getElementById('btn-send-feedback')?.addEventListener('click', async () => {
-    const course = (document.getElementById('fb-course')?.value || '').trim();
-    const type   = (document.getElementById('fb-type')?.value || 'General');
-    const rating = Number(document.getElementById('fb-rating')?.value || '') || null;
-    const text   = (document.getElementById('fb-text')?.value || '').trim();
-    if (!text) return alert('Please enter feedback text');
-    const r = await fetch('/api/feedback', {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ course, type, rating, text })
-    });
-    const data = await r.json();
-    if (!r.ok) return alert(data.error || 'Could not submit');
-    alert('Thanks for the feedback!');
-    document.getElementById('fb-text').value = '';
-  });
+  // boot
+  const { user } = readAuth();
+  if (user) { renderAuthed(user); show('view-hours'); loadOfficeHours(); }
+  else { renderLoggedOut(); show('view-login'); }
 });

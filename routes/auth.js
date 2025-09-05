@@ -1,188 +1,57 @@
-'use strict';
-
+// routes/auth.js
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const rateLimit = require('express-rate-limit');
 const jwt = require('jsonwebtoken');
-
-const { supabase } = require('../lib/supabase');
-const { requireAuth, requireRole, JWT_SECRET } = require('../middleware/auth');
+const { createClient } = require('@supabase/supabase-js');
 
 const router = express.Router();
-const HUSKERS_RE = /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i;
 
-/* ---------- rate limits ---------- */
-const loginLimiter   = rateLimit({ windowMs: 10 * 60 * 1000, max: 50 });
-const signupLimiter  = rateLimit({ windowMs: 60 * 60 * 1000, max: 30 });
-const changePwLimiter= rateLimit({ windowMs: 10 * 60 * 1000, max: 30 });
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const JWT_SECRET = process.env.JWT_SECRET;
 
-/* ---------- helpers ---------- */
-function signStaffToken({ nuid, role, name }) {
-  return jwt.sign({ kind: 'staff', nuid, role, name }, JWT_SECRET, { expiresIn: '8h' });
-}
-function signStudentToken({ id, email, name }) {
-  return jwt.sign({ kind: 'student', id, email, name }, JWT_SECRET, { expiresIn: '8h' });
-}
-function s(v, max = 200) { return String(v || '').trim().slice(0, max); }
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-/* ---------- POST /api/auth/login ---------- */
-router.post('/login', loginLimiter, async (req, res) => {
-  const login = s(req.body.login, 200).toLowerCase();
-  const password = String(req.body.password || '');
-  if (!login || !password) return res.status(400).json({ error: 'login and password required' });
+router.get('/ping', (req, res) => res.json({ ok: true }));
 
-  const isEmail = login.includes('@');
-  if (isEmail && !HUSKERS_RE.test(login)) {
-    return res.status(400).json({ error: 'Use your @huskers.unl.edu email (or your NUID).' });
-  }
+// POST /api/auth/login  { login: nuidOrEmail, password }
+router.post('/login', async (req, res) => {
+  try {
+    const { login, password } = req.body || {};
+    if (!login || !password) return res.status(400).json({ error: 'Missing login or password' });
 
-  // STAFF: try NUID then email
-  {
-    let staffRow = null;
-    if (!isEmail) {
-      const r = await supabase
-        .from('staff').select('nuid,name,role,password_hash,is_active').eq('nuid', login).single();
-      staffRow = r.data || null;
-    } else {
-      const r = await supabase
-        .from('staff').select('nuid,name,role,password_hash,is_active').eq('email', login).single();
-      staffRow = r.data || null;
+    const isEmail = /@/.test(login);
+    let q = supabase.from('staff').select('nuid, name, role, email, password_hash').limit(1);
+    q = isEmail ? q.eq('email', login) : q.eq('nuid', login);
+
+    const { data: rows, error } = await q;
+    if (error) throw error;
+    const userRow = rows && rows[0];
+    if (!userRow || !userRow.password_hash) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
-    if (staffRow && staffRow.is_active !== false && staffRow.password_hash) {
-      const ok = await bcrypt.compare(password, staffRow.password_hash);
-      if (ok) {
-        await supabase.from('staff').update({ last_login: new Date().toISOString() }).eq('nuid', staffRow.nuid);
-        return res.json({
-          token: signStaffToken(staffRow),
-          user: { kind: 'staff', nuid: staffRow.nuid, name: staffRow.name, role: staffRow.role }
-        });
-      }
-    }
-  }
 
-  // STUDENT: email (only huskers) then NUID
-  {
-    let row = null;
-    if (isEmail) {
-      const r = await supabase
-        .from('students').select('id,email,name,status,password_hash').eq('email', login).single();
-      row = r.data || null;
-    } else {
-      const r = await supabase
-        .from('students').select('id,email,name,status,password_hash').eq('nuid', login).single();
-      row = r.data || null;
-    }
-    if (row && row.status === 'approved' && row.password_hash) {
-      const ok = await bcrypt.compare(password, row.password_hash);
-      if (ok) {
-        return res.json({
-          token: signStudentToken(row),
-          user: { kind: 'student', id: row.id, email: row.email, name: row.name }
-        });
-      }
-    }
-  }
+    const ok = await bcrypt.compare(password, userRow.password_hash);
+    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
-  res.status(401).json({ error: 'Invalid credentials' });
+    const user = {
+      nuid: userRow.nuid,
+      name: userRow.name,
+      role: userRow.role,
+      email: userRow.email || null
+    };
+    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '12h' });
+    res.json({ token, user });
+  } catch (err) {
+    console.error('[auth/login] error', err);
+    res.status(500).json({ error: 'Login failed' });
+  }
 });
 
-/* ---------- POST /api/auth/student/signup ---------- */
-router.post('/student/signup', signupLimiter, async (req, res) => {
-  const email = s(req.body.email, 200).toLowerCase();
-  const name  = s(req.body.name, 120);
-  const nuid  = s(req.body.nuid, 32);
-  const class_year = s(req.body.class_year, 40);
-  const password   = String(req.body.password || '');
-  const courses    = Array.isArray(req.body.courses) ? req.body.courses.map(c => s(c, 120)).filter(Boolean) : [];
-
-  if (!email || !name || !password) return res.status(400).json({ error: 'email, name, password required' });
-  if (!HUSKERS_RE.test(email)) return res.status(400).json({ error: 'Email must be @huskers.unl.edu' });
-  if (password.length < 8) return res.status(400).json({ error: 'password must be at least 8 chars' });
-
-  const password_hash = await bcrypt.hash(password, 12);
-
-  const { data, error } = await supabase.from('students').insert([{
-    email, name, nuid: nuid || null, class_year, password_hash, status: 'pending'
-  }]).select('id').single();
-
-  if (error) return res.status(409).json({ error: 'email or nuid already exists' });
-
-  if (courses.length) {
-    const rows = courses.map(c => ({ student_id: data.id, course: c }));
-    await supabase.from('student_courses').insert(rows);
-  }
-  res.status(201).json({ ok: true, message: 'Submitted for approval' });
-});
-
-/* ---------- GET /api/auth/students/pending  (SL only) ---------- */
-router.get('/students/pending', requireAuth, requireRole('SL'), async (_req, res) => {
-  const { data, error } = await supabase
-    .from('students')
-    .select('id,email,name,nuid,class_year,created_at')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: true });
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data || []);
-});
-
-router.post('/students/:id/approve', requireAuth, requireRole('SL'), async (req, res) => {
-  const sid = Number(req.params.id);
-  const approver = req.user.nuid;
-  const { error } = await supabase.from('students')
-    .update({ status: 'approved', approved_at: new Date().toISOString(), approved_by: approver })
-    .eq('id', sid);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ ok: true });
-});
-
-router.post('/students/:id/reject', requireAuth, requireRole('SL'), async (req, res) => {
-  const sid = Number(req.params.id);
-  const approver = req.user.nuid;
-  const { error } = await supabase.from('students')
-    .update({ status: 'rejected', approved_at: new Date().toISOString(), approved_by: approver })
-    .eq('id', sid);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ ok: true });
-});
-
-/* ---------- POST /api/auth/change-password  (auth required) ---------- */
-router.post('/change-password', requireAuth, changePwLimiter, async (req, res) => {
-  const current = String(req.body.current_password || '');
-  const next = String(req.body.new_password || '');
-
-  if (!next || next.length < 8) {
-    return res.status(400).json({ error: 'new_password must be at least 8 characters' });
-  }
-
-  if (req.user.kind === 'staff') {
-    const { data: row, error } = await supabase
-      .from('staff').select('password_hash').eq('nuid', req.user.nuid).single();
-    if (error || !row || !row.password_hash) return res.status(400).json({ error: 'No existing password to change' });
-
-    const ok = await bcrypt.compare(current, row.password_hash);
-    if (!ok) return res.status(401).json({ error: 'Current password incorrect' });
-
-    const hash = await bcrypt.hash(next, 12);
-    const { error: e2 } = await supabase.from('staff').update({ password_hash: hash }).eq('nuid', req.user.nuid);
-    if (e2) return res.status(500).json({ error: e2.message });
-    return res.json({ ok: true, message: 'Password updated. Please log in again.' });
-  }
-
-  if (req.user.kind === 'student') {
-    const { data: row, error } = await supabase
-      .from('students').select('password_hash').eq('id', req.user.id).single();
-    if (error || !row || !row.password_hash) return res.status(400).json({ error: 'No existing password to change' });
-
-    const ok = await bcrypt.compare(current, row.password_hash);
-    if (!ok) return res.status(401).json({ error: 'Current password incorrect' });
-
-    const hash = await bcrypt.hash(next, 12);
-    const { error: e2 } = await supabase.from('students').update({ password_hash: hash }).eq('id', req.user.id);
-    if (e2) return res.status(500).json({ error: e2.message });
-    return res.json({ ok: true, message: 'Password updated. Please log in again.' });
-  }
-
-  res.status(400).json({ error: 'Unsupported account type' });
+// GET /api/auth/me  (requires Authorization: Bearer)
+const requireAuth = require('../middleware/auth');
+router.get('/me', requireAuth, (req, res) => {
+  res.json({ user: req.user });
 });
 
 module.exports = router;

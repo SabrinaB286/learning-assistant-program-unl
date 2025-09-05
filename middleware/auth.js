@@ -1,28 +1,21 @@
-// middleware/auth.js  (CommonJS)
-'use strict';
-
+// middleware/auth.js — verify JWT
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.APP_JWT_SECRET || 'dev-secret-change-me';
-
-function requireAuth(req, res, next) {
-  const h = req.headers.authorization || '';
-  const token = h.startsWith('Bearer ') ? h.slice(7) : null;
-  if (!token) return res.status(401).json({ error: 'Missing token' });
+module.exports = function requireAuth(req, res, next) {
   try {
-    req.user = jwt.verify(token, JWT_SECRET);
+    const hdr = req.headers.authorization || '';
+    const token = hdr.startsWith('Bearer ') ? hdr.slice(7) : null;
+    if (!token) return res.status(401).json({ error: 'Missing token' });
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = payload; // { nuid, role, name, email }
     next();
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+  } catch (e) {
+    return res.status(401).json({ error: 'Invalid token' });
   }
-}
+};
 
-// pass role string, e.g. requireRole('SL')
-function requireRole(role) {
-  return function (req, res, next) {
-    if (!req.user || req.user.role !== role) return res.status(403).json({ error: `${role} role required` });
-    next();
-  };
-}
-
-module.exports = { requireAuth, requireRole, JWT_SECRET };
+module.exports.requireRole = (...roles) => (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthenticated' });
+  if (!roles.includes(req.user.role)) return res.status(403).json({ error: 'Forbidden' });
+  next();
+};
