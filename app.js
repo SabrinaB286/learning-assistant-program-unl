@@ -1,4 +1,4 @@
-// app.js — repo root (Option B)
+// app.js — auto-detects your frontend; serves API + static
 'use strict';
 
 require('dotenv').config();
@@ -10,27 +10,16 @@ const cors = require('cors');
 
 const app = express();
 
-// ------------------------------------------------------------------
-// basic app setup
-// ------------------------------------------------------------------
+// -------------------------- basic app setup --------------------------
 app.set('trust proxy', true);
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
-// ------------------------------------------------------------------
-// API health & info
-// ------------------------------------------------------------------
-app.get('/healthz', (_req, res) =>
-  res.json({ ok: true, at: new Date().toISOString() })
-);
-app.get('/api', (_req, res) =>
-  res.json({ ok: true, service: 'lap-backend', time: new Date().toISOString() })
-);
+// ---------------------------- health/info ----------------------------
+app.get('/healthz', (_req, res) => res.json({ ok: true, at: new Date().toISOString() }));
+app.get('/api',     (_req, res) => res.json({ ok: true, service: 'lap-backend', time: new Date().toISOString() }));
 
-// ------------------------------------------------------------------
-// Mount routers from ./routes/*  (CommonJS modules: module.exports = router)
-// If a file is missing we just log a warning so the app still runs.
-// ------------------------------------------------------------------
+// -------------------------- mount API routers ------------------------
 function tryMount(pathToModule, mountPath) {
   try {
     const router = require(pathToModule);
@@ -45,38 +34,62 @@ function tryMount(pathToModule, mountPath) {
   }
 }
 
-// These correspond to files you said you have inside ./routes
-tryMount('./routes/auth.js',        '/api/auth');      // login, signup, approvals, etc.
-tryMount('./routes/password.js',    '/api/auth');      // change/reset password endpoints
-tryMount('./routes/staff.js',       '/api/staff');     // staff & schedules
-tryMount('./routes/office-hours.js','/api/schedule');  // GET /api/schedule/office-hours
-// If you also have a feedback API router, uncomment the next line:
-// tryMount('./routes/feedback.js',   '/api/feedback');
+tryMount('./routes/auth.js',         '/api/auth');
+tryMount('./routes/password.js',     '/api/auth');
+tryMount('./routes/staff.js',        '/api/staff');
+tryMount('./routes/office-hours.js', '/api/schedule');
+// If you have a feedback API router, uncomment:
+// tryMount('./routes/feedback.js',    '/api/feedback');
 
-// ------------------------------------------------------------------
-// Static frontend from ./public  (only if it exists)
-// ------------------------------------------------------------------
-const WEB_ROOT = path.join(__dirname, 'public');
+// ------------------------ detect & serve frontend --------------------
+/**
+ * We’ll try the following, in order:
+ *  1) ./public/index.html
+ *  2) ./feedback/index.html
+ *  3) ./index.html (repo root)
+ *  4) ./feedback-app.html (single file)
+ */
+const CANDIDATE_DIRS = [
+  path.join(__dirname, 'public'),
+  path.join(__dirname, 'feedback')
+];
+const CANDIDATE_FILES = [
+  path.join(__dirname, 'index.html'),
+  path.join(__dirname, 'feedback-app.html')
+];
 
-if (fs.existsSync(path.join(WEB_ROOT, 'index.html'))) {
-  app.use(express.static(WEB_ROOT));
-  // SPA-friendly catch-all: serve index.html for non-API HTML requests
-  app.get('*', (req, res, next) => {
-    const accept = req.headers.accept || '';
-    if (accept.includes('text/html')) {
-      return res.sendFile(path.join(WEB_ROOT, 'index.html'));
-    }
-    return next(); // let API/non-HTML fall through to 404
-  });
-  console.log(`[static] serving ${WEB_ROOT}`);
-} else {
-  console.warn(`[static] ${WEB_ROOT}/index.html not found. Serving API only.`);
+function findWebRoot() {
+  for (const dir of CANDIDATE_DIRS) {
+    const idx = path.join(dir, 'index.html');
+    if (fs.existsSync(idx)) return { type: 'dir', root: dir, index: idx };
+  }
+  for (const file of CANDIDATE_FILES) {
+    if (fs.existsSync(file)) return { type: 'file', root: path.dirname(file), index: file };
+  }
+  return null;
 }
 
-// ------------------------------------------------------------------
-// Start server
-// ------------------------------------------------------------------
+const web = findWebRoot();
+
+if (web) {
+  if (web.type === 'dir') {
+    app.use(express.static(web.root));
+    app.get('*', (req, res, next) => {
+      const accept = req.headers.accept || '';
+      if (accept.includes('text/html')) return res.sendFile(web.index);
+      return next();
+    });
+    console.log(`[static] serving directory ${web.root}`);
+  } else {
+    // single-file mode: serve index at '/' and still allow static from its folder
+    app.use(express.static(web.root));
+    app.get('/', (_req, res) => res.sendFile(web.index));
+    console.log(`[static] serving single file ${web.index}`);
+  }
+} else {
+  console.warn('[static] No frontend found (looked for public/, feedback/, index.html, feedback-app.html). API-only mode.');
+}
+
+// ------------------------------- start -------------------------------
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Backend listening on :${PORT}`);
-});
+app.listen(PORT, '0.0.0.0', () => console.log(`Backend listening on :${PORT}`));
