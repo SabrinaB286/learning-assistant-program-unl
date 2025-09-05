@@ -60,7 +60,8 @@
     .nav {
       display: flex;
       gap: 10px;
-      margin: 14px 0 0
+      margin: 14px 0 0;
+      flex-wrap: wrap
     }
 
     .chip {
@@ -211,6 +212,53 @@
       border: 1px solid rgba(255, 255, 255, .7)
     }
 
+    /* Office hours pill filter (dark-on-light UI inside content) */
+    .pillbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .pill {
+      border: 1px solid var(--ring);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 6px 12px;
+      cursor: pointer
+    }
+
+    .pill.active {
+      background: var(--unl-red);
+      color: #fff;
+      border-color: var(--unl-red)
+    }
+
+    .oh-group {
+      margin-top: 14px
+    }
+
+    .oh-title {
+      font-weight: 800;
+      margin: 0 0 6px 0
+    }
+
+    .oh-card {
+      border: 1px solid var(--ring);
+      border-radius: 12px;
+      padding: 10px;
+      margin: 6px 0;
+      background: #fff
+    }
+
+    .oh-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: .9rem
+    }
+
     /* modal */
     .modal-veil {
       position: fixed;
@@ -250,6 +298,7 @@
       </div>
       <div class="nav">
         <button id="nav-feedback" class="chip active" data-tab="feedback">Feedback</button>
+        <button id="nav-hours" class="chip" data-tab="hours">Office Hours</button>
         <button id="nav-login" class="chip" data-tab="login">Login</button>
         <button id="nav-dashboard" class="chip" data-tab="dashboard" style="display:none;">Dashboard</button>
       </div>
@@ -271,7 +320,6 @@
             <option>CSCE 155A</option>
             <option>CSCE 155E</option>
             <option>CSCE 155H</option>
-            <option>CSCE 155N</option>
             <option>CSCE 156</option>
           </select>
         </div>
@@ -320,16 +368,33 @@
       <button id="btn-submit-feedback" class="btn" style="margin-top:14px;">Submit Feedback</button>
     </section>
 
+    <!-- OFFICE HOURS -->
+    <section id="tab-hours" class="wrap hidden">
+      <h2 style="margin-top:0">Office Hours</h2>
+      <p class="muted" style="margin-top:0">Browse office hours by course. Data comes from staff schedules.</p>
+      <div class="pillbar" id="oh-filter">
+        <button class="pill active" data-course="">All</button>
+        <button class="pill" data-course="CSCE 101">CSCE 101</button>
+        <button class="pill" data-course="CSCE 155A">CSCE 155A</button>
+        <button class="pill" data-course="CSCE 155E">CSCE 155E</button>
+        <button class="pill" data-course="CSCE 155H">CSCE 155H</button>
+        <button class="pill" data-course="CSCE 156">CSCE 156</button>
+      </div>
+      <div id="hours-body" style="margin-top:12px;"></div>
+    </section>
+
     <!-- LOGIN -->
     <section id="tab-login" class="wrap hidden">
       <h2 style="margin-top:0;text-align:center">Sign in</h2>
       <div style="max-width:460px;margin:0 auto;">
-        <label for="login-id">NUID or Email</label>
-        <input id="login-id" type="text" placeholder="e.g., 12345678 or user@huskers.unl.edu" autocomplete="username">
-        <div style="height:8px"></div>
-        <label for="login-pw">Password</label>
-        <input id="login-pw" type="password" placeholder="Your password" autocomplete="current-password">
-        <button id="btn-login" class="btn" style="width:100%;margin-top:14px;">Sign in</button>
+        <form id="login-form" onsubmit="return false">
+          <label for="login-id">NUID or Email</label>
+          <input id="login-id" type="text" placeholder="e.g., 12345678 or user@huskers.unl.edu" autocomplete="username">
+          <div style="height:8px"></div>
+          <label for="login-pw">Password</label>
+          <input id="login-pw" type="password" placeholder="Your password" autocomplete="current-password">
+          <button id="btn-login" class="btn" style="width:100%;margin-top:14px;" type="submit">Sign in</button>
+        </form>
 
         <details style="margin-top:18px;">
           <summary><b>New student?</b> Create an account</summary>
@@ -390,7 +455,6 @@
           <option>CSCE 155A</option>
           <option>CSCE 155E</option>
           <option>CSCE 155H</option>
-          <option>CSCE 155N</option>
           <option>CSCE 156</option>
         </select>
         <div id="feedback-list" style="margin-top:12px;"></div>
@@ -512,12 +576,14 @@
     const HUSKERS_RE = /^[A-Za-z0-9._%+-]+@huskers\.unl\.edu$/i;
     const headers = () => authToken ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken } : { 'Content-Type': 'application/json' };
     const isHuskers = e => HUSKERS_RE.test((e || '').trim());
-    const courseOptions = () => `<option value="">Select a course</option><option>CSCE 101</option><option>CSCE 155A</option><option>CSCE 155E</option><option>CSCE 155H</option><option>CSCE 155N</option><option>CSCE 156</option><option>CSCE 231</option><option>CSCE 235</option><option>CSCE 310</option>`;
+    const courseOptions = () => `<option value="">Select a course</option><option>CSCE 101</option><option>CSCE 155A</option><option>CSCE 155E</option><option>CSCE 155H</option><option>CSCE 156</option>`;
+    const OFFICE_URL = '/api/schedule/office-hours';
 
     function alertUI(msg, ok = true) { const box = document.createElement('div'); box.className = 'alert ' + (ok ? 'alert-success' : 'alert-error'); box.textContent = msg; $('#alerts').prepend(box); setTimeout(() => box.remove(), 4500); }
     function showTab(name) {
-      ['feedback', 'login', 'dashboard'].forEach(id => $('#tab-' + id)?.classList.toggle('hidden', id !== name));
-      [['feedback', 'nav-feedback'], ['login', 'nav-login'], ['dashboard', 'nav-dashboard']].forEach(([t, btnId]) => $('#' + btnId)?.classList.toggle('active', t === name));
+      ['feedback', 'hours', 'login', 'dashboard'].forEach(id => $('#tab-' + id)?.classList.toggle('hidden', id !== name));
+      [['feedback', 'nav-feedback'], ['hours', 'nav-hours'], ['login', 'nav-login'], ['dashboard', 'nav-dashboard']]
+        .forEach(([t, btnId]) => $('#' + btnId)?.classList.toggle('active', t === name));
       if (name === 'dashboard' && authToken && currentUser) {
         loadFeedback();
         if (currentUser.kind === 'staff') {
@@ -527,6 +593,7 @@
           if (isSL) { loadPending(); }
         }
       }
+      if (name === 'hours') { loadOfficeHours(); }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
     function refreshTopBar() {
@@ -536,6 +603,7 @@
       if (logged) { $('#who-name').textContent = `${currentUser.name} (${currentUser.role || currentUser.kind})`; }
     }
     $('#nav-feedback')?.addEventListener('click', () => showTab('feedback'));
+    $('#nav-hours')?.addEventListener('click', () => showTab('hours'));
     $('#nav-login')?.addEventListener('click', () => showTab('login'));
     $('#nav-dashboard')?.addEventListener('click', () => {
       if (!(authToken && currentUser)) { alertUI('Please sign in first.', false); showTab('login'); return; }
@@ -567,8 +635,8 @@
       } catch (e) { alertUI(e.message, false); }
     });
 
-    // login/logout
-    $('#btn-login')?.addEventListener('click', async () => {
+    // ---------- LOGIN (Enter submits) ----------
+    async function doLogin() {
       const login = $('#login-id').value.trim(), password = $('#login-pw').value;
       if (!login || !password) return alertUI('Enter login and password.', false);
       if (login.includes('@') && !isHuskers(login)) return alertUI('Use your @huskers.unl.edu email (or NUID).', false);
@@ -582,7 +650,10 @@
         refreshTopBar(); alertUI(`Welcome, ${currentUser.name}!`);
         showTab('dashboard');
       } catch (e) { alertUI(e.message, false); }
-    });
+    }
+    $('#login-form')?.addEventListener('submit', (e) => { e.preventDefault(); doLogin(); });
+    $('#btn-login')?.addEventListener('click', (e) => { e.preventDefault(); doLogin(); });
+
     $('#logout-btn')?.addEventListener('click', () => {
       localStorage.removeItem('authToken'); localStorage.removeItem('user');
       authToken = null; currentUser = null; refreshTopBar(); showTab('feedback'); alertUI('Signed out.');
@@ -606,7 +677,7 @@
       } catch (e) { alertUI(e.message, false); }
     });
 
-    // dashboard data
+    // ---------- Dashboard: feedback list ----------
     let FEED = [];
     async function loadFeedback() {
       try { const r = await fetch('/api/feedback'); const data = await r.json(); if (!r.ok) throw new Error(data.error || 'Failed'); FEED = data || []; }
@@ -640,7 +711,7 @@
     }
     $('#filter-course')?.addEventListener('change', renderFeedback);
 
-    // schedule
+    // ---------- Dashboard: my schedule ----------
     async function loadSchedule() {
       if (!currentUser || currentUser.kind !== 'staff') return;
       $('#schedule-panel').style.display = 'block';
@@ -685,7 +756,7 @@
       } catch (e) { alertUI(e.message, false); }
     });
 
-    // SL panels
+    // ---------- SL panels ----------
     function showSL(is) {
       $('#admin-pending').style.display = is ? 'block' : 'none';
       $('#admin-add-staff').style.display = is ? 'block' : 'none';
@@ -789,6 +860,68 @@
         localStorage.removeItem('authToken'); localStorage.removeItem('user');
         authToken = null; currentUser = null; refreshTopBar(); showTab('login');
       } catch (e) { alertUI(e.message, false); }
+    });
+
+    // ---------- Office Hours tab ----------
+    let OFFICE_DATA = [];
+    const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    function dayIdx(d) { const i = DAY_ORDER.indexOf((d || '').slice(0, 3)); return i < 0 ? 99 : i; }
+    async function loadOfficeHours() {
+      const box = $('#hours-body'); box.innerHTML = '<div class="muted">Loading…</div>';
+      try {
+        const r = await fetch(OFFICE_URL); const rows = await r.json();
+        if (!r.ok) throw new Error(rows.error || 'Failed to load office hours');
+        OFFICE_DATA = (rows || []).filter(x => (x.type || '') === 'office_hour');  // keep only office hours
+        renderOfficeHours(getCurrentCourseFilter());
+      } catch (e) {
+        box.innerHTML = ''; alertUI(e.message, false);
+      }
+    }
+    function getCurrentCourseFilter() { const active = $$('#oh-filter .pill.active')[0]; return active?.dataset.course || ''; }
+    function renderOfficeHours(filterCourse) {
+      const body = $('#hours-body'); body.innerHTML = '';
+      const rows = OFFICE_DATA.filter(r => !filterCourse || (r.course_code || r.course) === filterCourse);
+      if (!rows.length) { body.innerHTML = '<div class="muted">No office hours found.</div>'; return; }
+
+      // group by course, then sort by day/start_time
+      const byCourse = new Map();
+      rows.forEach(r => {
+        const key = (r.course_code || r.course || 'Other').toUpperCase();
+        if (!byCourse.has(key)) byCourse.set(key, []);
+        byCourse.get(key).push(r);
+      });
+
+      [...byCourse.keys()].sort().forEach(course => {
+        const group = document.createElement('div'); group.className = 'oh-group';
+        const title = document.createElement('h3'); title.className = 'oh-title'; title.textContent = course; group.append(title);
+
+        const list = byCourse.get(course).slice().sort((a, b) => {
+          const da = dayIdx(a.day), db = dayIdx(b.day);
+          if (da !== db) return da - db;
+          return String(a.start_time).localeCompare(String(b.start_time));
+        });
+
+        list.forEach(r => {
+          const card = document.createElement('div'); card.className = 'oh-card';
+          const who = `${r.staff_name || 'Unknown'}${r.staff_role ? ` (${r.staff_role})` : ''}`;
+          card.innerHTML = `
+            <div><b>${who}</b></div>
+            <div class="oh-meta">
+              <span>${r.day || ''}</span>
+              <span>${r.start_time || ''}–${r.end_time || ''}</span>
+              <span>${r.location || ''}</span>
+            </div>`;
+          group.append(card);
+        });
+
+        body.append(group);
+      });
+    }
+    $('#oh-filter')?.addEventListener('click', e => {
+      const pill = e.target.closest('.pill'); if (!pill) return;
+      $$('#oh-filter .pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      renderOfficeHours(getCurrentCourseFilter());
     });
 
     // init: force logged-out start on Feedback tab
