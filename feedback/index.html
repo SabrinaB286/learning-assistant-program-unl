@@ -4,177 +4,584 @@
 <head>
   <meta charset="utf-8" />
   <title>Learning Assistant Feedback</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+
+  <!-- ===== Design Tokens & Base ===== -->
   <style>
     :root {
       --unl-red: #d00000;
-      --ink: #111;
-      --muted: #555;
+      --unl-red-600: #b30000;
+      --bg: #f5f6f8;
+      --ink: #151515;
+      --muted: #6a6f76;
+      --ring: #e6e7eb;
       --card: #fff;
-      --bg: #f4f5f7;
+      --ok: #065f46;
+      --ok-bg: #ecfdf5;
+      --bad: #991b1b;
+      --bad-bg: #fef2f2;
+      --chip: #f1f5f9;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      height: 100%
     }
 
     body {
       margin: 0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, Noto Sans, sans-serif;
       color: var(--ink);
       background: var(--bg);
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 40;
-      background: linear-gradient(135deg, var(--unl-red), #a20000);
-      color: #fff;
+    a {
+      color: var(--unl-red);
+      text-decoration: none
+    }
+
+    a:hover {
+      text-decoration: underline
     }
 
     .shell {
-      max-width: 1100px;
+      max-width: 1120px;
       margin: 0 auto;
-      padding: 18px 16px;
-    }
-
-    .brand {
-      font-weight: 800;
-      letter-spacing: .3px
-    }
-
-    nav {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-top: 8px
-    }
-
-    .chip,
-    .btn {
-      border: 1px solid rgba(255, 255, 255, .5);
-      background: transparent;
-      color: #fff;
-      border-radius: 999px;
-      padding: 8px 14px;
-      cursor: pointer
-    }
-
-    .chip.active {
-      background: #fff;
-      color: var(--unl-red)
-    }
-
-    .wrap {
-      background: var(--card);
-      border: 1px solid #e6e6e6;
-      border-radius: 14px;
-      padding: 18px;
-      margin: 18px 0;
-      box-shadow: 0 8px 22px rgba(0, 0, 0, .04)
-    }
-
-    .muted {
-      color: var(--muted)
-    }
-
-    .grid {
-      display: grid;
-      gap: 14px
-    }
-
-    .g-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr))
-    }
-
-    .btn-danger {
-      background: var(--unl-red);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 16px;
+      padding: 0 16px
     }
 
     .hidden {
       display: none !important
     }
 
-    .badge {
-      display: inline-block;
+    .muted {
+      color: var(--muted)
+    }
+
+    /* ===== Header ===== */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      color: #fff;
+      background: linear-gradient(135deg, var(--unl-red), var(--unl-red-600));
+      box-shadow: 0 1px 0 rgba(0, 0, 0, .08);
+    }
+
+    .brand {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: .2px;
+      padding-top: 16px
+    }
+
+    .sub {
+      opacity: .95;
+      padding-bottom: 10px
+    }
+
+    nav.nav {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 10px 0 18px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      color: #fff;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, .6);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 600;
+      transition: .15s ease;
+    }
+
+    .chip:hover {
+      background: rgba(255, 255, 255, .1)
+    }
+
+    .chip.active {
       background: #fff;
       color: var(--unl-red);
-      border: 1px solid rgba(255, 255, 255, .5);
+      border-color: #fff
+    }
+
+    .badge {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      color: var(--unl-red);
+      border: 1px solid rgba(255, 255, 255, .55);
       border-radius: 999px;
-      padding: 6px 10px;
-      margin-left: auto
+      padding: 8px 12px;
+      font-weight: 700
+    }
+
+    /* ===== Page containers ===== */
+    main {
+      padding: 18px 0 40px
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--ring);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 10px 26px rgba(0, 0, 0, .04);
+      margin: 18px 0;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: .25rem 0 .75rem
+    }
+
+    h2 {
+      font-size: 1.55rem
+    }
+
+    /* ===== Inputs / Buttons ===== */
+    label {
+      display: block;
+      font-weight: 700;
+      margin: 6px 0
     }
 
     input,
-    select {
+    select,
+    textarea {
       width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
+      padding: 12px 12px;
+      border: 1px solid var(--ring);
+      border-radius: 12px;
+      background: #fff;
+      color: var(--ink);
+      outline: 0;
+      font-size: 1rem;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: #c8cbd1;
+      box-shadow: 0 0 0 3px rgba(208, 0, 0, .12);
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .push {
+      margin-left: auto
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-weight: 700;
+      border: 1px solid var(--unl-red);
+      background: #fff;
+      color: var(--unl-red);
+      transition: .15s ease;
+    }
+
+    .btn:hover {
+      filter: brightness(.98)
+    }
+
+    .btn-primary {
+      background: var(--unl-red);
+      color: #fff;
+      border-color: var(--unl-red)
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--ring);
+      color: #2d2d2d
+    }
+
+    .btn-pill {
+      border-radius: 999px
+    }
+
+    /* ===== Grids ===== */
+    .grid {
+      display: grid;
+      gap: 14px
+    }
+
+    .g-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+    .g-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr))
+    }
+
+    @media (max-width:900px) {
+      .g-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+      }
+    }
+
+    @media (max-width:640px) {
+
+      .g-3,
+      .g-2 {
+        grid-template-columns: 1fr
+      }
+    }
+
+    /* ===== Alerts ===== */
+    #alert {
+      border-radius: 12px;
+      background: var(--ok-bg);
+      color: var(--ok);
+      border: 1px solid #a7f3d0;
+      padding: 12px 14px;
+      font-weight: 700
+    }
+
+    .alert-error {
+      background: var(--bad-bg) !important;
+      color: var(--bad) !important;
+      border-color: #fecaca !important
+    }
+
+    /* ===== Hours filter ===== */
+    .filter-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 8px 0 10px
+    }
+
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: var(--chip);
+      border: 1px solid #dde3ea;
+      color: #1c1c1c;
+      font-weight: 700
+    }
+
+    .filter-chip.active {
+      border-color: var(--unl-red);
+      color: #fff;
+      background: var(--unl-red)
+    }
+
+    /* ===== Tables ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #efefef
+    }
+
+    th {
+      color: #53565a;
+      font-weight: 800
+    }
+
+    /* ===== Modal (change password) ===== */
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, .35);
+      z-index: 70
+    }
+
+    .modal.show {
+      display: flex
+    }
+
+    .panel {
+      width: min(560px, 94vw);
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid var(--ring);
+      padding: 18px
+    }
+
+    .panel .foot {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 14px
     }
   </style>
 </head>
 
 <body>
+  <!-- ===== Header ===== -->
   <header class="topbar">
     <div class="shell">
       <div class="brand">Learning Assistant Feedback</div>
-      <div class="muted">Computer Science & Engineering – University of Nebraska–Lincoln</div>
-      <nav>
-        <button class="chip" data-route="feedback">Feedback</button>
-        <button class="chip" data-route="hours">Office Hours</button>
+      <div class="sub">Computer Science &amp; Engineering – University of Nebraska–Lincoln</div>
+      <nav class="nav" aria-label="Primary">
+        <button class="chip active" data-route="feedback" id="nav-feedback">Feedback</button>
+        <button class="chip" data-route="hours" id="nav-hours">Office Hours</button>
+        <button class="chip" data-route="dashboard" id="nav-dashboard">Dashboard</button>
         <button class="chip" data-route="login" id="nav-login">Login</button>
-        <span class="badge hidden" id="user-badge"></span>
-        <button class="chip hidden" id="btn-logout">Log out</button>
+        <span id="user-badge" class="badge hidden"></span>
+        <button id="btn-logout" class="chip hidden">Log out</button>
       </nav>
     </div>
   </header>
 
+  <!-- ===== Main ===== -->
   <main class="shell">
-    <div class="wrap hidden" id="alert"></div>
+    <div id="alert" class="card hidden" role="status" aria-live="polite"></div>
 
-    <section class="wrap" id="view-login">
-      <h2>Sign in</h2>
-      <div class="grid">
-        <div>
-          <label>NUID or Email</label>
-          <input id="login-id" placeholder="12345678 or user@huskers.unl.edu" autocomplete="username" />
+    <!-- === Feedback === -->
+    <section id="view-feedback" class="card">
+      <h2>Submit Feedback</h2>
+      <p class="muted">Share course or LA feedback. Submissions are stored in Supabase.</p>
+
+      <div class="grid g-2">
+        <div class="card" style="border:1px solid #eef0f3">
+          <h3>Open form</h3>
+          <p class="muted">Use our simple form or embed your own.</p>
+          <a class="btn btn-primary btn-pill" href="/feedback-app.html">Open Feedback Form</a>
         </div>
-        <div>
-          <label>Password</label>
-          <input id="login-pass" type="password" placeholder="Your password" autocomplete="current-password" />
+
+        <div class="card" style="border:1px solid #eef0f3">
+          <h3>Helpful info</h3>
+          <p class="muted">Questions? Reach out to the Learning Assistant Program.</p>
         </div>
-      </div>
-      <div style="margin-top:12px">
-        <button class="btn-danger" id="btn-login" type="button">Sign in</button>
       </div>
     </section>
 
-    <section class="wrap hidden" id="view-hours">
+    <!-- === Office Hours === -->
+    <section id="view-hours" class="card hidden">
       <h2>Office Hours</h2>
-      <div class="muted">Browse office hours by course. Data comes from staff schedules.</div>
-      <div style="margin:10px 0">
-        <button class="chip active" data-course="">All</button>
-        <button class="chip" data-course="CSCE 101">CSCE 101</button>
-        <button class="chip" data-course="CSCE 155A">CSCE 155A</button>
-        <button class="chip" data-course="CSCE 155E">CSCE 155E</button>
-        <button class="chip" data-course="CSCE 155H">CSCE 155H</button>
-        <button class="chip" data-course="CSCE 156">CSCE 156</button>
+      <p class="muted">Filter by course to see matching staff office hours and lab times.</p>
+
+      <div class="filter-row" id="hours-filters">
+        <button class="filter-chip active" data-course="">All</button>
+        <button class="filter-chip" data-course="CSCE 101">CSCE 101</button>
+        <button class="filter-chip" data-course="CSCE 155A">CSCE 155A</button>
+        <button class="filter-chip" data-course="CSCE 155E">CSCE 155E</button>
+        <button class="filter-chip" data-course="CSCE 155H">CSCE 155H</button>
+        <button class="filter-chip" data-course="CSCE 156">CSCE 156</button>
       </div>
+
       <div id="hours-list" class="grid g-3"></div>
     </section>
 
-    <section class="wrap hidden" id="view-feedback">
-      <h2>Feedback</h2>
-      <p class="muted">If you host a separate feedback form, link it here or render inline.</p>
+    <!-- === Login === -->
+    <section id="view-login" class="card hidden" aria-labelledby="login-title">
+      <h2 id="login-title">Sign in</h2>
+
+      <form id="login-form" novalidate>
+        <div class="grid g-2">
+          <div>
+            <label for="login-id">NUID or Email</label>
+            <input id="login-id" placeholder="12345678 or user@huskers.unl.edu" autocomplete="username" />
+          </div>
+          <div>
+            <label for="login-pass">Password</label>
+            <input id="login-pass" type="password" placeholder="Your password" autocomplete="current-password" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button id="btn-login" type="submit" class="btn btn-primary">Sign in</button>
+          <span class="muted">New student? <a href="#" aria-disabled="true">Create an account</a></span>
+          <span class="push"></span>
+          <button id="btn-open-change-password" type="button" class="btn btn-ghost">Change password</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- === Dashboard (shell) === -->
+    <section id="view-dashboard" class="card hidden">
+      <h2>Dashboard</h2>
+      <div class="grid g-3">
+        <div class="card" style="border:1px solid #eef0f3">
+          <h3>Total Feedback</h3>
+          <div id="stat-total-feedback" style="font-size:2rem;font-weight:800">0</div>
+        </div>
+        <div class="card" style="border:1px solid #eef0f3">
+          <h3>Average Rating</h3>
+          <div id="stat-avg-rating" style="font-size:2rem;font-weight:800">0.0</div>
+        </div>
+        <div class="card" style="border:1px solid #eef0f3">
+          <h3>This Week</h3>
+          <div id="stat-this-week" style="font-size:2rem;font-weight:800">0</div>
+        </div>
+      </div>
+
+      <div class="card" style="border:1px solid #eef0f3;margin-top:12px">
+        <h3>My Schedule</h3>
+        <table id="tbl-my-schedule" aria-label="My schedule">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Day</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Location</th>
+              <th>Course</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="6" class="muted">No entries.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   </main>
 
-  <!-- absolute paths + defer -->
-  <script defer src="/config.js"></script>
+  <!-- ===== Change Password Modal ===== -->
+  <div id="modal-change-password" class="modal" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="cp-title">
+      <h3 id="cp-title">Change password</h3>
+      <div class="grid g-2">
+        <div>
+          <label for="cp-current">Current password</label>
+          <input id="cp-current" type="password" autocomplete="current-password" />
+        </div>
+        <div>
+          <label for="cp-new">New password</label>
+          <input id="cp-new" type="password" autocomplete="new-password" />
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <label for="cp-confirm">Confirm new password</label>
+        <input id="cp-confirm" type="password" autocomplete="new-password" />
+      </div>
+      <div class="foot">
+        <button id="cp-cancel" class="btn btn-ghost" type="button">Cancel</button>
+        <button id="cp-save" class="btn btn-primary" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Your project scripts (absolute paths) ===== -->
+  <script defer src="/public/config.js"></script>
   <script defer src="/lib/supabase.js"></script>
+  <script defer src="/routes/office-hours.js"></script>
+  <script defer src="/routes/auth.js"></script>
+  <script defer src="/routes/password.js"></script>
+  <script defer src="/routes/staff.js"></script>
   <script defer src="/feedback/feedback.js"></script>
+
+  <!-- ===== Tiny glue so buttons always work (safe with your JS) ===== -->
+  <script>
+    (function () {
+      const $ = (s, sc = document) => sc.querySelector(s);
+      const $$ = (s, sc = document) => Array.from(sc.querySelectorAll(s));
+
+      const sections = {
+        feedback: $('#view-feedback'),
+        hours: $('#view-hours'),
+        login: $('#view-login'),
+        dashboard: $('#view-dashboard')
+      };
+
+      function show(route) {
+        // activate chip
+        $$('.nav .chip').forEach(c => c.classList.toggle('active', c.dataset.route === route));
+        // show section
+        Object.entries(sections).forEach(([k, el]) => el.classList.toggle('hidden', k !== route));
+        // store for refreshes (optional)
+        try { sessionStorage.setItem('lap_route', route); } catch (e) { }
+      }
+
+      // Nav clicks
+      $$('.nav .chip').forEach(btn => {
+        btn.addEventListener('click', () => show(btn.dataset.route));
+      });
+
+      // Restore last route (default feedback)
+      const last = (() => {
+        try { return sessionStorage.getItem('lap_route') || 'feedback'; } catch (e) { return 'feedback'; }
+      })();
+      show(last);
+
+      // Login form submit on Enter
+      const form = $('#login-form');
+      const btnLogin = $('#btn-login');
+      if (form && btnLogin) {
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          btnLogin.click(); // your external auth.js/feedback.js should handle the click
+        });
+      }
+
+      // Change password modal open/close
+      const modal = $('#modal-change-password');
+      const openBtn = $('#btn-open-change-password');
+      const cancel = $('#cp-cancel');
+      const save = $('#cp-save');
+      function toggleModal(open) { modal.classList.toggle('show', !!open); modal.setAttribute('aria-hidden', open ? 'false' : 'true'); }
+      openBtn?.addEventListener('click', () => toggleModal(true));
+      cancel?.addEventListener('click', () => toggleModal(false));
+      modal?.addEventListener('click', (e) => { if (e.target === modal) toggleModal(false); });
+      // Save button just dispatches a custom event your password.js can hook if desired
+      save?.addEventListener('click', () => {
+        const detail = {
+          current: $('#cp-current').value,
+          next: $('#cp-new').value,
+          confirm: $('#cp-confirm').value
+        };
+        document.dispatchEvent(new CustomEvent('lap:change-password', { detail }));
+      });
+
+      // Office-hour filter chips: emit event your office-hours.js can read
+      $$('#hours-filters .filter-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          $$('#hours-filters .filter-chip').forEach(c => c.classList.toggle('active', c === chip));
+          const course = chip.dataset.course || '';
+          document.dispatchEvent(new CustomEvent('lap:filter-hours', { detail: { course } }));
+        });
+      });
+    })();
+  </script>
 </body>
 
 </html>
