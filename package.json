@@ -5,6 +5,7 @@
   "main": "app.js",
   "engines": { "node": ">=18.18 <23" },
   "scripts": {
+    "prestart": "node -e \"console.log('CWD:',process.cwd());require('fs').readdirSync('.').forEach(f=>console.log('-',f))\"",
     "start": "node app.js"
   },
   "dependencies": {
