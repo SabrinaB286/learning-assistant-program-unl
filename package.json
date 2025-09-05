@@ -1,15 +1,19 @@
 {
-  "name": "lap-feedback-backend",
-  "version": "1.1.1",
-  "type": "module",
+  "name": "lap-backend",
+  "version": "1.0.0",
+  "private": true,
   "main": "app.js",
+  "engines": { "node": ">=18.18 <23" },
   "scripts": {
-    "start": "node app.js",
-    "build": "echo \"no build step\""
+    "start": "node app.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.43.4",
+    "@supabase/supabase-js": "^2.45.4",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "express": "^4.19.2"
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.5.1",
+    "jsonwebtoken": "^9.0.2"
   }
 }

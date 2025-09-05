@@ -1,7 +1,10 @@
-import { Router } from 'express';
-import { createClient } from '@supabase/supabase-js';
+// office-hours.js  (CommonJS)
+'use strict';
 
-const router = Router();
+const express = require('express');
+const { createClient } = require('@supabase/supabase-js');
+
+const router = express.Router();
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -9,11 +12,14 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
+// GET /api/schedule/office-hours
 router.get('/office-hours', async (_req, res) => {
   try {
+    // Prefer SQL function if present
     let { data, error } = await supabase.rpc('get_office_hours');
 
     if (error && /does not exist/i.test(error.message)) {
+      // Fallback: join staff_schedules + staff
       const { data: sched, error: e1 } = await supabase
         .from('staff_schedules')
         .select('id,nuid,type,day,start_time,end_time,location,course_code')
@@ -34,7 +40,7 @@ router.get('/office-hours', async (_req, res) => {
         day: s.day,
         start_time: typeof s.start_time === 'string' ? s.start_time : String(s.start_time).slice(0, 5),
         end_time:   typeof s.end_time   === 'string' ? s.end_time   : String(s.end_time).slice(0, 5),
-        location: s.location,
+        location: s.location || '',
         staff_name: map.get(s.nuid)?.name || 'Unknown',
         staff_role: map.get(s.nuid)?.role || ''
       }));
@@ -49,4 +55,4 @@ router.get('/office-hours', async (_req, res) => {
   }
 });
 
-export default router;
+module.exports = router;
