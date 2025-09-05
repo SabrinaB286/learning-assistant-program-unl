@@ -3,5 +3,8 @@
 // set __API_BASE__ to your backend's URL. Example:
 // window.__API_BASE__ = "https://lap-feedback-backend.onrender.com";
 
-window.__API_BASE__ = window.__API_BASE__ || location.origin;
+// public/config.js
+window.__API_BASE__ = window.__API_BASE__ || `${location.origin}`;
+// You can add other globals here, e.g. course list, UI flags, etc.
+
 </script>
