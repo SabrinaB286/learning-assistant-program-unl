@@ -1,62 +1,47 @@
 // app.js
-const path = require('path');
-const fs = require('fs');
 const express = require('express');
-const compression = require('compression');
-const helmet = require('helmet');
-
-// If you created the server router as recommended:
-const authRouter = require('./server/routes/auth'); // <- adjust only if you placed it elsewhere
+const path = require('path');
+const cors = require('cors');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-// --- middleware
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(compression());
+// Middleware
+app.use(cors());
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true }));
 
-// --- static assets (front-end files)
-app.use('/public', express.static(path.join(__dirname, 'public')));
+// ---- Static assets (your structure) ----
+app.use('/lib',      express.static(path.join(__dirname, 'lib')));
+app.use('/public',   express.static(path.join(__dirname, 'public')));
 app.use('/feedback', express.static(path.join(__dirname, 'feedback')));
-app.use('/lib', express.static(path.join(__dirname, 'lib')));
-app.use('/routes', express.static(path.join(__dirname, 'routes')));
+app.use('/routes',   express.static(path.join(__dirname, 'routes')));
+app.use(express.static(path.join(__dirname))); // to serve /index.html
 
-// --- API routes (server-side)
-app.use('/api/auth', authRouter);
-
-// --- pick a homepage file robustly
-const candidates = [
-  process.env.HOME_PAGE && path.join(__dirname, process.env.HOME_PAGE),
-  path.join(__dirname, 'index.html'),
-  path.join(__dirname, 'public', 'index.html'),
-  path.join(__dirname, 'feedback', 'index.html'), // <- where yours currently lives
-].filter(Boolean);
-
-const HOME = candidates.find(p => {
-  try { return fs.statSync(p).isFile(); } catch { return false; }
-});
-
-if (!HOME) {
-  console.error('[server] No index.html found. Looked for:\n' + candidates.join('\n'));
+// ---- APIs (mounted if present) ----
+function tryMount(route, file) {
+  try {
+    const r = require(file);
+    app.use(route, r);
+    console.log(`Mounted ${route} from ${file}`);
+  } catch (e) {
+    console.log(`(note) API ${route} not mounted (${file} not found)`);
+  }
 }
+tryMount('/api/auth',         path.join(__dirname, 'server', 'routes', 'auth'));
+tryMount('/api/schedule',     path.join(__dirname, 'server', 'routes', 'schedule'));
+tryMount('/api/office-hours', path.join(__dirname, 'server', 'routes', 'officehours'));
+tryMount('/api/feedback',     path.join(__dirname, 'server', 'routes', 'feedback'));
 
-// Health check
-app.get('/healthz', (_req, res) => res.json({ ok: true }));
-
-// Root -> homepage
-app.get('/', (_req, res) => {
-  if (!HOME) return res.status(500).send('Homepage not found on server.');
-  res.sendFile(HOME);
+// ---- Root and SPA fallback (non-/api goes to index.html) ----
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+app.get(/^\/(?!api\/).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// SPA fallback so hard-refresh on subpaths still works
-app.get('*', (_req, res) => {
-  if (!HOME) return res.status(404).send('Not configured.');
-  res.sendFile(HOME);
-});
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`HTTP server listening on :${port}`);
-  console.log(`Serving homepage -> ${HOME || '(missing)'}`);
+// ---- Start
+app.listen(PORT, () => {
+  console.log(`Server listening on ${PORT}`);
 });

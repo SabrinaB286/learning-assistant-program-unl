@@ -1,67 +1,36 @@
-// routes/staff.js
-const express = require('express');
-const { createClient } = require('@supabase/supabase-js');
-const requireAuth = require('../middleware/auth');
-const { requireRole } = require('../middleware/auth');
+import { getToken } from '/routes/auth.js';
 
-const router = express.Router();
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+function authHeaders() {
+  const t = getToken();
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
 
-// GET /api/staff/me
-router.get('/me', requireAuth, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('staff')
-      .select('nuid, name, role, email')
-      .eq('nuid', req.user.nuid)
-      .limit(1);
-    if (error) throw error;
-    res.json(data?.[0] || null);
-  } catch (e) {
-    console.error('[staff/me]', e);
-    res.status(500).json({ error: 'Failed to load profile' });
-  }
-});
+// List LAs assigned to a CL
+export async function fetchAssignedLAs() {
+  const res = await fetch('/api/staff/assigned-las', {
+    headers: { ...authHeaders() }
+  });
+  if (!res.ok) throw new Error('Failed to load assigned LAs');
+  return res.json();
+}
 
-// GET /api/staff/me/schedule
-router.get('/me/schedule', requireAuth, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('staff_schedules')
-      .select('day_of_week, start_time, end_time, location, schedule_type, nuid')
-      .eq('nuid', req.user.nuid);
-    if (error) throw error;
-    res.json(data || []);
-  } catch (e) {
-    console.error('[staff/me/schedule]', e);
-    res.status(500).json({ error: 'Failed to load schedule' });
-  }
-});
+// Add or update a staff schedule row
+export async function upsertSchedule(entry) {
+  const res = await fetch('/api/schedule', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify(entry)   // { day, start, end, type, location, course_code }
+  });
+  if (!res.ok) throw new Error('Failed to save schedule');
+  return res.json();
+}
 
-// POST /api/staff/schedule  (SL can add for anyone; others only for themselves)
-router.post('/schedule', requireAuth, async (req, res) => {
-  try {
-    const { nuid, day_of_week, start_time, end_time, location, schedule_type } = req.body || {};
-    const target = nuid || req.user.nuid;
-
-    if (target !== req.user.nuid && req.user.role !== 'SL') {
-      return res.status(403).json({ error: 'Only SL can edit other schedules' });
-    }
-    if (!day_of_week || !start_time || !end_time || !location || !schedule_type) {
-      return res.status(400).json({ error: 'Missing fields' });
-    }
-
-    const { data, error } = await supabase
-      .from('staff_schedules')
-      .insert([{ nuid: target, day_of_week, start_time, end_time, location, schedule_type }])
-      .select('*')
-      .limit(1);
-    if (error) throw error;
-    res.json({ ok: true, schedule: data?.[0] || null });
-  } catch (e) {
-    console.error('[staff/schedule]', e);
-    res.status(500).json({ error: 'Failed to save schedule' });
-  }
-});
-
-module.exports = router;
+// Delete a schedule row
+export async function deleteSchedule(id) {
+  const res = await fetch(`/api/schedule/${id}`, {
+    method: 'DELETE',
+    headers: { ...authHeaders() }
+  });
+  if (!res.ok) throw new Error('Failed to delete schedule');
+  return true;
+}
