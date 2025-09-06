@@ -6,7 +6,6 @@
   <title>Learning Assistant Feedback</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 
-  <!-- ===== Design Tokens & Base ===== -->
   <style>
     :root {
       --unl-red: #d00000;
@@ -66,7 +65,7 @@
       color: var(--muted)
     }
 
-    /* ===== Header ===== */
+    /* Header */
     .topbar {
       position: sticky;
       top: 0;
@@ -93,7 +92,7 @@
       gap: 10px;
       align-items: center;
       flex-wrap: wrap;
-      padding: 10px 0 18px;
+      padding: 10px 0 18px
     }
 
     .chip {
@@ -134,7 +133,7 @@
       font-weight: 700
     }
 
-    /* ===== Page containers ===== */
+    /* Layout */
     main {
       padding: 18px 0 40px
     }
@@ -158,7 +157,7 @@
       font-size: 1.55rem
     }
 
-    /* ===== Inputs / Buttons ===== */
+    /* Inputs/Buttons */
     label {
       display: block;
       font-weight: 700;
@@ -227,11 +226,7 @@
       color: #2d2d2d
     }
 
-    .btn-pill {
-      border-radius: 999px
-    }
-
-    /* ===== Grids ===== */
+    /* Grid */
     .grid {
       display: grid;
       gap: 14px
@@ -259,7 +254,7 @@
       }
     }
 
-    /* ===== Alerts ===== */
+    /* Alerts */
     #alert {
       border-radius: 12px;
       background: var(--ok-bg);
@@ -275,7 +270,7 @@
       border-color: #fecaca !important
     }
 
-    /* ===== Hours filter ===== */
+    /* Hours filter */
     .filter-row {
       display: flex;
       gap: 12px;
@@ -303,17 +298,17 @@
       background: var(--unl-red)
     }
 
-    /* ===== Iframe for embedded form ===== */
+    /* Iframe (feedback embed) */
     .iframe-form {
       width: 100%;
-      height: 1100px;
+      height: 1600px;
       border: 0;
       border-radius: 12px;
       background: #fff;
       box-shadow: inset 0 0 0 1px var(--ring);
     }
 
-    /* ===== Modal (change password) ===== */
+    /* Modal (change password) */
     .modal {
       position: fixed;
       inset: 0;
@@ -346,7 +341,7 @@
 </head>
 
 <body>
-  <!-- ===== Header ===== -->
+  <!-- Header -->
   <header class="topbar">
     <div class="shell">
       <div class="brand">Learning Assistant Feedback</div>
@@ -354,7 +349,7 @@
       <nav class="nav" aria-label="Primary">
         <button class="chip active" data-route="feedback" id="nav-feedback">Feedback</button>
         <button class="chip" data-route="hours" id="nav-hours">Office Hours</button>
-        <!-- Dashboard is hidden until a staff user logs in -->
+        <!-- Dashboard hidden until staff login -->
         <button class="chip hidden" data-route="dashboard" id="nav-dashboard">Dashboard</button>
         <button class="chip" data-route="login" id="nav-login">Login</button>
         <span id="user-badge" class="badge hidden"></span>
@@ -363,23 +358,24 @@
     </div>
   </header>
 
-  <!-- ===== Main ===== -->
   <main class="shell">
     <div id="alert" class="card hidden" role="status" aria-live="polite"></div>
 
-    <!-- === Feedback (EMBEDDED FORM) === -->
+    <!-- Feedback (EMBEDDED, full form comes from your existing page) -->
     <section id="view-feedback" class="card">
       <h2>Submit Feedback</h2>
       <p class="muted">Share course or LA feedback. Submissions are stored in Supabase.</p>
-      <!-- Embeds your existing form page so you don’t duplicate code -->
-      <iframe class="iframe-form" src="/feedback-app.html" title="Feedback form"></iframe>
+      <!-- IMPORTANT:
+           This expects your existing feedback page at /feedback/index.html
+           If your form is in another file, move/rename it to feedback/index.html -->
+      <iframe class="iframe-form" src="/feedback/index.html" title="Feedback form"></iframe>
+      <noscript>Please enable JavaScript to load the feedback form.</noscript>
     </section>
 
-    <!-- === Office Hours === -->
+    <!-- Office Hours -->
     <section id="view-hours" class="card hidden">
       <h2>Office Hours</h2>
       <p class="muted">Filter by course to see matching staff office hours and lab times.</p>
-
       <div class="filter-row" id="hours-filters">
         <button class="filter-chip active" data-course="">All</button>
         <button class="filter-chip" data-course="CSCE 101">CSCE 101</button>
@@ -388,14 +384,12 @@
         <button class="filter-chip" data-course="CSCE 155H">CSCE 155H</button>
         <button class="filter-chip" data-course="CSCE 156">CSCE 156</button>
       </div>
-
       <div id="hours-list" class="grid g-3"></div>
     </section>
 
-    <!-- === Login === -->
+    <!-- Login -->
     <section id="view-login" class="card hidden" aria-labelledby="login-title">
       <h2 id="login-title">Sign in</h2>
-
       <form id="login-form" novalidate>
         <div class="grid g-2">
           <div>
@@ -407,7 +401,6 @@
             <input id="login-pass" type="password" placeholder="Your password" autocomplete="current-password" />
           </div>
         </div>
-
         <div class="row" style="margin-top:12px">
           <button id="btn-login" type="submit" class="btn btn-primary">Sign in</button>
           <span class="muted">New student? <a href="#" aria-disabled="true">Create an account</a></span>
@@ -417,7 +410,7 @@
       </form>
     </section>
 
-    <!-- === Dashboard (visible only for staff) === -->
+    <!-- Dashboard (staff-only) -->
     <section id="view-dashboard" class="card hidden">
       <h2>Dashboard</h2>
       <div class="grid g-3">
@@ -458,7 +451,7 @@
     </section>
   </main>
 
-  <!-- ===== Change Password Modal ===== -->
+  <!-- Change Password Modal -->
   <div id="modal-change-password" class="modal" aria-hidden="true">
     <div class="panel" role="dialog" aria-modal="true" aria-labelledby="cp-title">
       <h3 id="cp-title">Change password</h3>
@@ -483,7 +476,7 @@
     </div>
   </div>
 
-  <!-- ===== Your project scripts (absolute paths) ===== -->
+  <!-- Your scripts (absolute paths) -->
   <script defer src="/public/config.js"></script>
   <script defer src="/lib/supabase.js"></script>
   <script defer src="/routes/office-hours.js"></script>
@@ -492,7 +485,7 @@
   <script defer src="/routes/staff.js"></script>
   <script defer src="/feedback/feedback.js"></script>
 
-  <!-- ===== Minimal glue: nav, embedded login, staff-only dashboard ===== -->
+  <!-- Page glue: nav + login + staff-only dashboard -->
   <script>
     (function () {
       const $ = (s, sc = document) => sc.querySelector(s);
@@ -514,7 +507,6 @@
       const staffRoles = new Set(['SL', 'CL', 'LA']);
 
       function showAlert(msg, isErr = false) {
-        if (!alertBox) return;
         alertBox.textContent = msg;
         alertBox.classList.toggle('alert-error', !!isErr);
         alertBox.classList.remove('hidden');
@@ -529,7 +521,6 @@
 
       function applyUserUI(user) {
         const isStaff = user && staffRoles.has(user.role);
-        // Badge
         if (user) {
           userBadge.textContent = user.name + (isStaff ? ` (${user.role})` : '');
           userBadge.classList.remove('hidden');
@@ -540,9 +531,7 @@
           btnLogout.classList.add('hidden');
           navLogin.classList.remove('hidden');
         }
-        // Dashboard visibility
         navDash.classList.toggle('hidden', !isStaff);
-        // If we’re on dashboard but lost staff status, bounce to feedback
         const current = (() => { try { return sessionStorage.getItem('lap_route') || 'feedback' } catch (e) { return 'feedback' } })();
         if (current === 'dashboard' && !isStaff) { setRoute('feedback'); }
       }
@@ -571,15 +560,15 @@
         }
       }
 
-      // Try to hydrate session on load
+      // Force start on FEEDBACK
+      setRoute('feedback');
+
       (async () => {
         const u = await getMe();
         applyUserUI(u);
-        const last = (() => { try { return sessionStorage.getItem('lap_route') || 'feedback' } catch (e) { return 'feedback' } })();
-        setRoute(last);
       })();
 
-      // Navigation clicks
+      // Navigation
       $$('.nav .chip').forEach(btn => {
         btn.addEventListener('click', async () => {
           const route = btn.dataset.route;
@@ -609,54 +598,47 @@
         }
       });
 
-      // Login (click or Enter)
+      // Login submit (click or Enter)
       const form = $('#login-form');
       const btnLogin = $('#btn-login');
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        btnLogin.click();
-      });
+      form.addEventListener('submit', (e) => { e.preventDefault(); btnLogin.click(); });
 
       btnLogin.addEventListener('click', async () => {
         const id = $('#login-id').value.trim();
         const password = $('#login-pass').value;
-        if (!id || !password) { showAlert('Enter your NUID/email and password.', true); return; }
+        if (!id || !password) { showAlert('Missing login or password', true); return; }
 
-        // If your own function exists (from /routes/auth.js), use it first.
+        // Prefer your custom function if defined
         if (typeof window.lapLogin === 'function') {
           try {
             const out = await window.lapLogin(id, password);
-            // Expect { token, user:{name,role,...} }
             if (!out || !out.token) throw new Error('Login failed');
             saveToken(out.token);
             applyUserUI(out.user || null);
-            setRoute('feedback'); // stay on feedback after login
+            setRoute('feedback');
             showAlert(`Welcome, ${out.user?.name || 'user'}!`);
-          } catch (err) {
-            showAlert(err.message || 'Login failed', true);
-          }
+          } catch (err) { showAlert(err.message || 'Login failed', true); }
           return;
         }
 
-        // Built-in fallback to /api/auth/login
+        // Fallback to API: **send { login, password }**
         try {
           const data = await fetchJSON('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ id, password })
+            body: JSON.stringify({ login: id, password })
           });
-          // Expect server to return { token, user: { name, role } }
           if (!data || !data.token) throw new Error('Bad login response');
           saveToken(data.token);
           applyUserUI(data.user || null);
-          setRoute('feedback'); // default view after login
+          setRoute('feedback');
           showAlert(`Welcome, ${data.user?.name || 'user'}!`);
         } catch (err) {
           showAlert(err.message || 'Invalid credentials', true);
         }
       });
 
-      // Change password modal open/close
+      // Change password modal behavior
       const modal = $('#modal-change-password');
       $('#btn-open-change-password')?.addEventListener('click', () => {
         modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false');
@@ -665,8 +647,6 @@
         modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true');
       });
       modal?.addEventListener('click', (e) => { if (e.target === modal) { modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true'); } });
-
-      // Save change password — emit an event your password.js can handle
       $('#cp-save')?.addEventListener('click', () => {
         const detail = {
           current: $('#cp-current').value,
@@ -676,7 +656,7 @@
         document.dispatchEvent(new CustomEvent('lap:change-password', { detail }));
       });
 
-      // Hours filter chips emit event (your office-hours.js can listen)
+      // Hours filter chips emit event your office-hours.js listens for
       $$('#hours-filters .filter-chip').forEach(chip => {
         chip.addEventListener('click', () => {
           $$('#hours-filters .filter-chip').forEach(c => c.classList.toggle('active', c === chip));
