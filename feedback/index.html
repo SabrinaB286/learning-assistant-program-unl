@@ -5,21 +5,20 @@
   <meta charset="utf-8" />
   <title>Learning Assistant Feedback</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-
   <style>
     :root {
       --unl-red: #d00000;
       --unl-red-600: #b30000;
-      --bg: #f5f6f8;
       --ink: #151515;
       --muted: #6a6f76;
+      --bg: #f5f6f8;
       --ring: #e6e7eb;
+      --chip: #f1f5f9;
       --card: #fff;
       --ok: #065f46;
       --ok-bg: #ecfdf5;
       --bad: #991b1b;
       --bad-bg: #fef2f2;
-      --chip: #f1f5f9;
     }
 
     *,
@@ -51,21 +50,17 @@
       text-decoration: underline
     }
 
+    .hidden {
+      display: none !important
+    }
+
     .shell {
       max-width: 1120px;
       margin: 0 auto;
       padding: 0 16px
     }
 
-    .hidden {
-      display: none !important
-    }
-
-    .muted {
-      color: var(--muted)
-    }
-
-    /* Header */
+    /* Top bar */
     .topbar {
       position: sticky;
       top: 0;
@@ -76,7 +71,6 @@
     }
 
     .brand {
-      font-size: 1.05rem;
       font-weight: 800;
       letter-spacing: .2px;
       padding-top: 16px
@@ -84,7 +78,7 @@
 
     .sub {
       opacity: .95;
-      padding-bottom: 10px
+      padding-bottom: 12px
     }
 
     nav.nav {
@@ -92,7 +86,7 @@
       gap: 10px;
       align-items: center;
       flex-wrap: wrap;
-      padding: 10px 0 18px
+      padding: 10px 0 16px
     }
 
     .chip {
@@ -106,7 +100,7 @@
       border: 1px solid rgba(255, 255, 255, .6);
       border-radius: 999px;
       padding: 8px 14px;
-      font-weight: 600;
+      font-weight: 700;
       transition: .15s ease;
     }
 
@@ -133,7 +127,6 @@
       font-weight: 700
     }
 
-    /* Layout */
     main {
       padding: 18px 0 40px
     }
@@ -157,7 +150,37 @@
       font-size: 1.55rem
     }
 
-    /* Inputs/Buttons */
+    .muted {
+      color: var(--muted)
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px
+    }
+
+    .g-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+    .g-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr))
+    }
+
+    @media (max-width:900px) {
+      .g-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+      }
+    }
+
+    @media (max-width:640px) {
+
+      .g-3,
+      .g-2 {
+        grid-template-columns: 1fr
+      }
+    }
+
     label {
       display: block;
       font-weight: 700;
@@ -226,34 +249,6 @@
       color: #2d2d2d
     }
 
-    /* Grid */
-    .grid {
-      display: grid;
-      gap: 14px
-    }
-
-    .g-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr))
-    }
-
-    .g-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr))
-    }
-
-    @media (max-width:900px) {
-      .g-3 {
-        grid-template-columns: repeat(2, minmax(0, 1fr))
-      }
-    }
-
-    @media (max-width:640px) {
-
-      .g-3,
-      .g-2 {
-        grid-template-columns: 1fr
-      }
-    }
-
     /* Alerts */
     #alert {
       border-radius: 12px;
@@ -261,7 +256,8 @@
       color: var(--ok);
       border: 1px solid #a7f3d0;
       padding: 12px 14px;
-      font-weight: 700
+      font-weight: 700;
+      margin-top: 6px
     }
 
     .alert-error {
@@ -270,72 +266,46 @@
       border-color: #fecaca !important
     }
 
-    /* Hours filter */
-    .filter-row {
+    /* Stars */
+    .stars {
       display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin: 8px 0 10px
+      gap: 4px;
+      align-items: center
     }
 
-    .filter-chip {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      cursor: pointer;
-      padding: 9px 14px;
-      border-radius: 999px;
-      background: var(--chip);
-      border: 1px solid #dde3ea;
-      color: #1c1c1c;
-      font-weight: 700
-    }
-
-    .filter-chip.active {
-      border-color: var(--unl-red);
-      color: #fff;
-      background: var(--unl-red)
-    }
-
-    /* Iframe (feedback embed) */
-    .iframe-form {
-      width: 100%;
-      height: 1600px;
-      border: 0;
-      border-radius: 12px;
-      background: #fff;
-      box-shadow: inset 0 0 0 1px var(--ring);
-    }
-
-    /* Modal (change password) */
-    .modal {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, .35);
-      z-index: 70
-    }
-
-    .modal.show {
-      display: flex
-    }
-
-    .panel {
-      width: min(560px, 94vw);
-      background: #fff;
-      border-radius: 16px;
+    .star {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
       border: 1px solid var(--ring);
-      padding: 18px
+      background: #fff;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 32px;
+      text-align: center;
+      user-select: none;
     }
 
-    .panel .foot {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-      margin-top: 14px
+    .star.active {
+      background: #ffe6e6;
+      border-color: #ffbcbc
+    }
+
+    .star:hover {
+      filter: brightness(.98)
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border-bottom: 1px solid var(--ring);
+      text-align: left;
+      font-size: .95rem
     }
   </style>
 </head>
@@ -349,7 +319,6 @@
       <nav class="nav" aria-label="Primary">
         <button class="chip active" data-route="feedback" id="nav-feedback">Feedback</button>
         <button class="chip" data-route="hours" id="nav-hours">Office Hours</button>
-        <!-- Dashboard hidden until staff login -->
         <button class="chip hidden" data-route="dashboard" id="nav-dashboard">Dashboard</button>
         <button class="chip" data-route="login" id="nav-login">Login</button>
         <span id="user-badge" class="badge hidden"></span>
@@ -361,33 +330,99 @@
   <main class="shell">
     <div id="alert" class="card hidden" role="status" aria-live="polite"></div>
 
-    <!-- Feedback (EMBEDDED, full form comes from your existing page) -->
+    <!-- FEEDBACK (inline, no iframe) -->
     <section id="view-feedback" class="card">
       <h2>Submit Feedback</h2>
       <p class="muted">Share course or LA feedback. Submissions are stored in Supabase.</p>
-      <!-- IMPORTANT:
-           This expects your existing feedback page at /feedback/index.html
-           If your form is in another file, move/rename it to feedback/index.html -->
-      <iframe class="iframe-form" src="/feedback/index.html" title="Feedback form"></iframe>
-      <noscript>Please enable JavaScript to load the feedback form.</noscript>
+
+      <form id="feedback-form">
+        <div class="grid g-2">
+          <div>
+            <label for="fb-course">Course</label>
+            <select id="fb-course" required>
+              <option value="" selected disabled>Select a course</option>
+              <option>CSCE 101</option>
+              <option>CSCE 155A</option>
+              <option>CSCE 155E</option>
+              <option>CSCE 155H</option>
+              <option>CSCE 156</option>
+            </select>
+          </div>
+          <div>
+            <label for="fb-type">Type</label>
+            <select id="fb-type" required>
+              <option value="" selected disabled>Select a type</option>
+              <option>Website</option>
+              <option>Comments on Staff</option>
+              <option>Comments on the Class</option>
+              <option>Office Hours</option>
+              <option>Random</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:10px">
+          <label>Rating (optional)</label>
+          <div class="stars" id="fb-stars" role="radiogroup" aria-label="Star rating 1 to 5">
+            <button type="button" class="star" data-val="1" aria-label="1 star">★</button>
+            <button type="button" class="star" data-val="2" aria-label="2 stars">★</button>
+            <button type="button" class="star" data-val="3" aria-label="3 stars">★</button>
+            <button type="button" class="star" data-val="4" aria-label="4 stars">★</button>
+            <button type="button" class="star" data-val="5" aria-label="5 stars">★</button>
+          </div>
+          <input type="hidden" id="fb-rating" value="" />
+        </div>
+
+        <div style="margin-top:10px">
+          <label for="fb-text">Your feedback</label>
+          <textarea id="fb-text" rows="6" placeholder="Share details…" required></textarea>
+        </div>
+
+        <div class="grid g-2" style="margin-top:10px">
+          <div>
+            <label for="fb-name">Your name (optional)</label>
+            <input id="fb-name" placeholder="e.g., Pat Student" />
+          </div>
+          <div>
+            <label for="fb-year">Year (optional)</label>
+            <select id="fb-year">
+              <option value="">Prefer not to say</option>
+              <option>Freshman</option>
+              <option>Sophomore</option>
+              <option>Junior</option>
+              <option>Senior</option>
+              <option>Graduate</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button type="submit" class="btn btn-primary">Submit feedback</button>
+          <span class="muted">Thank you for helping us improve!</span>
+        </div>
+      </form>
     </section>
 
-    <!-- Office Hours -->
+    <!-- OFFICE HOURS -->
     <section id="view-hours" class="card hidden">
       <h2>Office Hours</h2>
-      <p class="muted">Filter by course to see matching staff office hours and lab times.</p>
-      <div class="filter-row" id="hours-filters">
-        <button class="filter-chip active" data-course="">All</button>
-        <button class="filter-chip" data-course="CSCE 101">CSCE 101</button>
-        <button class="filter-chip" data-course="CSCE 155A">CSCE 155A</button>
-        <button class="filter-chip" data-course="CSCE 155E">CSCE 155E</button>
-        <button class="filter-chip" data-course="CSCE 155H">CSCE 155H</button>
-        <button class="filter-chip" data-course="CSCE 156">CSCE 156</button>
+      <p class="muted">Browse office hours by course. Data comes from staff schedules.</p>
+
+      <div class="row" id="hours-filters" style="flex-wrap:wrap; gap:10px; margin-top:10px">
+        <button class="chip" data-course="">All</button>
+        <button class="chip" data-course="CSCE 101">CSCE 101</button>
+        <button class="chip" data-course="CSCE 155A">CSCE 155A</button>
+        <button class="chip" data-course="CSCE 155E">CSCE 155E</button>
+        <button class="chip" data-course="CSCE 155H">CSCE 155H</button>
+        <button class="chip" data-course="CSCE 156">CSCE 156</button>
       </div>
-      <div id="hours-list" class="grid g-3"></div>
+
+      <div id="hours-list" class="grid g-3" style="margin-top:12px"></div>
     </section>
 
-    <!-- Login -->
+    <!-- LOGIN -->
     <section id="view-login" class="card hidden" aria-labelledby="login-title">
       <h2 id="login-title">Sign in</h2>
       <form id="login-form" novalidate>
@@ -410,7 +445,7 @@
       </form>
     </section>
 
-    <!-- Dashboard (staff-only) -->
+    <!-- DASHBOARD (staff only) -->
     <section id="view-dashboard" class="card hidden">
       <h2>Dashboard</h2>
       <div class="grid g-3">
@@ -451,32 +486,10 @@
     </section>
   </main>
 
-  <!-- Change Password Modal -->
-  <div id="modal-change-password" class="modal" aria-hidden="true">
-    <div class="panel" role="dialog" aria-modal="true" aria-labelledby="cp-title">
-      <h3 id="cp-title">Change password</h3>
-      <div class="grid g-2">
-        <div>
-          <label for="cp-current">Current password</label>
-          <input id="cp-current" type="password" autocomplete="current-password" />
-        </div>
-        <div>
-          <label for="cp-new">New password</label>
-          <input id="cp-new" type="password" autocomplete="new-password" />
-        </div>
-      </div>
-      <div style="margin-top:10px">
-        <label for="cp-confirm">Confirm new password</label>
-        <input id="cp-confirm" type="password" autocomplete="new-password" />
-      </div>
-      <div class="foot">
-        <button id="cp-cancel" class="btn btn-ghost" type="button">Cancel</button>
-        <button id="cp-save" class="btn btn-primary" type="button">Save</button>
-      </div>
-    </div>
-  </div>
+  <!-- Change Password Modal (hooks are in routes/password.js if you have it) -->
+  <div id="modal-change-password" class="hidden" aria-hidden="true"></div>
 
-  <!-- Your scripts (absolute paths) -->
+  <!-- Your existing files -->
   <script defer src="/public/config.js"></script>
   <script defer src="/lib/supabase.js"></script>
   <script defer src="/routes/office-hours.js"></script>
@@ -485,7 +498,7 @@
   <script defer src="/routes/staff.js"></script>
   <script defer src="/feedback/feedback.js"></script>
 
-  <!-- Page glue: nav + login + staff-only dashboard -->
+  <!-- Page glue (routing + login wiring + stars UI) -->
   <script>
     (function () {
       const $ = (s, sc = document) => sc.querySelector(s);
@@ -497,29 +510,43 @@
         login: $('#view-login'),
         dashboard: $('#view-dashboard')
       };
-
+      const alertBox = $('#alert');
       const navDash = $('#nav-dashboard');
       const navLogin = $('#nav-login');
-      const btnLogout = $('#btn-logout');
       const userBadge = $('#user-badge');
-      const alertBox = $('#alert');
-
+      const btnLogout = $('#btn-logout');
       const staffRoles = new Set(['SL', 'CL', 'LA']);
 
-      function showAlert(msg, isErr = false) {
+      function showAlert(msg, err = false) {
         alertBox.textContent = msg;
-        alertBox.classList.toggle('alert-error', !!isErr);
+        alertBox.classList.toggle('alert-error', !!err);
         alertBox.classList.remove('hidden');
         setTimeout(() => alertBox.classList.add('hidden'), 5000);
       }
 
       function setRoute(route) {
-        $$('.nav .chip').forEach(c => c.classList.toggle('active', c.dataset.route === route));
-        Object.entries(sections).forEach(([key, el]) => el.classList.toggle('hidden', key !== route));
+        $$('.nav .chip').forEach(b => b.classList.toggle('active', b.dataset.route === route));
+        Object.entries(sections).forEach(([k, el]) => el.classList.toggle('hidden', k !== route));
         try { sessionStorage.setItem('lap_route', route); } catch (e) { }
       }
 
-      function applyUserUI(user) {
+      function saveToken(t) { try { localStorage.setItem('lap_jwt', t); } catch (e) { } }
+      function getToken() { try { return localStorage.getItem('lap_jwt') } catch (e) { return null } }
+      function clearToken() { try { localStorage.removeItem('lap_jwt'); } catch (e) { } }
+
+      async function getMe() {
+        const token = getToken();
+        if (!token) return null;
+        try {
+          const res = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}`, 'Accept': 'application/json' } });
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data) throw 0;
+          return data.user || null;
+        } catch { clearToken(); return null; }
+      }
+
+      async function applyUserUIFromToken() {
+        const user = await getMe();
         const isStaff = user && staffRoles.has(user.role);
         if (user) {
           userBadge.textContent = user.name + (isStaff ? ` (${user.role})` : '');
@@ -532,52 +559,21 @@
           navLogin.classList.remove('hidden');
         }
         navDash.classList.toggle('hidden', !isStaff);
-        const current = (() => { try { return sessionStorage.getItem('lap_route') || 'feedback' } catch (e) { return 'feedback' } })();
-        if (current === 'dashboard' && !isStaff) { setRoute('feedback'); }
+        const last = (() => { try { return sessionStorage.getItem('lap_route') || 'feedback' } catch (e) { return 'feedback' } })();
+        if (last === 'dashboard' && !isStaff) setRoute('feedback');
       }
 
-      async function fetchJSON(url, opts = {}) {
-        const res = await fetch(url, opts);
-        let data = null;
-        try { data = await res.json(); } catch (_) { }
-        if (!res.ok) throw new Error((data && (data.error || data.message)) || `HTTP ${res.status}`);
-        return data;
-      }
-
-      function saveToken(t) { try { localStorage.setItem('lap_jwt', t) } catch (e) { } }
-      function getToken() { try { return localStorage.getItem('lap_jwt') } catch (e) { return null } }
-      function clearToken() { try { localStorage.removeItem('lap_jwt') } catch (e) { } }
-
-      async function getMe() {
-        const token = getToken();
-        if (!token) return null;
-        try {
-          const me = await fetchJSON('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
-          return me && me.user ? me.user : null;
-        } catch (e) {
-          clearToken();
-          return null;
-        }
-      }
-
-      // Force start on FEEDBACK
+      // Start on Feedback
       setRoute('feedback');
+      applyUserUIFromToken();
 
-      (async () => {
-        const u = await getMe();
-        applyUserUI(u);
-      })();
-
-      // Navigation
+      // Nav
       $$('.nav .chip').forEach(btn => {
         btn.addEventListener('click', async () => {
           const route = btn.dataset.route;
           if (route === 'dashboard') {
             const u = await getMe();
-            if (!u || !staffRoles.has(u.role)) {
-              showAlert('Dashboard is for staff accounts (SL, CL, LA) only.', true);
-              return;
-            }
+            if (!u || !staffRoles.has(u.role)) { showAlert('Dashboard is for staff (SL/CL/LA) only.', true); return; }
           }
           setRoute(route);
         });
@@ -586,80 +582,72 @@
       // Logout
       btnLogout.addEventListener('click', async () => {
         const token = getToken();
-        try {
-          if (token) {
-            await fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }).catch(() => { });
-          }
-        } finally {
-          clearToken();
-          applyUserUI(null);
-          setRoute('feedback');
-          showAlert('Signed out.');
-        }
+        try { if (token) await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => { }); }
+        finally { clearToken(); applyUserUIFromToken(); setRoute('feedback'); showAlert('Signed out.'); }
       });
 
-      // Login submit (click or Enter)
+      // Login
       const form = $('#login-form');
-      const btnLogin = $('#btn-login');
-      form.addEventListener('submit', (e) => { e.preventDefault(); btnLogin.click(); });
-
-      btnLogin.addEventListener('click', async () => {
+      form.addEventListener('submit', (e) => { e.preventDefault(); $('#btn-login').click(); });
+      $('#btn-login').addEventListener('click', async () => {
         const id = $('#login-id').value.trim();
-        const password = $('#login-pass').value;
-        if (!id || !password) { showAlert('Missing login or password', true); return; }
+        const pw = $('#login-pass').value;
+        if (!id || !pw) { showAlert('Missing login or password', true); return; }
 
-        // Prefer your custom function if defined
+        // Prefer window.lapLogin if provided (see routes/auth.js below)
         if (typeof window.lapLogin === 'function') {
           try {
-            const out = await window.lapLogin(id, password);
+            const out = await window.lapLogin(id, pw); // must return { token, user }
             if (!out || !out.token) throw new Error('Login failed');
             saveToken(out.token);
-            applyUserUI(out.user || null);
+            await applyUserUIFromToken();
             setRoute('feedback');
             showAlert(`Welcome, ${out.user?.name || 'user'}!`);
-          } catch (err) { showAlert(err.message || 'Login failed', true); }
-          return;
+            return;
+          } catch (err) { showAlert(err.message || 'Login failed', true); return; }
         }
 
-        // Fallback to API: **send { login, password }**
-        try {
-          const data = await fetchJSON('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ login: id, password })
-          });
-          if (!data || !data.token) throw new Error('Bad login response');
-          saveToken(data.token);
-          applyUserUI(data.user || null);
-          setRoute('feedback');
-          showAlert(`Welcome, ${data.user?.name || 'user'}!`);
-        } catch (err) {
-          showAlert(err.message || 'Invalid credentials', true);
+        // Fallback: try multiple payload shapes
+        const shapes = [
+          { login: id, password: pw },
+          { id: id, password: pw },
+          { nuid: id, password: pw },
+          { email: id, password: pw },
+        ];
+        for (const body of shapes) {
+          try {
+            const res = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify(body)
+            });
+            const data = await res.json().catch(() => null);
+            if (res.ok && data && data.token) {
+              saveToken(data.token);
+              await applyUserUIFromToken();
+              setRoute('feedback');
+              showAlert(`Welcome, ${data.user?.name || 'user'}!`);
+              return;
+            }
+          } catch { }
         }
+        showAlert('Invalid credentials', true);
       });
 
-      // Change password modal behavior
-      const modal = $('#modal-change-password');
-      $('#btn-open-change-password')?.addEventListener('click', () => {
-        modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false');
-      });
-      $('#cp-cancel')?.addEventListener('click', () => {
-        modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true');
-      });
-      modal?.addEventListener('click', (e) => { if (e.target === modal) { modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true'); } });
-      $('#cp-save')?.addEventListener('click', () => {
-        const detail = {
-          current: $('#cp-current').value,
-          next: $('#cp-new').value,
-          confirm: $('#cp-confirm').value
-        };
-        document.dispatchEvent(new CustomEvent('lap:change-password', { detail }));
+      // Stars UI
+      const stars = $$('#fb-stars .star'); const rating = $('#fb-rating');
+      stars.forEach(s => {
+        s.addEventListener('click', () => {
+          const v = Number(s.dataset.val);
+          rating.value = String(v);
+          stars.forEach(x => x.classList.toggle('active', Number(x.dataset.val) <= v));
+        });
       });
 
-      // Hours filter chips emit event your office-hours.js listens for
-      $$('#hours-filters .filter-chip').forEach(chip => {
+      // Hours filter chips -> event that /routes/office-hours.js listens for
+      $$('#hours-filters .chip').forEach(chip => {
         chip.addEventListener('click', () => {
-          $$('#hours-filters .filter-chip').forEach(c => c.classList.toggle('active', c === chip));
+          $$('#hours-filters .chip').forEach(c => c.classList.toggle('active', c === chip));
           const course = chip.dataset.course || '';
           document.dispatchEvent(new CustomEvent('lap:filter-hours', { detail: { course } }));
         });
