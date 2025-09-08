@@ -5,17 +5,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Learning Assistant Feedback • UNL</title>
-
-  <!-- Formal theme -->
   <style>
     :root {
       --unl-red: #c8102e;
       --unl-red-dark: #a00d25;
       --ink: #111827;
-      /* text color */
       --muted: #6b7280;
       --bg: #f5f6fa;
-      --card: #ffffff;
+      --card: #fff;
       --ring: #e5e7eb;
       --shadow: 0 8px 24px rgba(17, 24, 39, .06);
       --star: #f59e0b;
@@ -34,15 +31,15 @@
     body {
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
       color: var(--ink);
-      background: var(--bg);
+      background: var(--bg)
     }
 
-    /* Header */
+    /* header */
     .topbar {
       background: linear-gradient(135deg, var(--unl-red), var(--unl-red-dark));
       color: #fff;
-      padding: 22px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, .15);
+      padding: 18px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .15)
     }
 
     .shell {
@@ -53,21 +50,40 @@
 
     .brand {
       font-weight: 800;
-      font-size: 1.25rem;
-      letter-spacing: .2px
+      font-size: 1.25rem
     }
 
     .sub {
       opacity: .9
     }
 
-    /* Nav buttons */
+    .rowh {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      align-items: end
+    }
+
     .nav {
       display: flex;
-      gap: 12px;
-      align-items: center;
-      justify-content: flex-end;
-      margin-top: 12px
+      gap: 10px;
+      align-items: center
+    }
+
+    .btn {
+      background: transparent;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, .75);
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600
+    }
+
+    .btn:hover,
+    .btn.active {
+      background: #fff;
+      color: var(--unl-red)
     }
 
     .chip {
@@ -76,37 +92,9 @@
       border-radius: 999px
     }
 
-    .btn {
-      background: transparent;
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, .7);
-      padding: 8px 16px;
-      border-radius: 999px;
-      cursor: pointer;
-      font-weight: 600
-    }
-
-    .btn.active,
-    .btn:hover {
-      background: #fff;
-      color: var(--unl-red)
-    }
-
-    .btn-ghost {
-      background: #fff;
-      color: var(--unl-red);
-      border-color: #fff
-    }
-
-    .btn-muted {
-      background: #fff;
-      color: var(--ink);
-      border: 1px solid var(--ring)
-    }
-
-    /* Cards/sections */
+    /* content */
     main {
-      padding: 24px 0 40px
+      padding: 22px 0 40px
     }
 
     .card {
@@ -115,7 +103,7 @@
       border-radius: 16px;
       box-shadow: var(--shadow);
       padding: 20px;
-      margin-top: 18px;
+      margin-top: 18px
     }
 
     h1,
@@ -128,27 +116,36 @@
       margin-top: 0
     }
 
-    /* Form controls (fixes white-on-white) */
+    /* form controls */
     label {
       font-weight: 600
     }
 
-    .row {
+    .grid {
       display: grid;
-      gap: 10px;
-      margin-bottom: 12px
+      gap: 14px
+    }
+
+    .g-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+    @media(max-width:860px) {
+      .g-2 {
+        grid-template-columns: 1fr
+      }
     }
 
     input,
     select,
     textarea {
       width: 100%;
+      min-height: 44px;
       border: 1px solid var(--ring);
       border-radius: 10px;
       padding: 10px 12px;
       background: #fff;
-      color: var(--ink);
-      min-height: 44px;
+      color: var(--ink)
     }
 
     input::placeholder,
@@ -180,30 +177,28 @@
       background: var(--unl-red-dark)
     }
 
+    .btn-muted {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--ring);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer
+    }
+
     .hidden {
       display: none !important
     }
 
-    /* grid */
-    .grid {
-      display: grid;
-      gap: 14px
-    }
-
-    @media (min-width:860px) {
-      .g-2 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-    }
-
-    /* tabs */
-    .tabs {
+    /* filter pills */
+    .pills {
       display: flex;
       gap: 8px;
-      margin: 6px 0 2px
+      flex-wrap: wrap
     }
 
-    .tab {
+    .pill {
       background: #fff;
       border: 1px solid var(--ring);
       color: var(--ink);
@@ -213,7 +208,7 @@
       font-weight: 600
     }
 
-    .tab.active {
+    .pill.active {
       background: var(--unl-red);
       color: #fff;
       border-color: var(--unl-red)
@@ -260,41 +255,34 @@
 </head>
 
 <body>
-  <!-- ===== HEADER ===== -->
+  <!-- HEADER -->
   <header class="topbar">
     <div class="shell">
-      <div class="grid g-2" style="align-items:center">
+      <div class="rowh">
         <div>
           <div class="brand">Learning Assistant Feedback</div>
           <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
         </div>
-        <nav class="nav">
-          <button class="btn" data-nav="feedback">Feedback</button>
+        <nav class="nav" style="justify-content:flex-start">
+          <button class="btn active" data-nav="feedback">Feedback</button>
           <button class="btn" data-nav="office">Office Hours</button>
           <button id="login-tab" class="btn" data-nav="login">Login</button>
           <span id="user-chip" class="chip hidden"></span>
-          <button id="logout-btn" class="btn hidden">Log out</button>
+          <button id="logout-btn" class="btn hidden" style="margin-left:auto">Log out</button>
         </nav>
       </div>
     </div>
   </header>
 
   <main class="shell">
-    <!-- ===== TABS VISUAL (optional, we also wire header buttons) ===== -->
-    <div class="tabs">
-      <button class="tab active" data-nav="feedback">Feedback</button>
-      <button class="tab" data-nav="office">Office Hours</button>
-      <button class="tab" data-nav="login">Login</button>
-    </div>
-
-    <!-- ===== FEEDBACK (default) ===== -->
+    <!-- FEEDBACK (default) -->
     <section id="section-feedback" class="card">
       <h2>Submit Feedback</h2>
       <p class="lead">Share course or LA feedback. Submissions are stored in Supabase.</p>
 
       <form id="feedback-form" class="grid">
-        <div class="g-2">
-          <div class="row">
+        <div class="grid g-2">
+          <div>
             <label for="course">Course</label>
             <select id="course" name="course" required>
               <option value="">Select a course…</option>
@@ -305,7 +293,7 @@
               <option>CSCE 156</option>
             </select>
           </div>
-          <div class="row">
+          <div>
             <label for="type">Type</label>
             <select id="type" name="type" required>
               <option value="">Select type…</option>
@@ -319,29 +307,27 @@
           </div>
         </div>
 
-        <div class="row">
+        <div>
           <label>Rating</label>
           <div id="stars" class="stars">
-            <span class="star" data-v="1">★</span>
-            <span class="star" data-v="2">★</span>
-            <span class="star" data-v="3">★</span>
-            <span class="star" data-v="4">★</span>
+            <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span>
+            <span class="star" data-v="3">★</span><span class="star" data-v="4">★</span>
             <span class="star" data-v="5">★</span>
           </div>
           <input type="hidden" id="rating" name="rating" value="0" />
         </div>
 
-        <div class="row">
+        <div>
           <label for="text">Your feedback</label>
           <textarea id="text" name="text" placeholder="Share details…"></textarea>
         </div>
 
-        <div class="g-2">
-          <div class="row">
+        <div class="grid g-2">
+          <div>
             <label for="submitter">Your name (optional)</label>
             <input id="submitter" name="submitter" placeholder="First Last" />
           </div>
-          <div class="row">
+          <div>
             <label for="year">Year (optional)</label>
             <select id="year" name="year">
               <option value="">Prefer not to say</option>
@@ -355,46 +341,43 @@
         </div>
 
         <div id="fb-alert" class="alert hidden"></div>
-
-        <div class="actions">
-          <button id="fb-submit" type="submit" class="btn-primary">Submit feedback</button>
-        </div>
+        <div class="actions"><button id="fb-submit" type="submit" class="btn-primary">Submit feedback</button></div>
       </form>
     </section>
 
-    <!-- ===== OFFICE HOURS ===== -->
+    <!-- OFFICE HOURS -->
     <section id="section-office" class="card hidden">
       <h2>Office Hours</h2>
       <p class="lead">Browse office hours by course. Data comes from staff schedules.</p>
 
-      <div class="tabs" id="course-filter">
-        <button class="tab active" data-course="ALL">All</button>
-        <button class="tab" data-course="CSCE 101">CSCE 101</button>
-        <button class="tab" data-course="CSCE 155A">CSCE 155A</button>
-        <button class="tab" data-course="CSCE 155E">CSCE 155E</button>
-        <button class="tab" data-course="CSCE 155H">CSCE 155H</button>
-        <button class="tab" data-course="CSCE 156">CSCE 156</button>
+      <div class="pills" id="course-filter">
+        <button class="pill active" data-course="ALL">All</button>
+        <button class="pill" data-course="CSCE 101">CSCE 101</button>
+        <button class="pill" data-course="CSCE 155A">CSCE 155A</button>
+        <button class="pill" data-course="CSCE 155E">CSCE 155E</button>
+        <button class="pill" data-course="CSCE 155H">CSCE 155H</button>
+        <button class="pill" data-course="CSCE 156">CSCE 156</button>
       </div>
 
       <div id="office-alert" class="alert hidden"></div>
       <div id="office-list" class="grid"></div>
     </section>
 
-    <!-- ===== LOGIN ===== -->
+    <!-- LOGIN -->
     <section id="section-login" class="card hidden">
       <h2>Sign in</h2>
       <p class="lead">Staff and students sign in with NUID (or @huskers.unl.edu) and password.</p>
 
       <div id="login-alert" class="alert hidden"></div>
       <form id="login-form" class="grid g-2" novalidate>
-        <div class="row">
+        <div>
           <label for="login-input">NUID or Email</label>
           <input id="login-input" name="login" type="text" placeholder="12345678 or user@huskers.unl.edu"
-            autocomplete="username" required />
+            autocomplete="username" required>
         </div>
-        <div class="row">
+        <div>
           <label for="password-input">Password</label>
-          <input id="password-input" name="password" type="password" autocomplete="current-password" required />
+          <input id="password-input" name="password" type="password" autocomplete="current-password" required>
         </div>
         <div class="actions">
           <button id="login-btn" type="submit" class="btn-primary">Sign in</button>
@@ -404,26 +387,21 @@
     </section>
   </main>
 
-  <!-- ===== PAGE SCRIPTS ===== -->
   <script>
     /* ---------- helpers ---------- */
-    const $ = (s, r = document) => r.querySelector(s);
-    const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-    const show = id => { ['feedback', 'office', 'login'].forEach(k => $('#section-' + k).classList.toggle('hidden', k !== id)); setActives(id); };
-    const setActives = id => {
+    const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+    const show = id => {
+      ['feedback', 'office', 'login'].forEach(k => $('#section-' + k).classList.toggle('hidden', k !== id));
       $$('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
-      $$('.tab[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
       history.replaceState(null, '', '#' + id);
     };
-
-    /* ---------- tab/nav wiring ---------- */
-    $$('.btn[data-nav], .tab[data-nav]').forEach(b => b.addEventListener('click', () => show(b.dataset.nav)));
-    show((location.hash || '#feedback').slice(1));
+    // left nav: single set of buttons
+    $$('[data-nav]').forEach(b => b.addEventListener('click', () => show(b.dataset.nav)));
+    show((location.hash || '#feedback').slice(1));  // start on feedback
 
     /* ---------- stars ---------- */
     (function () {
-      const stars = $$('#stars .star');
-      const hidden = $('#rating');
+      const stars = $$('#stars .star'), hidden = $('#rating');
       const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n));
       stars.forEach(s => {
         s.addEventListener('mouseenter', () => paint(Number(s.dataset.v)));
@@ -432,131 +410,98 @@
       });
     })();
 
-    /* ---------- Feedback submit -> POST /api/feedback ---------- */
+    /* ---------- endpoint helpers (tries with and without /api) ---------- */
+    const tryFetch = async (method, paths, body) => {
+      for (const p of paths) {
+        try {
+          const res = await fetch(p, {
+            method, credentials: 'include',
+            headers: body ? { 'Content-Type': 'application/json' } : undefined,
+            body: body ? JSON.stringify(body) : undefined
+          });
+          // if 404, try next path
+          if (res.status === 404) continue;
+          return { res, json: await (async () => { try { return await res.json(); } catch { return null; } })() };
+        } catch { }
+      }
+      return { res: null, json: null };
+    };
+
+    /* ---------- Feedback submit -> POST /api/feedback or /feedback ---------- */
     (function () {
       const form = $('#feedback-form'); if (!form) return;
-      const btn = $('#fb-submit');
-      const alert = $('#fb-alert');
-      const ok = (m) => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
-      const bad = (m) => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden'); };
+      const btn = $('#fb-submit'), alert = $('#fb-alert');
+      const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') };
+      const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') };
 
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        alert.classList.add('hidden'); alert.textContent = '';
+      form.addEventListener('submit', async e => {
+        e.preventDefault(); alert.classList.add('hidden'); alert.textContent = '';
         const fd = new FormData(form);
         const payload = {
-          course: fd.get('course') || '',
-          type: fd.get('type') || '',
-          rating: Number($('#rating').value || 0) || null,
-          text: fd.get('text') || '',
-          submitter: fd.get('submitter') || '',
-          year: fd.get('year') || ''
+          course: fd.get('course') || '', type: fd.get('type') || '',
+          rating: Number($('#rating').value || 0) || null, text: fd.get('text') || '',
+          submitter: fd.get('submitter') || '', year: fd.get('year') || ''
         };
-        if (!payload.course || !payload.type) { bad('Please select a course and type.'); return; }
+        if (!payload.course || !payload.type) return bad('Please select a course and type.');
         btn.disabled = true; btn.textContent = 'Submitting…';
-        try {
-          const res = await fetch('/api/feedback', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          let data = {}; try { data = await res.json(); } catch { }
-          if (!res.ok) throw new Error(data?.message || 'Submit failed');
-          ok('Thanks! Your feedback was submitted.');
-          form.reset(); $('#rating').value = 0; $$('#stars .star').forEach(s => s.classList.remove('active'));
-        } catch (err) { bad(err.message || 'Could not submit feedback.'); }
-        finally { btn.disabled = false; btn.textContent = 'Submit feedback'; }
+        const { res, json } = await tryFetch('POST', ['/api/feedback', '/feedback'], payload);
+        btn.disabled = false; btn.textContent = 'Submit feedback';
+        if (!res || !res.ok) return bad(json?.message || 'Submit failed');
+        ok('Thanks! Your feedback was submitted.');
+        form.reset(); $('#rating').value = 0; $$('#stars .star').forEach(s => s.classList.remove('active'));
       });
     })();
 
-    /* ---------- Office hours list -> GET /api/office-hours ---------- */
+    /* ---------- Office hours list -> GET /api/office-hours or /office-hours ---------- */
     (function () {
       const list = $('#office-list'); if (!list) return;
-      const alert = $('#office-alert');
-      const render = (rows) => {
+      const alert = $('#office-alert'); let ALL = [];
+      const render = rows => {
         list.innerHTML = '';
         if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; }
-        alert.classList.add('hidden'); alert.textContent = '';
-        rows.forEach(r => {
-          const div = document.createElement('div');
-          div.className = 'card';
-          div.innerHTML = `
-            <div class="grid g-2" style="align-items:center">
-              <div>
-                <div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
-                <div class="sub">Location: ${r.location || 'TBA'}</div>
-              </div>
-              <div style="text-align:right"><span class="chip">${r.staff_name || r.nuid}</span></div>
-            </div>`;
+        alert.classList.add('hidden'); rows.forEach(r => {
+          const div = document.createElement('div'); div.className = 'card';
+          div.innerHTML = `<div class="grid g-2" style="align-items:center">
+            <div><div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
+            <div class="sub">Location: ${r.location || 'TBA'}</div></div>
+            <div style="text-align:right"><span class="chip">${r.staff_name || r.nuid || 'Staff'}</span></div></div>`;
           list.appendChild(div);
         });
       };
-      let ALL = [];
-      const load = async () => {
-        try { const res = await fetch('/api/office-hours'); ALL = await res.json(); if (!Array.isArray(ALL)) ALL = []; }
-        catch { ALL = []; }
-        render(ALL);
-      };
+      const load = async () => { const { res, json } = await tryFetch('GET', ['/api/office-hours', '/office-hours']); ALL = Array.isArray(json) ? json : []; render(ALL); };
       load();
-      $$('#course-filter .tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          $$('#course-filter .tab').forEach(t => t.classList.toggle('active', t === tab));
-          const c = tab.dataset.course;
-          render(c === 'ALL' ? ALL : ALL.filter(x => x.course === c));
-        });
-      });
+      $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => {
+        $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
+        const c = p.dataset.course; render(c === 'ALL' ? ALL : ALL.filter(x => x.course === c));
+      }));
     })();
 
-    /* ---------- Login -> POST /api/auth/login (Enter or click) ---------- */
+    /* ---------- Login -> POST /api/auth/login or /auth/login (Enter or click) ---------- */
     (function () {
       const form = $('#login-form'); if (!form) return;
-      const alert = $('#login-alert');
-      const userChip = $('#user-chip');
-      const logoutBtn = $('#logout-btn');
-      const loginTab = $('#login-tab');
+      const alert = $('#login-alert'), userChip = $('#user-chip'), logoutBtn = $('#logout-btn'), loginTab = $('#login-tab');
+      const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') };
+      const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') };
 
-      const ok = (m) => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
-      const bad = (m) => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden'); };
+      form.addEventListener('submit', async e => {
+        e.preventDefault(); alert.classList.add('hidden'); alert.textContent = '';
+        const login = $('#login-input').value.trim(), password = $('#password-input').value;
+        if (!login || !password) return bad('Missing login or password');
+        const { res, json } = await tryFetch('POST', ['/api/auth/login', '/auth/login'], { login, password });
+        if (!res) return bad('Network error');
+        if (res.status === 404) return bad('Login route not found (404). Ensure your server exposes POST /api/auth/login or /auth/login');
+        if (!res.ok) return bad(json?.message || 'Invalid credentials');
 
-      const LOGIN_URL = '/api/auth/login'; // <-- change if your backend uses a different path
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        alert.classList.add('hidden'); alert.textContent = '';
-        const login = $('#login-input').value.trim();
-        const password = $('#password-input').value;
-        if (!login || !password) { bad('Missing login or password'); return; }
-
-        try {
-          const res = await fetch(LOGIN_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ login, password })
-          });
-          let data = {}; try { data = await res.json(); } catch { }
-          if (res.status === 404) { bad('Login route not found (404). Ensure your server exposes POST ' + LOGIN_URL); return; }
-          if (!res.ok) throw new Error(data?.message || 'Invalid credentials');
-
-          // success – show user + hide Login button; default to feedback
-          const who = data?.name || data?.email || login;
-          userChip.textContent = who + (data?.role ? ` (${data.role})` : '');
-          userChip.classList.remove('hidden');
-          logoutBtn.classList.remove('hidden');
-          loginTab.classList.add('hidden');
-          ok('Signed in.');
-          show('feedback');
-        } catch (err) {
-          bad(err.message || 'Login failed');
-        }
+        const who = json?.name || json?.email || login;
+        userChip.textContent = who + (json?.role ? ` (${json.role})` : '');
+        userChip.classList.remove('hidden'); logoutBtn.classList.remove('hidden'); loginTab.classList.add('hidden');
+        ok('Signed in.'); show('feedback');
       });
 
-      // log out (optional API)
+      // submit on Enter (already handled by form submit), wire logout
       logoutBtn.addEventListener('click', async () => {
-        try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { }
-        userChip.classList.add('hidden'); userChip.textContent = '';
-        logoutBtn.classList.add('hidden'); $('#login-tab').classList.remove('hidden');
-        show('feedback');
+        try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch { }
+        userChip.classList.add('hidden'); userChip.textContent = ''; logoutBtn.classList.add('hidden'); loginTab.classList.remove('hidden'); show('feedback');
       });
     })();
   </script>
