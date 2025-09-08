@@ -3,23 +3,23 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Learning Assistant Feedback</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Learning Assistant Feedback • UNL</title>
+  <meta name="color-scheme" content="light dark" />
 
   <style>
     :root {
       --unl-red: #d00000;
-      --unl-red-dark: #9a0000;
-      --ink: #111;
-      --muted: #6b7280;
-      --ring: #e5e7eb;
-      --card: #ffffff;
+      --unl-red-dark: #b00000;
+      --ink: #222;
+      --muted: #666;
+      --bg: #f6f7fb;
+      --card: #fff;
+      --ring: #e6e7ee;
+      --ok: #18a34a;
+      --bad: #c1121f;
       --chip: #f1f5f9;
-      --ok: #16a34a;
-      --bad: #b91c1c;
-      --star-off: #e2e8f0;
-      --star-on: #fbbf24;
-      /* yellow-400 */
+      --star: #fbbf24;
     }
 
     * {
@@ -28,25 +28,25 @@
 
     body {
       margin: 0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
       color: var(--ink);
-      background: #f7f7fb;
-    }
-
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 40;
-      background: linear-gradient(135deg, var(--unl-red), var(--unl-red-dark));
-      color: #fff;
-      padding: 14px 0;
-      box-shadow: 0 2px 0 rgba(0, 0, 0, .05);
+      background: var(--bg);
     }
 
     .shell {
       max-width: 1100px;
-      margin: 0 auto;
+      margin: 24px auto;
       padding: 0 16px
+    }
+
+    .topbar {
+      background: linear-gradient(135deg, var(--unl-red), var(--unl-red-dark));
+      color: #fff;
+      padding: 14px 0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid rgba(255, 255, 255, .1);
     }
 
     .brand {
@@ -55,45 +55,40 @@
     }
 
     .sub {
-      opacity: .85;
+      opacity: .9;
       font-size: .95rem
     }
 
     .nav {
       display: flex;
       gap: 10px;
-      margin: 14px 0 0
+      margin: 14px 0
     }
 
     .btn {
-      background: var(--unl-red);
-      color: #fff;
-      border: none;
-      border-radius: 999px;
-      padding: 10px 16px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .btn-ghost {
       background: transparent;
       color: #fff;
-      border: 1px solid rgba(255, 255, 255, .6);
-      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .7);
       padding: 8px 14px;
-      cursor: pointer;
+      border-radius: 999px;
+      cursor: pointer
     }
 
     .btn:hover {
       filter: brightness(.95)
     }
 
-    .btn-muted {
-      background: #e5e7eb;
-      color: #111
+    .btn-ghost {
+      background: #fff;
+      color: var(--unl-red);
+      border: 1px solid #fff
     }
 
     .wrap {
+      background: var(--bg)
+    }
+
+    .card {
       background: var(--card);
       border: 1px solid var(--ring);
       border-radius: 14px;
@@ -102,60 +97,14 @@
       box-shadow: 0 6px 20px rgba(0, 0, 0, .06)
     }
 
-    .grid {
-      display: grid;
-      gap: 14px
-    }
-
-    .g-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr))
-    }
-
-    @media (max-width: 900px) {
-      .g-3 {
-        grid-template-columns: 1fr
-      }
-    }
-
-    .kpi {
-      background: var(--card);
-      border: 1px solid var(--ring);
-      border-radius: 12px;
-      padding: 16px
-    }
-
-    .kpi h3 {
-      margin: 0;
-      font-size: 1.9rem
-    }
-
-    .kpi p {
-      margin: 8px 0 0;
-      color: var(--muted)
-    }
-
-    .chip {
-      background: var(--chip);
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: 1px solid #d9e0e7;
-      cursor: pointer
-    }
-
-    .chip.active {
-      background: #fff;
-      color: var(--unl-red);
-      border-color: var(--unl-red)
-    }
-
     .row {
-      display: flex;
-      gap: 12px;
-      align-items: center;
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px
     }
 
-    .push {
-      margin-left: auto
+    label {
+      font-weight: 600
     }
 
     input,
@@ -166,47 +115,28 @@
       border: 1px solid var(--ring);
       border-radius: 10px;
       background: #fff;
-      font: inherit;
+      min-height: 44px
     }
 
     textarea {
       min-height: 110px
     }
 
-    label {
-      font-weight: 600;
-      margin-bottom: 6px;
-      display: block
-    }
-
-    .stat .n {
-      font-size: 2rem;
-      font-weight: 800
+    h1,
+    h2,
+    h3 {
+      margin: 14px 0
     }
 
     .hidden {
-      display: none !important;
+      display: none !important
     }
 
-    .stars {
-      display: inline-flex;
-      gap: 6px
-    }
-
-    .star {
-      width: 28px;
-      height: 28px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 6px;
-      cursor: pointer;
-      user-select: none;
-      background: var(--star-off);
-    }
-
-    .star.on {
-      background: var(--star-on)
+    .chip {
+      background: var(--chip);
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: .85rem
     }
 
     .alert {
@@ -223,298 +153,381 @@
     }
 
     .alert-error {
-      background: #fef2f2;
-      color: #991b1b;
-      border: 1px solid #fecaca
+      background: #fff1f2;
+      color: #9f1239;
+      border: 1px solid #fecdd3
+    }
+
+    .btn-primary {
+      background: var(--unl-red);
+      color: #fff;
+      border: 1px solid var(--unl-red);
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600
+    }
+
+    .btn-primary:hover {
+      background: var(--unl-red-dark)
+    }
+
+    .btn-muted {
+      background: #fff;
+      border: 1px solid var(--ring);
+      color: var(--ink);
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-weight: 600
+    }
+
+    /* stars */
+    .stars {
+      display: flex;
+      gap: 6px;
+      align-items: center
+    }
+
+    .star {
+      font-size: 28px;
+      cursor: pointer;
+      color: #d3d6de;
+      transition: color .15s;
+      line-height: 1
+    }
+
+    .star.active {
+      color: var(--star)
+    }
+
+    .pillbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 10px 0
+    }
+
+    .pill {
+      border: 1px solid var(--ring);
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      background: #fff
+    }
+
+    .pill.active {
+      background: var(--unl-red);
+      color: #fff;
+      border-color: var(--unl-red)
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px
+    }
+
+    @media (min-width:840px) {
+      .g-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
     }
   </style>
 </head>
 
 <body>
-
-  <!-- Top bar -->
+  <!-- ======= TOP BAR ======= -->
   <header class="topbar">
     <div class="shell">
-      <div class="brand">Learning Assistant Feedback</div>
-      <div class="sub">Computer Science &amp; Engineering – University of Nebraska–Lincoln</div>
-
-      <nav class="nav">
-        <button class="btn-ghost" data-tab="feedback">Feedback</button>
-        <button class="btn-ghost" data-tab="hours">Office Hours</button>
-        <button class="btn-ghost push" id="btnLoginTab" data-tab="login">Login</button>
-        <button class="btn hidden" id="btnLogout">Log out</button>
-      </nav>
+      <div class="grid g-2" style="align-items:center">
+        <div>
+          <div class="brand">Learning Assistant Feedback</div>
+          <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
+        </div>
+        <nav class="nav" style="justify-content:flex-end">
+          <button class="btn" data-nav="feedback">Feedback</button>
+          <button class="btn" data-nav="office">Office Hours</button>
+          <button id="login-nav" class="btn-ghost" data-nav="login">Login</button>
+          <span id="user-chip" class="chip hidden"></span>
+          <button id="logout-btn" class="btn hidden">Log out</button>
+        </nav>
+      </div>
     </div>
   </header>
 
-  <main class="shell" style="padding: 18px 16px 40px">
-    <div id="flash" class="alert hidden"></div>
-
-    <!-- FEEDBACK (default visible) -->
-    <section id="pane-feedback" class="wrap">
+  <main class="shell wrap">
+    <!-- ======= FEEDBACK ======= -->
+    <section id="section-feedback" class="card">
       <h2>Submit Feedback</h2>
       <p>Share course or LA feedback. Submissions are stored in Supabase.</p>
 
-      <form id="feedbackForm" class="grid g-3">
-        <div>
-          <label for="fb-course">Course</label>
-          <select id="fb-course" required>
-            <option value="">Select a course</option>
-            <option>CSCE 101</option>
-            <option>CSCE 155A</option>
-            <option>CSCE 155E</option>
-            <option>CSCE 155H</option>
-            <option>CSCE 156</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="fb-type">Type</label>
-          <select id="fb-type" required>
-            <option value="">Select a type</option>
-            <option>Website</option>
-            <option>Staff</option>
-            <option>Class</option>
-            <option>Office Hours</option>
-            <option>Random</option>
-            <option>Other</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Rating</label>
-          <div class="stars" id="fb-stars" role="radiogroup" aria-label="Rating">
-            <div class="star" data-v="1">★</div>
-            <div class="star" data-v="2">★</div>
-            <div class="star" data-v="3">★</div>
-            <div class="star" data-v="4">★</div>
-            <div class="star" data-v="5">★</div>
+      <form id="feedback-form" class="grid">
+        <div class="g-2">
+          <div class="row">
+            <label for="course">Course</label>
+            <select id="course" name="course" required>
+              <option value="">Select a course…</option>
+              <option>CSCE 101</option>
+              <option>CSCE 155A</option>
+              <option>CSCE 155E</option>
+              <option>CSCE 155H</option>
+              <option>CSCE 156</option>
+            </select>
           </div>
-          <input type="hidden" id="fb-rating" value="">
+
+          <div class="row">
+            <label for="type">Type</label>
+            <select id="type" name="type" required>
+              <option value="">Select type…</option>
+              <option>Website</option>
+              <option>Staff</option>
+              <option>Class</option>
+              <option>Office Hours</option>
+              <option>Random</option>
+              <option>Other</option>
+            </select>
+          </div>
         </div>
 
-        <div class="g-full" style="grid-column: 1 / -1">
-          <label for="fb-text">Feedback</label>
-          <textarea id="fb-text" placeholder="Share details…"></textarea>
+        <div class="row">
+          <label>Rating</label>
+          <div class="stars" id="stars">
+            <span class="star" data-v="1">★</span>
+            <span class="star" data-v="2">★</span>
+            <span class="star" data-v="3">★</span>
+            <span class="star" data-v="4">★</span>
+            <span class="star" data-v="5">★</span>
+            <input type="hidden" id="rating" name="rating" value="0" />
+          </div>
         </div>
 
-        <div>
-          <label for="fb-name">Your name (optional)</label>
-          <input id="fb-name" placeholder="First Last">
+        <div class="row">
+          <label for="text">Your feedback</label>
+          <textarea id="text" name="text" placeholder="Share details…"></textarea>
         </div>
 
-        <div>
-          <label for="fb-year">Year (optional)</label>
-          <select id="fb-year">
-            <option value="">—</option>
-            <option>Freshman</option>
-            <option>Sophomore</option>
-            <option>Junior</option>
-            <option>Senior</option>
-            <option>Graduate</option>
-          </select>
+        <div class="g-2">
+          <div class="row">
+            <label for="submitter">Your name (optional)</label>
+            <input id="submitter" name="submitter" placeholder="First Last" />
+          </div>
+
+          <div class="row">
+            <label for="year">Year (optional)</label>
+            <select id="year" name="year">
+              <option value="">Prefer not to say</option>
+              <option>Freshman</option>
+              <option>Sophomore</option>
+              <option>Junior</option>
+              <option>Senior</option>
+              <option>Graduate</option>
+            </select>
+          </div>
         </div>
 
-        <div style="display:flex; align-items:end">
-          <button type="submit" class="btn">Submit</button>
+        <div id="feedback-alert" class="alert hidden" role="alert" aria-live="polite"></div>
+
+        <div class="row">
+          <button class="btn-primary" type="submit" id="feedback-submit">Submit feedback</button>
         </div>
       </form>
     </section>
 
-    <!-- OFFICE HOURS -->
-    <section id="pane-hours" class="wrap hidden">
+    <!-- ======= OFFICE HOURS ======= -->
+    <section id="section-office" class="card hidden">
       <h2>Office Hours</h2>
       <p>Browse office hours by course. Data comes from staff schedules.</p>
 
-      <div class="row" id="hoursFilters">
-        <button class="chip active" data-course="all">All</button>
-        <button class="chip" data-course="CSCE 101">CSCE 101</button>
-        <button class="chip" data-course="CSCE 155A">CSCE 155A</button>
-        <button class="chip" data-course="CSCE 155E">CSCE 155E</button>
-        <button class="chip" data-course="CSCE 155H">CSCE 155H</button>
-        <button class="chip" data-course="CSCE 156">CSCE 156</button>
+      <div class="pillbar" id="course-filter">
+        <button class="pill active" data-course="ALL">All</button>
+        <button class="pill" data-course="CSCE 101">CSCE 101</button>
+        <button class="pill" data-course="CSCE 155A">CSCE 155A</button>
+        <button class="pill" data-course="CSCE 155E">CSCE 155E</button>
+        <button class="pill" data-course="CSCE 155H">CSCE 155H</button>
+        <button class="pill" data-course="CSCE 156">CSCE 156</button>
       </div>
 
-      <div id="hoursList" class="grid" style="margin-top:14px"></div>
+      <div id="office-list" class="grid"></div>
+      <div id="office-alert" class="alert hidden"></div>
     </section>
 
-    <!-- LOGIN / ACCOUNT -->
-    <section id="pane-login" class="wrap hidden">
+    <!-- ======= LOGIN ======= -->
+    <section id="section-login" class="card hidden">
       <h2>Sign in</h2>
-      <form id="loginForm" class="grid g-3">
-        <div class="g-full" style="grid-column: 1 / -1">
-          <label for="login-id">NUID or Email</label>
-          <input id="login-id" placeholder="12345678 or user@huskers.unl.edu" autocomplete="username">
+      <div id="login-alert" class="alert hidden" role="alert" aria-live="polite"></div>
+
+      <form id="login-form" novalidate>
+        <div class="g-2">
+          <div class="row">
+            <label for="login-input">NUID or Email</label>
+            <input id="login-input" name="login" type="text" inputmode="text" autocomplete="username"
+              placeholder="12345678 or user@huskers.unl.edu" required>
+          </div>
+          <div class="row">
+            <label for="password-input">Password</label>
+            <input id="password-input" name="password" type="password" autocomplete="current-password" required>
+          </div>
         </div>
-        <div class="g-full" style="grid-column: 1 / -1">
-          <label for="login-pass">Password</label>
-          <input id="login-pass" type="password" placeholder="Your password" autocomplete="current-password">
-        </div>
-        <div style="display:flex; gap:10px">
-          <button type="submit" id="btnSignIn" class="btn">Sign in</button>
-          <button type="button" id="btnChangePass" class="btn-muted">Change password</button>
+
+        <div class="row" style="margin-top:12px;">
+          <button id="login-btn" type="submit" class="btn-primary">Sign in</button>
+          <button id="change-pass-btn" type="button" class="btn-muted">Change password</button>
         </div>
       </form>
-
-      <div id="dashboard" class="wrap hidden" style="margin-top:16px">
-        <div class="row">
-          <strong id="who"></strong>
-          <span class="chip" id="roleChip" style="margin-left:8px"></span>
-          <span class="push"></span>
-        </div>
-        <div class="grid g-3" style="margin-top:14px">
-          <div class="kpi">
-            <h3 id="kTotal">0</h3>
-            <p>Total Feedback</p>
-          </div>
-          <div class="kpi">
-            <h3 id="kAvg">0.0</h3>
-            <p>Average Rating</p>
-          </div>
-          <div class="kpi">
-            <h3 id="kWeek">0</h3>
-            <p>This Week</p>
-          </div>
-        </div>
-        <!-- Staff schedule editor / student approvals can be injected by /routes/staff.js -->
-        <div id="staffPanel" style="margin-top:14px"></div>
-      </div>
     </section>
   </main>
 
-  <!-- Load client modules via absolute URLs so moving index.html won't break paths -->
-  <script type="module">
-    // Optional: if you keep config.js in /public next to images/styles
-    try { await import('/public/config.js'); } catch { }
+  <!-- ========= PAGE SCRIPTS ========= -->
 
-    // Shared supabase client (if used on the front-end)
-    try { await import('/lib/supabase.js'); } catch { }
+  <!-- Login handler (press Enter or click works) -->
+  <script type="module" src="/public/login.js"></script>
 
-    // Feature modules (only if you use them):
-    // These files should attach event handlers (e.g., form submission, API calls)
-    // and expose small hooks on window for cross-module use if needed.
-    try { await import('/routes/auth.js'); } catch { }
-    try { await import('/feedback/feedback.js'); } catch { }
-    try { await import('/routes/office-hours.js'); } catch { }
-    try { await import('/routes/staff.js'); } catch { }
-
-    // --- Lightweight UI wiring (tabs + rating stars + enter-to-submit) ---
-
-    const flash = (msg, kind = 'success') => {
-      const el = document.getElementById('flash');
-      el.textContent = msg;
-      el.className = `alert alert-${kind}`;
-      el.classList.remove('hidden');
-      setTimeout(() => el.classList.add('hidden'), 3500);
+  <!-- Minimal page wiring (tabs, stars, simple feedback POST).
+       If you already have feedback.js for submission, you can remove the feedback-post logic below. -->
+  <script>
+    // ----- section tabs -----
+    const sections = {
+      feedback: document.getElementById('section-feedback'),
+      office: document.getElementById('section-office'),
+      login: document.getElementById('section-login')
     };
+    const navButtons = Array.from(document.querySelectorAll('[data-nav]'));
+    function show(which) {
+      Object.entries(sections).forEach(([k, el]) => el.classList.toggle('hidden', k !== which));
+      navButtons.forEach(b => b.classList.toggle('btn-ghost', b.dataset.nav === which));
+      // remember choice in hash
+      history.replaceState(null, '', `#${which}`);
+    }
+    navButtons.forEach(b => b.addEventListener('click', () => show(b.dataset.nav)));
+    window.addEventListener('hashchange', () => {
+      const tab = (location.hash || '#feedback').replace('#', '');
+      show(sections[tab] ? tab : 'feedback');
+    });
+    show((location.hash || '#feedback').replace('#', ''));
 
-    // Tabs
-    const tabs = ['feedback', 'hours', 'login'];
-    const showTab = (name) => {
-      tabs.forEach(t => {
-        document.getElementById(`pane-${t}`).classList.toggle('hidden', t !== name);
-      });
-      document.querySelectorAll('[data-tab]').forEach(b => {
-        b.classList.toggle('btn', b.dataset.tab === name);
-        b.classList.toggle('btn-ghost', b.dataset.tab !== name);
-      });
-      // by default start on feedback
-      history.replaceState({}, '', '/');
-    };
-    document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
-    showTab('feedback');
-
-    // Rating stars
-    const starsWrap = document.getElementById('fb-stars');
-    const ratingInput = document.getElementById('fb-rating');
-    if (starsWrap) {
-      const paint = (n) => {
-        starsWrap.querySelectorAll('.star').forEach(st => {
-          st.classList.toggle('on', Number(st.dataset.v) <= n);
-        });
-      };
-      starsWrap.addEventListener('mouseover', (e) => {
-        if (e.target.classList.contains('star')) paint(Number(e.target.dataset.v));
-      });
-      starsWrap.addEventListener('mouseout', () => paint(Number(ratingInput.value || 0)));
-      starsWrap.addEventListener('click', (e) => {
-        if (!e.target.classList.contains('star')) return;
-        ratingInput.value = e.target.dataset.v;
-        paint(Number(ratingInput.value));
+    // ----- stars -----
+    const starWrap = document.getElementById('stars');
+    if (starWrap) {
+      const stars = Array.from(starWrap.querySelectorAll('.star'));
+      const hidden = document.getElementById('rating');
+      function paint(n) {
+        stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n));
+      }
+      stars.forEach(s => {
+        s.addEventListener('mouseenter', () => paint(Number(s.dataset.v)));
+        s.addEventListener('mouseleave', () => paint(Number(hidden.value || 0)));
+        s.addEventListener('click', () => { hidden.value = s.dataset.v; paint(Number(hidden.value)); });
       });
     }
 
-    // Enter to submit on login
-    const loginForm = document.getElementById('loginForm');
-    loginForm?.addEventListener('submit', (e) => {
-      e.preventDefault();
-      document.getElementById('btnSignIn').click();
-    });
+    // ----- simple feedback submit (POST /api/feedback) -----
+    const feedbackForm = document.getElementById('feedback-form');
+    const feedbackBtn = document.getElementById('feedback-submit');
+    const fbAlert = document.getElementById('feedback-alert');
 
-    // Feedback submit fallback (in case /feedback/feedback.js didn’t attach yet)
-    const fbForm = document.getElementById('feedbackForm');
-    fbForm?.addEventListener('submit', async (e) => {
-      if (window.Feedback?.submit) return; // your module will handle it
-      e.preventDefault();
-      const payload = {
-        course: document.getElementById('fb-course').value || null,
-        type: document.getElementById('fb-type').value || null,
-        rating: Number(document.getElementById('fb-rating').value || 0) || null,
-        text: document.getElementById('fb-text').value || '',
-        submitter: document.getElementById('fb-name').value || null,
-        year: document.getElementById('fb-year').value || null
-      };
-      if (!payload.course || !payload.type) {
-        flash('Please select course and type.', 'error'); return;
-      }
-      try {
-        // If you have an API route, call it; otherwise let your existing module handle it.
-        const res = await fetch('/api/feedback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error(await res.text());
-        fbForm.reset(); document.getElementById('fb-rating').value = '';
-        starsWrap?.querySelectorAll('.star').forEach(s => s.classList.remove('on'));
-        flash('Thanks for your feedback!');
-      } catch (err) {
-        flash(`Submit failed: ${err.message}`, 'error');
-      }
-    });
+    function fbShow(msg, ok = false) {
+      fbAlert.classList.remove('hidden', 'alert-success', 'alert-error');
+      fbAlert.classList.add(ok ? 'alert-success' : 'alert-error');
+      fbAlert.textContent = msg;
+    }
+    function fbHide() { fbAlert.classList.add('hidden'); fbAlert.textContent = ''; }
 
-    // Logout button (if your /routes/auth.js implements window.Auth.logout)
-    document.getElementById('btnLogout')?.addEventListener('click', async () => {
-      try {
-        if (window.Auth?.logout) await window.Auth.logout();
-        flash('Signed out');
-        showTab('feedback');
-        document.getElementById('btnLogout').classList.add('hidden');
-        document.getElementById('btnLoginTab').classList.remove('hidden');
-      } catch (e) {
-        flash('Sign out failed', 'error');
-      }
-    });
+    if (feedbackForm) {
+      feedbackForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        fbHide();
 
-    // If your auth module exposes session info, reflect it in the UI
-    if (window.Auth?.onReady) {
-      window.Auth.onReady(({ user, role, name }) => {
-        const who = document.getElementById('who');
-        const roleChip = document.getElementById('roleChip');
-        const dash = document.getElementById('dashboard');
-        if (user) {
-          who.textContent = name || user;
-          roleChip.textContent = role || '';
-          dash.classList.remove('hidden');
-          document.getElementById('btnLogout').classList.remove('hidden');
-          document.getElementById('btnLoginTab').classList.add('hidden');
-        } else {
-          dash.classList.add('hidden');
-          document.getElementById('btnLogout').classList.add('hidden');
-          document.getElementById('btnLoginTab').classList.remove('hidden');
+        const form = new FormData(feedbackForm);
+        const payload = {
+          course: form.get('course') || '',
+          type: form.get('type') || '',
+          rating: Number(document.getElementById('rating').value || 0) || null,
+          text: form.get('text') || '',
+          submitter: form.get('submitter') || '',
+          year: form.get('year') || ''
+        };
+
+        if (!payload.course || !payload.type) {
+          fbShow('Please choose a course and type.');
+          return;
+        }
+
+        feedbackBtn.disabled = true; feedbackBtn.textContent = 'Submitting…';
+        try {
+          const res = await fetch('/api/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          let data = {};
+          try { data = await res.json(); } catch { }
+          if (!res.ok) throw new Error(data?.message || 'Submit failed');
+
+          fbShow('Thanks! Your feedback was submitted.', true);
+          feedbackForm.reset();
+          document.getElementById('rating').value = 0;
+          const stars = document.querySelectorAll('#stars .star'); stars.forEach(s => s.classList.remove('active'));
+        } catch (err) {
+          fbShow(err?.message || 'Could not submit feedback.');
+        } finally {
+          feedbackBtn.disabled = false; feedbackBtn.textContent = 'Submit feedback';
         }
       });
     }
+
+    // ----- office hours (lightweight fetch & filter list) -----
+    const officeList = document.getElementById('office-list');
+    const officeAlert = document.getElementById('office-alert');
+    const pills = Array.from(document.querySelectorAll('#course-filter .pill'));
+    let officeData = [];
+
+    function renderOffice(course = 'ALL') {
+      if (!officeList) return;
+      officeList.innerHTML = '';
+      const rows = officeData.filter(r => course === 'ALL' || r.course === course);
+      if (!rows.length) {
+        officeAlert.classList.remove('hidden', 'alert-success'); officeAlert.classList.add('alert-error');
+        officeAlert.textContent = 'No office hours to show.';
+        return;
+      }
+      officeAlert.classList.add('hidden'); officeAlert.textContent = '';
+      rows.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.innerHTML = `
+          <div class="grid g-2" style="align-items:center">
+            <div>
+              <div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
+              <div class="sub">Location: ${r.location || 'TBA'}</div>
+            </div>
+            <div style="text-align:right">
+              <span class="chip">${r.staff_name || r.nuid}</span>
+            </div>
+          </div>`;
+        officeList.appendChild(div);
+      });
+    }
+    async function loadOffice() {
+      try {
+        const res = await fetch('/api/office-hours');
+        officeData = await res.json();
+        if (!Array.isArray(officeData)) officeData = [];
+      } catch { officeData = []; }
+      renderOffice('ALL');
+    }
+    if (officeList) { loadOffice(); }
+    pills.forEach(p => p.addEventListener('click', () => {
+      pills.forEach(x => x.classList.toggle('active', x === p));
+      renderOffice(p.dataset.course);
+    }));
+
+    // ----- logout button (if your API provides /api/auth/logout) -----
+    document.getElementById('logout-btn')?.addEventListener('click', async () => {
+      try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { }
+      localStorage.removeItem('lap_auth_token');
+      document.getElementById('user-chip')?.classList.add('hidden');
+      document.getElementById('logout-btn')?.classList.add('hidden');
+      document.getElementById('login-nav')?.classList.remove('hidden');
+      show('feedback');
+    });
   </script>
 </body>
 
