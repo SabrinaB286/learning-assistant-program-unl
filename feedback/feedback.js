@@ -1,41 +1,48 @@
-// feedback/feedback.js
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from '/public/config.js';
+// public/feedback/feedback.js
+const starsBox = document.querySelector('#fbStars');
+const stars = [...document.querySelectorAll('#fbStars .star')];
+const course = document.querySelector('#fbCourse');
+const typeSel = document.querySelector('#fbType');
+const txt = document.querySelector('#fbText');
+const submitter = document.querySelector('#fbSubmitter');
+const year = document.querySelector('#fbYear');
+const btn = document.querySelector('#fbSend');
+const msg = document.querySelector('#fbMsg');
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const form = document.getElementById('feedback-form');
-const alertBox = document.getElementById('fb-alert');
+let chosen = 0;
 
-function showAlert(kind, msg) {
-  alertBox.classList.remove('hidden', 'alert-ok', 'alert-error');
-  alertBox.classList.add('alert', kind === 'ok' ? 'alert-ok' : 'alert-error');
-  alertBox.textContent = msg;
-  setTimeout(()=> alertBox.classList.add('hidden'), 4000);
+function paint(n) {
+  stars.forEach((s,i)=> s.classList.toggle('on', i < n));
 }
+stars.forEach(s=>{
+  s.addEventListener('mouseenter', ()=> paint(Number(s.dataset.v)));
+  s.addEventListener('mouseleave', ()=> paint(chosen));
+  s.addEventListener('click', ()=> { chosen = Number(s.dataset.v); paint(chosen); });
+});
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const fd = new FormData(form);
-
-  const payload = {
-    course:    fd.get('course') || null,
-    type:      fd.get('type')   || 'General',
-    rating:    fd.get('rating') ? Number(fd.get('rating')) : null,
-    text:      (fd.get('text') || '').trim(),
-    submitter: fd.get('submitter') || null,
-    year:      fd.get('year') || null,
-    id_entered: fd.get('id_entered') || null
+btn.addEventListener('click', async () => {
+  msg.className = 'alert hidden';
+  const body = {
+    course: course.value || null,
+    type: typeSel.value,
+    rating: chosen || null,
+    text: txt.value.trim(),
+    submitter: submitter.value.trim() || null,
+    year: year.value || null
   };
-
-  if (!payload.text) {
-    showAlert('err', 'Please enter feedback.');
+  if (!body.type || !body.text) {
+    msg.textContent = 'Type and feedback text are required.';
+    msg.className = 'alert alert-bad';
     return;
   }
-
-  const { error } = await supabase.from('feedback').insert(payload);
-  if (error) {
-    showAlert('err', error.message);
-  } else {
-    form.reset();
-    showAlert('ok', 'Thank you! Your feedback was submitted.');
+  try {
+    const res = await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if (!res.ok) throw new Error((await res.json()).message || 'Failed to submit');
+    msg.textContent = 'Thanks! Your feedback was submitted.';
+    msg.className = 'alert alert-ok';
+    txt.value=''; chosen=0; paint(0);
+  } catch(e) {
+    msg.textContent = e.message || 'Error';
+    msg.className = 'alert alert-bad';
   }
 });

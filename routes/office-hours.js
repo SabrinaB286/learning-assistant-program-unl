@@ -1,59 +1,28 @@
-// routes/office-hours.js
-const express = require('express');
-const { createClient } = require('@supabase/supabase-js');
+// public/routes/office-hours.js
+import { getToken } from '/routes/auth.js';
+function auth(){ const t=getToken(); return t?{Authorization:`Bearer ${t}`} : {}; }
 
-const router = express.Router();
+export async function fetchOfficeHours(course){
+  const url=new URL('/api/office-hours',location.origin);
+  if(course) url.searchParams.set('course',course);
+  const r=await fetch(url); if(!r.ok) throw new Error('Failed'); return r.json();
+}
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+// Staff CRUD
+export async function listMySchedule(){
+  const r=await fetch('/api/schedule/mine',{headers:auth()});
+  if(!r.ok) throw new Error('Failed to load schedule');
+  return r.json();
+}
 
-// GET /api/schedule/office-hours
-router.get('/office-hours', async (req, res) => {
-  try {
-    // schedules
-    const { data: schedules, error: e1 } = await supabase
-      .from('staff_schedules')
-      .select('nuid, day_of_week, start_time, end_time, location, schedule_type');
-    if (e1) throw e1;
+export async function upsertSchedule(entry){
+  const r=await fetch('/api/schedule',{method:'POST',headers:{'Content-Type':'application/json',...auth()},body:JSON.stringify(entry)});
+  if(!r.ok){let m='Save failed'; try{m=(await r.json()).message||m;}catch{} throw new Error(m);}
+  return r.json();
+}
 
-    const nuids = [...new Set((schedules || []).map(s => s.nuid))];
-
-    let staffByNUID = {};
-    let courseByNUID = {};
-
-    if (nuids.length) {
-      const { data: staff, error: e2 } = await supabase
-        .from('staff')
-        .select('nuid, name, role')
-        .in('nuid', nuids);
-      if (e2) throw e2;
-      staffByNUID = Object.fromEntries((staff || []).map(s => [s.nuid, s]));
-
-      // one course per staff (you can expand later)
-      const { data: sc, error: e3 } = await supabase
-        .from('staff_courses')
-        .select('nuid, course_code')
-        .in('nuid', nuids);
-      if (e3) throw e3;
-      sc?.forEach(r => { if (!courseByNUID[r.nuid]) courseByNUID[r.nuid] = r.course_code; });
-    }
-
-    const result = (schedules || []).map(s => ({
-      staff_nuid: s.nuid,
-      staff_name: staffByNUID[s.nuid]?.name || 'Unknown',
-      staff_role: staffByNUID[s.nuid]?.role || null,
-      course_code: courseByNUID[s.nuid] || null,
-      day: s.day_of_week,
-      start_time: s.start_time,
-      end_time: s.end_time,
-      location: s.location,
-      type: s.schedule_type
-    }));
-
-    res.json(result);
-  } catch (err) {
-    console.error('[office-hours] error:', err);
-    res.status(500).json({ error: 'Failed to load office hours' });
-  }
-});
-
-module.exports = router;
+export async function deleteSchedule(id){
+  const r=await fetch(`/api/schedule/${id}`,{method:'DELETE',headers:auth()});
+  if(!r.ok){let m='Delete failed'; try{m=(await r.json()).message||m;}catch{} throw new Error(m);}
+  return true;
+}

@@ -1,36 +1,18 @@
+// public/routes/staff.js
 import { getToken } from '/routes/auth.js';
 
-function authHeaders() {
-  const t = getToken();
-  return t ? { Authorization: `Bearer ${t}` } : {};
+function auth(){ const t=getToken(); return t?{Authorization:`Bearer ${t}`} : {}; }
+
+export async function getMyProfile(){
+  const r=await fetch('/api/staff/me',{headers:auth()}); if(!r.ok) throw new Error('Failed'); return r.json();
 }
 
-// List LAs assigned to a CL
-export async function fetchAssignedLAs() {
-  const res = await fetch('/api/staff/assigned-las', {
-    headers: { ...authHeaders() }
-  });
-  if (!res.ok) throw new Error('Failed to load assigned LAs');
-  return res.json();
+export async function fetchCourses(){
+  const r=await fetch('/api/courses'); if(!r.ok) throw new Error('Failed'); return r.json();
 }
 
-// Add or update a staff schedule row
-export async function upsertSchedule(entry) {
-  const res = await fetch('/api/schedule', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify(entry)   // { day, start, end, type, location, course_code }
-  });
-  if (!res.ok) throw new Error('Failed to save schedule');
-  return res.json();
-}
-
-// Delete a schedule row
-export async function deleteSchedule(id) {
-  const res = await fetch(`/api/schedule/${id}`, {
-    method: 'DELETE',
-    headers: { ...authHeaders() }
-  });
-  if (!res.ok) throw new Error('Failed to delete schedule');
-  return true;
+export async function addStaff(payload){
+  const r=await fetch('/api/staff',{method:'POST',headers:{'Content-Type':'application/json',...auth()},body:JSON.stringify(payload)});
+  if(!r.ok){ let msg='Failed'; try{msg=(await r.json()).message||msg;}catch{} throw new Error(msg);}
+  return r.json();
 }
