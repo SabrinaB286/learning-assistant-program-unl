@@ -3,98 +3,134 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Learning Assistant Feedback • UNL</title>
-  <meta name="color-scheme" content="light dark" />
 
+  <!-- Formal theme -->
   <style>
     :root {
-      --unl-red: #d00000;
-      --unl-red-dark: #b00000;
-      --ink: #222;
-      --muted: #666;
-      --bg: #f6f7fb;
-      --card: #fff;
-      --ring: #e6e7ee;
-      --ok: #18a34a;
-      --bad: #c1121f;
-      --chip: #f1f5f9;
-      --star: #fbbf24;
+      --unl-red: #c8102e;
+      --unl-red-dark: #a00d25;
+      --ink: #111827;
+      /* text color */
+      --muted: #6b7280;
+      --bg: #f5f6fa;
+      --card: #ffffff;
+      --ring: #e5e7eb;
+      --shadow: 0 8px 24px rgba(17, 24, 39, .06);
+      --star: #f59e0b;
     }
 
     * {
       box-sizing: border-box
     }
 
+    html,
     body {
       margin: 0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      padding: 0
+    }
+
+    body {
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
       color: var(--ink);
       background: var(--bg);
     }
 
-    .shell {
-      max-width: 1100px;
-      margin: 24px auto;
-      padding: 0 16px
-    }
-
+    /* Header */
     .topbar {
       background: linear-gradient(135deg, var(--unl-red), var(--unl-red-dark));
       color: #fff;
-      padding: 14px 0;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      border-bottom: 1px solid rgba(255, 255, 255, .1);
+      padding: 22px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .15);
+    }
+
+    .shell {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 16px
     }
 
     .brand {
       font-weight: 800;
-      letter-spacing: .3px
+      font-size: 1.25rem;
+      letter-spacing: .2px
     }
 
     .sub {
-      opacity: .9;
-      font-size: .95rem
+      opacity: .9
     }
 
+    /* Nav buttons */
     .nav {
       display: flex;
-      gap: 10px;
-      margin: 14px 0
+      gap: 12px;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 12px
+    }
+
+    .chip {
+      background: rgba(255, 255, 255, .14);
+      padding: 6px 10px;
+      border-radius: 999px
     }
 
     .btn {
       background: transparent;
       color: #fff;
       border: 1px solid rgba(255, 255, 255, .7);
-      padding: 8px 14px;
+      padding: 8px 16px;
       border-radius: 999px;
-      cursor: pointer
+      cursor: pointer;
+      font-weight: 600
     }
 
+    .btn.active,
     .btn:hover {
-      filter: brightness(.95)
+      background: #fff;
+      color: var(--unl-red)
     }
 
     .btn-ghost {
       background: #fff;
       color: var(--unl-red);
-      border: 1px solid #fff
+      border-color: #fff
     }
 
-    .wrap {
-      background: var(--bg)
+    .btn-muted {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--ring)
+    }
+
+    /* Cards/sections */
+    main {
+      padding: 24px 0 40px
     }
 
     .card {
       background: var(--card);
       border: 1px solid var(--ring);
-      border-radius: 14px;
-      padding: 18px;
-      margin-top: 16px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, .06)
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-top: 18px;
+    }
+
+    h1,
+    h2 {
+      margin: 8px 0 12px
+    }
+
+    p.lead {
+      color: var(--muted);
+      margin-top: 0
+    }
+
+    /* Form controls (fixes white-on-white) */
+    label {
+      font-weight: 600
     }
 
     .row {
@@ -103,81 +139,84 @@
       margin-bottom: 12px
     }
 
-    label {
-      font-weight: 600
-    }
-
     input,
     select,
     textarea {
       width: 100%;
-      padding: 10px;
       border: 1px solid var(--ring);
       border-radius: 10px;
+      padding: 10px 12px;
       background: #fff;
-      min-height: 44px
+      color: var(--ink);
+      min-height: 44px;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #9ca3af
     }
 
     textarea {
-      min-height: 110px
+      min-height: 120px
     }
 
-    h1,
-    h2,
-    h3 {
-      margin: 14px 0
-    }
-
-    .hidden {
-      display: none !important
-    }
-
-    .chip {
-      background: var(--chip);
-      padding: 4px 8px;
-      border-radius: 999px;
-      font-size: .85rem
-    }
-
-    .alert {
-      padding: 12px 14px;
-      border-radius: 10px;
-      margin: 12px 0;
-      font-weight: 600
-    }
-
-    .alert-success {
-      background: #ecfdf5;
-      color: #065f46;
-      border: 1px solid #a7f3d0
-    }
-
-    .alert-error {
-      background: #fff1f2;
-      color: #9f1239;
-      border: 1px solid #fecdd3
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center
     }
 
     .btn-primary {
       background: var(--unl-red);
       color: #fff;
       border: 1px solid var(--unl-red);
-      border-radius: 10px;
       padding: 10px 16px;
-      font-weight: 600
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer
     }
 
     .btn-primary:hover {
       background: var(--unl-red-dark)
     }
 
-    .btn-muted {
+    .hidden {
+      display: none !important
+    }
+
+    /* grid */
+    .grid {
+      display: grid;
+      gap: 14px
+    }
+
+    @media (min-width:860px) {
+      .g-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    /* tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin: 6px 0 2px
+    }
+
+    .tab {
       background: #fff;
       border: 1px solid var(--ring);
       color: var(--ink);
-      border-radius: 10px;
-      padding: 10px 16px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
       font-weight: 600
+    }
+
+    .tab.active {
+      background: var(--unl-red);
+      color: #fff;
+      border-color: var(--unl-red)
     }
 
     /* stars */
@@ -191,7 +230,6 @@
       font-size: 28px;
       cursor: pointer;
       color: #d3d6de;
-      transition: color .15s;
       line-height: 1
     }
 
@@ -199,42 +237,30 @@
       color: var(--star)
     }
 
-    .pillbar {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin: 10px 0
+    /* alerts */
+    .alert {
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-weight: 600;
+      margin: 8px 0
     }
 
-    .pill {
-      border: 1px solid var(--ring);
-      padding: 8px 14px;
-      border-radius: 999px;
-      cursor: pointer;
-      background: #fff
+    .alert-error {
+      background: #fff1f2;
+      color: #9f1239;
+      border: 1px solid #fecdd3
     }
 
-    .pill.active {
-      background: var(--unl-red);
-      color: #fff;
-      border-color: var(--unl-red)
-    }
-
-    .grid {
-      display: grid;
-      gap: 14px
-    }
-
-    @media (min-width:840px) {
-      .g-2 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
+    .alert-success {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0
     }
   </style>
 </head>
 
 <body>
-  <!-- ======= TOP BAR ======= -->
+  <!-- ===== HEADER ===== -->
   <header class="topbar">
     <div class="shell">
       <div class="grid g-2" style="align-items:center">
@@ -242,10 +268,10 @@
           <div class="brand">Learning Assistant Feedback</div>
           <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
         </div>
-        <nav class="nav" style="justify-content:flex-end">
+        <nav class="nav">
           <button class="btn" data-nav="feedback">Feedback</button>
           <button class="btn" data-nav="office">Office Hours</button>
-          <button id="login-nav" class="btn-ghost" data-nav="login">Login</button>
+          <button id="login-tab" class="btn" data-nav="login">Login</button>
           <span id="user-chip" class="chip hidden"></span>
           <button id="logout-btn" class="btn hidden">Log out</button>
         </nav>
@@ -253,11 +279,18 @@
     </div>
   </header>
 
-  <main class="shell wrap">
-    <!-- ======= FEEDBACK ======= -->
+  <main class="shell">
+    <!-- ===== TABS VISUAL (optional, we also wire header buttons) ===== -->
+    <div class="tabs">
+      <button class="tab active" data-nav="feedback">Feedback</button>
+      <button class="tab" data-nav="office">Office Hours</button>
+      <button class="tab" data-nav="login">Login</button>
+    </div>
+
+    <!-- ===== FEEDBACK (default) ===== -->
     <section id="section-feedback" class="card">
       <h2>Submit Feedback</h2>
-      <p>Share course or LA feedback. Submissions are stored in Supabase.</p>
+      <p class="lead">Share course or LA feedback. Submissions are stored in Supabase.</p>
 
       <form id="feedback-form" class="grid">
         <div class="g-2">
@@ -272,7 +305,6 @@
               <option>CSCE 156</option>
             </select>
           </div>
-
           <div class="row">
             <label for="type">Type</label>
             <select id="type" name="type" required>
@@ -289,14 +321,14 @@
 
         <div class="row">
           <label>Rating</label>
-          <div class="stars" id="stars">
+          <div id="stars" class="stars">
             <span class="star" data-v="1">★</span>
             <span class="star" data-v="2">★</span>
             <span class="star" data-v="3">★</span>
             <span class="star" data-v="4">★</span>
             <span class="star" data-v="5">★</span>
-            <input type="hidden" id="rating" name="rating" value="0" />
           </div>
+          <input type="hidden" id="rating" name="rating" value="0" />
         </div>
 
         <div class="row">
@@ -309,7 +341,6 @@
             <label for="submitter">Your name (optional)</label>
             <input id="submitter" name="submitter" placeholder="First Last" />
           </div>
-
           <div class="row">
             <label for="year">Year (optional)</label>
             <select id="year" name="year">
@@ -323,51 +354,49 @@
           </div>
         </div>
 
-        <div id="feedback-alert" class="alert hidden" role="alert" aria-live="polite"></div>
+        <div id="fb-alert" class="alert hidden"></div>
 
-        <div class="row">
-          <button class="btn-primary" type="submit" id="feedback-submit">Submit feedback</button>
+        <div class="actions">
+          <button id="fb-submit" type="submit" class="btn-primary">Submit feedback</button>
         </div>
       </form>
     </section>
 
-    <!-- ======= OFFICE HOURS ======= -->
+    <!-- ===== OFFICE HOURS ===== -->
     <section id="section-office" class="card hidden">
       <h2>Office Hours</h2>
-      <p>Browse office hours by course. Data comes from staff schedules.</p>
+      <p class="lead">Browse office hours by course. Data comes from staff schedules.</p>
 
-      <div class="pillbar" id="course-filter">
-        <button class="pill active" data-course="ALL">All</button>
-        <button class="pill" data-course="CSCE 101">CSCE 101</button>
-        <button class="pill" data-course="CSCE 155A">CSCE 155A</button>
-        <button class="pill" data-course="CSCE 155E">CSCE 155E</button>
-        <button class="pill" data-course="CSCE 155H">CSCE 155H</button>
-        <button class="pill" data-course="CSCE 156">CSCE 156</button>
+      <div class="tabs" id="course-filter">
+        <button class="tab active" data-course="ALL">All</button>
+        <button class="tab" data-course="CSCE 101">CSCE 101</button>
+        <button class="tab" data-course="CSCE 155A">CSCE 155A</button>
+        <button class="tab" data-course="CSCE 155E">CSCE 155E</button>
+        <button class="tab" data-course="CSCE 155H">CSCE 155H</button>
+        <button class="tab" data-course="CSCE 156">CSCE 156</button>
       </div>
 
-      <div id="office-list" class="grid"></div>
       <div id="office-alert" class="alert hidden"></div>
+      <div id="office-list" class="grid"></div>
     </section>
 
-    <!-- ======= LOGIN ======= -->
+    <!-- ===== LOGIN ===== -->
     <section id="section-login" class="card hidden">
       <h2>Sign in</h2>
-      <div id="login-alert" class="alert hidden" role="alert" aria-live="polite"></div>
+      <p class="lead">Staff and students sign in with NUID (or @huskers.unl.edu) and password.</p>
 
-      <form id="login-form" novalidate>
-        <div class="g-2">
-          <div class="row">
-            <label for="login-input">NUID or Email</label>
-            <input id="login-input" name="login" type="text" inputmode="text" autocomplete="username"
-              placeholder="12345678 or user@huskers.unl.edu" required>
-          </div>
-          <div class="row">
-            <label for="password-input">Password</label>
-            <input id="password-input" name="password" type="password" autocomplete="current-password" required>
-          </div>
+      <div id="login-alert" class="alert hidden"></div>
+      <form id="login-form" class="grid g-2" novalidate>
+        <div class="row">
+          <label for="login-input">NUID or Email</label>
+          <input id="login-input" name="login" type="text" placeholder="12345678 or user@huskers.unl.edu"
+            autocomplete="username" required />
         </div>
-
-        <div class="row" style="margin-top:12px;">
+        <div class="row">
+          <label for="password-input">Password</label>
+          <input id="password-input" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <div class="actions">
           <button id="login-btn" type="submit" class="btn-primary">Sign in</button>
           <button id="change-pass-btn" type="button" class="btn-muted">Change password</button>
         </div>
@@ -375,159 +404,161 @@
     </section>
   </main>
 
-  <!-- ========= PAGE SCRIPTS ========= -->
-
-  <!-- Login handler (press Enter or click works) -->
-  <script type="module" src="/public/login.js"></script>
-
-  <!-- Minimal page wiring (tabs, stars, simple feedback POST).
-       If you already have feedback.js for submission, you can remove the feedback-post logic below. -->
+  <!-- ===== PAGE SCRIPTS ===== -->
   <script>
-    // ----- section tabs -----
-    const sections = {
-      feedback: document.getElementById('section-feedback'),
-      office: document.getElementById('section-office'),
-      login: document.getElementById('section-login')
+    /* ---------- helpers ---------- */
+    const $ = (s, r = document) => r.querySelector(s);
+    const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+    const show = id => { ['feedback', 'office', 'login'].forEach(k => $('#section-' + k).classList.toggle('hidden', k !== id)); setActives(id); };
+    const setActives = id => {
+      $$('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
+      $$('.tab[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
+      history.replaceState(null, '', '#' + id);
     };
-    const navButtons = Array.from(document.querySelectorAll('[data-nav]'));
-    function show(which) {
-      Object.entries(sections).forEach(([k, el]) => el.classList.toggle('hidden', k !== which));
-      navButtons.forEach(b => b.classList.toggle('btn-ghost', b.dataset.nav === which));
-      // remember choice in hash
-      history.replaceState(null, '', `#${which}`);
-    }
-    navButtons.forEach(b => b.addEventListener('click', () => show(b.dataset.nav)));
-    window.addEventListener('hashchange', () => {
-      const tab = (location.hash || '#feedback').replace('#', '');
-      show(sections[tab] ? tab : 'feedback');
-    });
-    show((location.hash || '#feedback').replace('#', ''));
 
-    // ----- stars -----
-    const starWrap = document.getElementById('stars');
-    if (starWrap) {
-      const stars = Array.from(starWrap.querySelectorAll('.star'));
-      const hidden = document.getElementById('rating');
-      function paint(n) {
-        stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n));
-      }
+    /* ---------- tab/nav wiring ---------- */
+    $$('.btn[data-nav], .tab[data-nav]').forEach(b => b.addEventListener('click', () => show(b.dataset.nav)));
+    show((location.hash || '#feedback').slice(1));
+
+    /* ---------- stars ---------- */
+    (function () {
+      const stars = $$('#stars .star');
+      const hidden = $('#rating');
+      const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n));
       stars.forEach(s => {
         s.addEventListener('mouseenter', () => paint(Number(s.dataset.v)));
         s.addEventListener('mouseleave', () => paint(Number(hidden.value || 0)));
         s.addEventListener('click', () => { hidden.value = s.dataset.v; paint(Number(hidden.value)); });
       });
-    }
+    })();
 
-    // ----- simple feedback submit (POST /api/feedback) -----
-    const feedbackForm = document.getElementById('feedback-form');
-    const feedbackBtn = document.getElementById('feedback-submit');
-    const fbAlert = document.getElementById('feedback-alert');
+    /* ---------- Feedback submit -> POST /api/feedback ---------- */
+    (function () {
+      const form = $('#feedback-form'); if (!form) return;
+      const btn = $('#fb-submit');
+      const alert = $('#fb-alert');
+      const ok = (m) => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
+      const bad = (m) => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden'); };
 
-    function fbShow(msg, ok = false) {
-      fbAlert.classList.remove('hidden', 'alert-success', 'alert-error');
-      fbAlert.classList.add(ok ? 'alert-success' : 'alert-error');
-      fbAlert.textContent = msg;
-    }
-    function fbHide() { fbAlert.classList.add('hidden'); fbAlert.textContent = ''; }
-
-    if (feedbackForm) {
-      feedbackForm.addEventListener('submit', async (e) => {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        fbHide();
-
-        const form = new FormData(feedbackForm);
+        alert.classList.add('hidden'); alert.textContent = '';
+        const fd = new FormData(form);
         const payload = {
-          course: form.get('course') || '',
-          type: form.get('type') || '',
-          rating: Number(document.getElementById('rating').value || 0) || null,
-          text: form.get('text') || '',
-          submitter: form.get('submitter') || '',
-          year: form.get('year') || ''
+          course: fd.get('course') || '',
+          type: fd.get('type') || '',
+          rating: Number($('#rating').value || 0) || null,
+          text: fd.get('text') || '',
+          submitter: fd.get('submitter') || '',
+          year: fd.get('year') || ''
         };
-
-        if (!payload.course || !payload.type) {
-          fbShow('Please choose a course and type.');
-          return;
-        }
-
-        feedbackBtn.disabled = true; feedbackBtn.textContent = 'Submitting…';
+        if (!payload.course || !payload.type) { bad('Please select a course and type.'); return; }
+        btn.disabled = true; btn.textContent = 'Submitting…';
         try {
           const res = await fetch('/api/feedback', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
-          let data = {};
-          try { data = await res.json(); } catch { }
+          let data = {}; try { data = await res.json(); } catch { }
           if (!res.ok) throw new Error(data?.message || 'Submit failed');
+          ok('Thanks! Your feedback was submitted.');
+          form.reset(); $('#rating').value = 0; $$('#stars .star').forEach(s => s.classList.remove('active'));
+        } catch (err) { bad(err.message || 'Could not submit feedback.'); }
+        finally { btn.disabled = false; btn.textContent = 'Submit feedback'; }
+      });
+    })();
 
-          fbShow('Thanks! Your feedback was submitted.', true);
-          feedbackForm.reset();
-          document.getElementById('rating').value = 0;
-          const stars = document.querySelectorAll('#stars .star'); stars.forEach(s => s.classList.remove('active'));
+    /* ---------- Office hours list -> GET /api/office-hours ---------- */
+    (function () {
+      const list = $('#office-list'); if (!list) return;
+      const alert = $('#office-alert');
+      const render = (rows) => {
+        list.innerHTML = '';
+        if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; }
+        alert.classList.add('hidden'); alert.textContent = '';
+        rows.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML = `
+            <div class="grid g-2" style="align-items:center">
+              <div>
+                <div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
+                <div class="sub">Location: ${r.location || 'TBA'}</div>
+              </div>
+              <div style="text-align:right"><span class="chip">${r.staff_name || r.nuid}</span></div>
+            </div>`;
+          list.appendChild(div);
+        });
+      };
+      let ALL = [];
+      const load = async () => {
+        try { const res = await fetch('/api/office-hours'); ALL = await res.json(); if (!Array.isArray(ALL)) ALL = []; }
+        catch { ALL = []; }
+        render(ALL);
+      };
+      load();
+      $$('#course-filter .tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          $$('#course-filter .tab').forEach(t => t.classList.toggle('active', t === tab));
+          const c = tab.dataset.course;
+          render(c === 'ALL' ? ALL : ALL.filter(x => x.course === c));
+        });
+      });
+    })();
+
+    /* ---------- Login -> POST /api/auth/login (Enter or click) ---------- */
+    (function () {
+      const form = $('#login-form'); if (!form) return;
+      const alert = $('#login-alert');
+      const userChip = $('#user-chip');
+      const logoutBtn = $('#logout-btn');
+      const loginTab = $('#login-tab');
+
+      const ok = (m) => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
+      const bad = (m) => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden'); };
+
+      const LOGIN_URL = '/api/auth/login'; // <-- change if your backend uses a different path
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        alert.classList.add('hidden'); alert.textContent = '';
+        const login = $('#login-input').value.trim();
+        const password = $('#password-input').value;
+        if (!login || !password) { bad('Missing login or password'); return; }
+
+        try {
+          const res = await fetch(LOGIN_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ login, password })
+          });
+          let data = {}; try { data = await res.json(); } catch { }
+          if (res.status === 404) { bad('Login route not found (404). Ensure your server exposes POST ' + LOGIN_URL); return; }
+          if (!res.ok) throw new Error(data?.message || 'Invalid credentials');
+
+          // success – show user + hide Login button; default to feedback
+          const who = data?.name || data?.email || login;
+          userChip.textContent = who + (data?.role ? ` (${data.role})` : '');
+          userChip.classList.remove('hidden');
+          logoutBtn.classList.remove('hidden');
+          loginTab.classList.add('hidden');
+          ok('Signed in.');
+          show('feedback');
         } catch (err) {
-          fbShow(err?.message || 'Could not submit feedback.');
-        } finally {
-          feedbackBtn.disabled = false; feedbackBtn.textContent = 'Submit feedback';
+          bad(err.message || 'Login failed');
         }
       });
-    }
 
-    // ----- office hours (lightweight fetch & filter list) -----
-    const officeList = document.getElementById('office-list');
-    const officeAlert = document.getElementById('office-alert');
-    const pills = Array.from(document.querySelectorAll('#course-filter .pill'));
-    let officeData = [];
-
-    function renderOffice(course = 'ALL') {
-      if (!officeList) return;
-      officeList.innerHTML = '';
-      const rows = officeData.filter(r => course === 'ALL' || r.course === course);
-      if (!rows.length) {
-        officeAlert.classList.remove('hidden', 'alert-success'); officeAlert.classList.add('alert-error');
-        officeAlert.textContent = 'No office hours to show.';
-        return;
-      }
-      officeAlert.classList.add('hidden'); officeAlert.textContent = '';
-      rows.forEach(r => {
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.innerHTML = `
-          <div class="grid g-2" style="align-items:center">
-            <div>
-              <div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
-              <div class="sub">Location: ${r.location || 'TBA'}</div>
-            </div>
-            <div style="text-align:right">
-              <span class="chip">${r.staff_name || r.nuid}</span>
-            </div>
-          </div>`;
-        officeList.appendChild(div);
+      // log out (optional API)
+      logoutBtn.addEventListener('click', async () => {
+        try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { }
+        userChip.classList.add('hidden'); userChip.textContent = '';
+        logoutBtn.classList.add('hidden'); $('#login-tab').classList.remove('hidden');
+        show('feedback');
       });
-    }
-    async function loadOffice() {
-      try {
-        const res = await fetch('/api/office-hours');
-        officeData = await res.json();
-        if (!Array.isArray(officeData)) officeData = [];
-      } catch { officeData = []; }
-      renderOffice('ALL');
-    }
-    if (officeList) { loadOffice(); }
-    pills.forEach(p => p.addEventListener('click', () => {
-      pills.forEach(x => x.classList.toggle('active', x === p));
-      renderOffice(p.dataset.course);
-    }));
-
-    // ----- logout button (if your API provides /api/auth/logout) -----
-    document.getElementById('logout-btn')?.addEventListener('click', async () => {
-      try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { }
-      localStorage.removeItem('lap_auth_token');
-      document.getElementById('user-chip')?.classList.add('hidden');
-      document.getElementById('logout-btn')?.classList.add('hidden');
-      document.getElementById('login-nav')?.classList.remove('hidden');
-      show('feedback');
-    });
+    })();
   </script>
 </body>
 
