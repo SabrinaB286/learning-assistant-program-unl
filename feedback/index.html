@@ -313,12 +313,12 @@
         <div class="brand">Learning Assistant Feedback</div>
         <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
 
-        <!-- Under-title actions (greeting only; removed duplicate Sign in button) -->
+        <!-- Greeting only -->
         <div id="page-actions">
           <span id="lap-user-greeting" class="chip hidden" aria-live="polite"></span>
         </div>
 
-        <!-- Nav row on its own line under the title -->
+        <!-- Tabs on their own line -->
         <div class="navrow">
           <nav class="nav">
             <button class="btn" data-nav="feedback">Feedback</button>
@@ -579,7 +579,7 @@
   </script>
 
   <script>
-    /* ---------- tiny router (single source of truth) ---------- */
+    /* ---------- tiny router ---------- */
     const PAGES = ['feedback', 'office', 'login', 'dashboard'];
     const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
     function show(id) {
@@ -608,7 +608,7 @@
     const roleIs = r => String(getUser()?.role || '').toUpperCase() === r;
     const isStaff = () => ['SL', 'CL', 'LA'].includes(String(getUser()?.role || '').toUpperCase());
 
-    /* ---------- header logic (single Login button; greeting chip only) ---------- */
+    /* ---------- header logic ---------- */
     (function () {
       const greet = $('#lap-user-greeting'), loginTab = $('#login-tab'), logoutBtn = $('#logout-btn'), dashTab = $('#dashboard-tab');
 
@@ -627,15 +627,14 @@
         $('#admin-block')?.classList.toggle('hidden', !(authed && roleIs('SL')));
       }
 
-      window.addEventListener('hashchange', () => paint());
-      document.addEventListener('DOMContentLoaded', () => { paint(); });
+      window.addEventListener('hashchange', paint);
+      document.addEventListener('DOMContentLoaded', paint);
     })();
 
-    /* ---------- nav bindings (after DOM ready) ---------- */
+    /* ---------- nav bindings ---------- */
     (function () {
       document.addEventListener('DOMContentLoaded', () => {
         $$('[data-nav]').forEach(b => b.addEventListener('click', () => show(b.dataset.nav)));
-        // initial route: hash > default
         const initial = location.hash.replace('#', '');
         show(PAGES.includes(initial) ? initial : 'feedback');
       });
@@ -669,7 +668,6 @@
           const arr = json?.items || json || [];
           render(Array.isArray(arr) ? arr : []);
         } catch {
-          // fallback route
           try {
             const res = await fetch('/office-hours', { credentials: 'include' });
             let json = null; try { json = await res.clone().json() } catch { }
@@ -702,11 +700,13 @@
 
         let res, json;
         try {
-          ({ res, json } = await (async () => { const r = await fetch('/api/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) }); let j = null; try { j = await r.clone().json() } catch { }; return { res: r, json: j }; })());
+          const r = await fetch('/api/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) });
+          res = r; try { json = await r.clone().json() } catch { }
         } catch { }
         if (!res || res.status === 404) {
           try {
-            const r = await fetch('/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) }); res = r; try { json = await r.clone().json() } catch { }
+            const r = await fetch('/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) });
+            res = r; try { json = await r.clone().json() } catch { }
           } catch { }
         }
         if (!res) return bad('Login request failed. Check your API route.');
@@ -730,7 +730,6 @@
         } else {
           show('feedback');
         }
-        // repaint header widgets
         window.dispatchEvent(new Event('hashchange'));
       });
 
@@ -787,7 +786,7 @@
     }
 
     (function () {
-      const form = $('#sched-form'); if (!form) return; const btn = $('#sched-save'), alert = $('#sched-alert');
+      const form = $('#sched-form'); if (!form) return; const btn = $('#sched-save'), alert = $('#sched-alert']);
       const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') }
       const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') }
       form.addEventListener('submit', async e => {
@@ -847,21 +846,60 @@
     async function loadAdmin() {
       const block = $('#admin-block'); if (!block) return; block.classList.remove('hidden');
 
+      // Supabase REST fallback with multiple table/column guesses + clear errors
       async function supabaseStaffFallback() {
-        try {
-          if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return null;
-          const url = `${window.SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/staff?select=nuid,name,email,role,course`;
-          const res = await fetch(url, { headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: `Bearer ${window.SUPABASE_ANON_KEY}` } });
-          if (!res.ok) return null;
-          return await res.json();
-        } catch { return null }
+        const URL = (window.SUPABASE_URL || '').replace(/\/+$/, '');
+        const KEY = window.SUPABASE_ANON_KEY;
+        if (!URL || !KEY) return { ok: false, rows: [], error: 'Missing SUPABASE_URL or ANON key on window.' };
+
+        const tables = ['staff', 'Staff', 'la_staff', 'staff_view', 'employees', 'profiles'];
+        const selects = [
+          'nuid,name,email,role,course',
+          'nuid,name,email,role,course_code',
+          'id,nuid,name,email,role,course',
+          'id,first_name,last_name,email,role,primary_course',
+          '*'
+        ];
+        const norm = (r) => ({
+          nuid: r.nuid ?? r.id ?? '',
+          name: r.name ?? [r.first_name, r.last_name].filter(Boolean).join(' ') ?? '',
+          email: r.email ?? r.username ?? '',
+          role: r.role ?? r.title ?? '',
+          course: r.course ?? r.course_code ?? r.primary_course ?? r.course_assigned ?? ''
+        });
+
+        for (const t of tables) {
+          for (const sel of selects) {
+            try {
+              const url = `${URL}/rest/v1/${encodeURIComponent(t)}?select=${encodeURIComponent(sel)}`;
+              const res = await fetch(url, {
+                headers: {
+                  apikey: KEY,
+                  Authorization: `Bearer ${KEY}`,
+                  Accept: 'application/json',
+                  Prefer: 'count=exact'
+                }
+              });
+              if (res.status === 401 || res.status === 403) {
+                const j = await res.json().catch(() => null);
+                return { ok: false, rows: [], error: `Supabase ${res.status}: ${j?.message || 'RLS/policy forbids select on "' + t + '".'}` };
+              }
+              if (!res.ok) { continue; }
+              const data = await res.json().catch(() => []);
+              if (Array.isArray(data) && data.length) {
+                return { ok: true, rows: data.map(norm), error: null };
+              }
+            } catch { continue; }
+          }
+        }
+        return { ok: true, rows: [], error: null };
       }
 
       // staff list
       (async () => {
         const body = $('#staff-table tbody'); const empty = $('#staff-empty');
         body.innerHTML = '';
-        let rows = [], ok = false, json = null;
+        let rows = [], ok = false, json = null, lastErr = null;
 
         const attempts = ['/api/admin/staff', '/admin/staff', '/api/staff', '/api/staff/list'];
         for (const path of attempts) {
@@ -871,41 +909,64 @@
             if (res.ok) {
               rows = Array.isArray(json) ? json : (Array.isArray(json?.items) ? json.items : []);
               ok = true; break;
+            } else {
+              lastErr = json?.message || `HTTP ${res.status} on ${path}`;
             }
-          } catch { }
+          } catch (e) { lastErr = e?.message || 'Network error'; }
         }
 
         if (!ok) {
           const sb = await supabaseStaffFallback();
-          if (Array.isArray(sb)) { rows = sb; ok = true; }
+          if (sb.error && !rows.length) {
+            empty.className = 'alert alert-error';
+            empty.textContent = sb.error;
+            empty.classList.remove('hidden');
+            return;
+          }
+          if (sb.ok && Array.isArray(sb.rows)) {
+            rows = sb.rows;
+            ok = true;
+          }
         }
 
         if (!ok) {
           empty.className = 'alert alert-error';
-          empty.textContent = json?.message || 'Could not load staff list';
+          empty.textContent = lastErr || (json?.message || 'Could not load staff list');
           empty.classList.remove('hidden');
           return;
         }
 
         if (!rows.length) {
-          empty.className = 'alert alert-success';
+          empty.className = 'alert success';
           empty.textContent = 'No staff found yet. Use “Add staff” to create the first entry.';
           empty.classList.remove('hidden');
         } else {
           empty.classList.add('hidden');
         }
 
-        rows.forEach(s => {
+        const normRow = (s) => ({
+          nuid: s.nuid ?? s.id ?? '',
+          name: s.name ?? [s.first_name, s.last_name].filter(Boolean).join(' ') ?? '',
+          email: s.email ?? s.username ?? '',
+          role: s.role ?? s.title ?? '',
+          course: s.course ?? s.course_code ?? s.primary_course ?? s.course_assigned ?? ''
+        });
+
+        rows.map(normRow).forEach(s => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${s.nuid || ''}</td><td>${s.name || ''}</td><td>${s.email || ''}</td><td>${s.role || ''}</td><td>${s.course || ''}</td>
-            <td><span class="link" data-rm="${s.nuid || s.id}">Remove</span></td>`;
+          tr.innerHTML = `<td>${s.nuid || ''}</td><td>${s.name || ''}</td><td>${s.email || ''}</td><td>${(s.role || '').toString().toUpperCase()}</td><td>${s.course || ''}</td>
+            <td><span class="link" data-rm="${s.nuid || s.id || ''}">Remove</span></td>`;
           body.appendChild(tr);
         });
         $$('[data-rm]').forEach(a => a.addEventListener('click', async () => {
-          const id = a.getAttribute('data-rm'); a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
+          const id = a.getAttribute('data-rm'); if (!id) return;
+          a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
           const tries = [`/api/admin/staff/${id}`, `/admin/staff/${id}`];
-          let ok = false; for (const t of tries) { try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { ok = true; break } } catch { } }
-          if (ok) loadAdmin(); else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto'; }
+          let removed = false;
+          for (const t of tries) {
+            try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { removed = true; break } } catch { }
+          }
+          if (removed) loadAdmin(); else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto'; }
         }));
       })();
 
@@ -944,7 +1005,7 @@
 
       // add staff
       (function () {
-        const form = $('#staff-form'), alert = $('#staff-alert');
+        const form = $('#staff-form'), alert = $('#staff-alert']);
         const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') }
         const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') }
         form.addEventListener('submit', async e => {
