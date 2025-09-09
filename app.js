@@ -1,13 +1,8 @@
 // app.js
 // Main server for LA Portal (Auth, Feedback, Schedule, Office Hours + SPA)
 
-// ----- Optional dotenv (for local dev). On Render, env vars are injected automatically.
-try {
-  require.resolve('dotenv');
-  require('dotenv').config();
-} catch (_) {
-  // dotenv not installed — that’s fine in production
-}
+// ----- Optional dotenv (local dev). Render already injects env vars.
+try { require.resolve('dotenv'); require('dotenv').config(); } catch (_) {}
 
 const path = require('path');
 const fs = require('fs');
@@ -15,7 +10,13 @@ const fs = require('fs');
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
-const morgan = require('morgan');
+// Optional morgan: if not installed, use a no-op logger
+function loadMorgan() {
+  try { return require('morgan'); }
+  catch { return () => (_fmt) => (req, res, next) => next(); }
+}
+const morgan = loadMorgan();
+
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
 
@@ -24,13 +25,8 @@ const app = express();
 // ----- Basic hardening & middleware
 app.set('trust proxy', 1); // trust Render/Heroku proxies
 
-app.use(helmet({
-  contentSecurityPolicy: false, // disable strict CSP for SPA; tighten later
-}));
-app.use(cors({
-  origin: true,
-  credentials: true,
-}));
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -46,26 +42,24 @@ app.get('/healthz', (_req, res) =>
 app.use('/api/auth', require('./server/routes/auth'));
 app.use('/api/feedback', require('./server/routes/feedback'));
 app.use('/api/schedule', require('./server/routes/schedule'));
-app.use('/api/office-hours', require('./server/routes/officehours')); // make sure this file exists
+app.use('/api/office-hours', require('./server/routes/officehours')); // ensure this file exists
 
 // ----- Static front-end (SPA)
-// Auto-detect front-end directory
 const FE_DIR =
   process.env.FEEDBACK_DIR ||
   (fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path.join(__dirname, 'public') :
    fs.existsSync(path.join(__dirname, 'feedback', 'index.html')) ? path.join(__dirname, 'feedback') :
-   __dirname // fallback; expects index.html at project root
-  );
+   __dirname);
 
 app.use(express.static(FE_DIR, {
   maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
   index: 'index.html',
 }));
 
-// For SPA routes: always return index.html (except API/asset paths)
+// SPA fallback
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api/')) return next();   // let API handle it
-  if (path.extname(req.path)) return next();         // let static handle assets
+  if (req.path.startsWith('/api/')) return next();
+  if (path.extname(req.path)) return next();
   res.sendFile(path.join(FE_DIR, 'index.html'));
 });
 
