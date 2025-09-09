@@ -1,41 +1,65 @@
 // app.js
-const express = require('express');
-const path = require('path');
-const morgan = require('morgan');
-const bodyParser = require('body-parser');
-const cors = require('cors');
+// Minimal server: SPA + API (no optional deps like morgan/body-parser/dotenv)
 
-// Import routes
-const authRoutes = require('./server/routes/auth');
-const feedbackRoutes = require('./server/routes/feedback');
-const scheduleRoutes = require('./server/routes/schedule');
-const officehoursRoutes = require('./server/routes/officehours');
+// --- built-ins first
+const path = require('path');
+const fs = require('fs');
+
+// --- core deps
+const express = require('express');
 
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(morgan('dev'));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// --- middleware (no extra packages)
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true }));
 
-// Static files
-const PUBLIC_DIR = path.join(__dirname, 'public');
-app.use(express.static(PUBLIC_DIR));
+// --- API routes (ensure these files exist and export `module.exports = router`)
+app.use('/api/auth', require('./server/routes/auth'));
+app.use('/api/feedback', require('./server/routes/feedback'));
+app.use('/api/schedule', require('./server/routes/schedule'));
+app.use('/api/office-hours', require('./server/routes/officehours'));
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/feedback', feedbackRoutes);
-app.use('/api/schedule', scheduleRoutes);
-app.use('/api/officehours', officehoursRoutes);
-
-// Default route (for SPA or index.html)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+// --- health check
+app.get('/healthz', (_req, res) => {
+  res.json({ ok: true, ts: new Date().toISOString() });
 });
 
-// Port setup
-const PORT = process.env.PORT || 1000;  // ← back to what you had originally
-app.listen(PORT, () => {
-  console.log(`LA Portal server listening on port ${PORT}`);
+// --- static front-end
+const PUBLIC_DIR   = path.join(__dirname, 'public');
+const FEEDBACK_DIR = path.join(__dirname, 'feedback');
+const ROOT_DIR     = __dirname;
+
+// pick primary SPA dir (where index.html lives)
+let FE_DIR = null;
+for (const candidate of [
+  path.join(__dirname, 'public', 'index.html'),
+  path.join(__dirname, 'feedback', 'index.html'),
+  path.join(__dirname, 'index.html'),
+]) {
+  if (fs.existsSync(candidate)) { FE_DIR = path.dirname(candidate); break; }
+}
+if (!FE_DIR) FE_DIR = ROOT_DIR;
+
+// serve static assets from primary + known dirs
+const staticDirs = [FE_DIR];
+if (fs.existsSync(PUBLIC_DIR)) staticDirs.push(PUBLIC_DIR);
+if (fs.existsSync(FEEDBACK_DIR)) staticDirs.push(FEEDBACK_DIR);
+for (const dir of staticDirs) {
+  app.use(express.static(dir, { index: 'index.html' }));
+}
+
+// SPA fallback to primary index.html
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  if (path.extname(req.path)) return next();
+  res.sendFile(path.join(FE_DIR, 'index.html'));
+});
+
+// --- boot (same style you had originally for the port)
+const PORT = process.env.PORT || 1000;   // your original pattern
+const HOST = '0.0.0.0';                  // required on Render
+app.listen(PORT, HOST, () => {
+  console.log(`Server listening on http://${HOST}:${PORT}`);
+  console.log(`Primary SPA dir: ${FE_DIR}`);
 });
