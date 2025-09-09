@@ -91,7 +91,7 @@
       border-radius: 999px
     }
 
-    /* NEW: under-title actions */
+    /* Under-title actions (new) */
     #page-actions {
       margin-top: 8px;
       display: flex;
@@ -108,11 +108,6 @@
 
     #lap-primary-action.btn:hover {
       background: #ffe5ea
-    }
-
-    #lap-user-greeting {
-      background: rgba(255, 255, 255, .14);
-      color: #fff
     }
 
     main {
@@ -328,13 +323,14 @@
           <div class="brand">Learning Assistant Feedback</div>
           <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
 
-          <!-- NEW: action row directly under title -->
+          <!-- Under-title actions (button hidden when logged in) -->
           <div id="page-actions">
-            <button id="lap-primary-action" class="btn">Sign in</button>
+            <button id="lap-primary-action" class="btn" data-hide-when-authed="true">Sign in</button>
             <span id="lap-user-greeting" class="chip hidden" aria-live="polite"></span>
           </div>
         </div>
 
+        <!-- Right nav -->
         <nav class="nav" style="justify-content:flex-start">
           <button class="btn active" data-nav="feedback">Feedback</button>
           <button class="btn" data-nav="office">Office Hours</button>
@@ -459,7 +455,7 @@
       </form>
     </section>
 
-    <!-- STAFF DASHBOARD -->
+    <!-- STAFF DASHBOARD (no SL admin list) -->
     <section id="section-dashboard" class="hidden">
       <div class="card">
         <h2>My Schedule</h2>
@@ -520,89 +516,21 @@
           <tbody></tbody>
         </table>
       </div>
-
-      <div id="admin-block" class="card hidden">
-        <h2>SL Admin</h2>
-        <p class="lead">Manage staff and approve students.</p>
-
-        <h3>Add staff</h3>
-        <div id="staff-alert" class="alert hidden"></div>
-        <form id="staff-form" class="grid g-3">
-          <div><label>NUID</label><input id="staff-nuid" placeholder="12345678" required></div>
-          <div><label>Name</label><input id="staff-name" placeholder="First Last" required></div>
-          <div><label>Email (@huskers.unl.edu)</label><input id="staff-email" placeholder="user@huskers.unl.edu"></div>
-          <div>
-            <label>Role</label>
-            <select id="staff-role" required>
-              <option value="">Select…</option>
-              <option>SL</option>
-              <option>CL</option>
-              <option>LA</option>
-            </select>
-          </div>
-          <div>
-            <label>Primary course</label>
-            <select id="staff-course">
-              <option value="">None</option>
-              <option>CSCE 101</option>
-              <option>CSCE 155A</option>
-              <option>CSCE 155E</option>
-              <option>CSCE 155H</option>
-              <option>CSCE 156</option>
-            </select>
-          </div>
-          <div class="actions">
-            <button id="staff-add" class="btn-primary" type="submit">Add staff</button>
-          </div>
-        </form>
-
-        <h3 style="margin-top:16px">Staff list</h3>
-        <table class="table" id="staff-table">
-          <thead>
-            <tr>
-              <th>NUID</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Course</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-
-        <h3 style="margin-top:16px">Pending students</h3>
-        <div id="pending-alert" class="alert hidden"></div>
-        <table class="table" id="pending-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>NUID</th>
-              <th>Email</th>
-              <th>Course</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
     </section>
   </main>
 
   <script>
-    /* ---------- tiny helpers ---------- */
+    /* ---------- helpers ---------- */
     const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
     const show = id => {
       ['feedback', 'office', 'login', 'dashboard'].forEach(k => $('#section-' + k).classList.toggle('hidden', k !== id));
       $$('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
       history.replaceState(null, '', '#' + id);
     };
-    // left nav
     $$('[data-nav]').forEach(b => b.addEventListener('click', () => show(b.dataset.nav)));
-    // ALWAYS start on Feedback
-    show('feedback');
+    show('feedback'); // default landing view
 
-    // Fetch wrapper that tries API and non-API path; returns last 404 rather than throwing
+    // fetch convenience with fallback paths
     const tryFetch = async (method, paths, body) => {
       let lastRes = null, lastJson = null;
       for (const p of paths) {
@@ -620,7 +548,7 @@
       return { res: lastRes, json: lastJson };
     };
 
-    /* ---------- stars ---------- */
+    /* ---------- rating stars ---------- */
     (function () {
       const stars = $$('#stars .star'), hidden = $('#rating');
       const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n));
@@ -631,7 +559,7 @@
       });
     })();
 
-    /* ---------- Header: under-title actions + greeting (name only) ---------- */
+    /* ---------- header (hide left sign-in when authed; show name; staff dashboard tab) ---------- */
     (function () {
       const getSession = () => {
         for (const k of ['lap_auth_v1', 'lap_auth']) {
@@ -655,71 +583,55 @@
       const dashTab = $('#dashboard-tab');
 
       function paintHeader() {
-        const name = getUserName();
         const authed = !!getToken();
-        if (btn) btn.textContent = authed ? 'Sign out' : 'Sign in';
+        const name = getUserName();
+
+        // hide the under-title button when authed
+        if (btn) btn.classList.toggle('hidden', authed || btn.dataset.hideWhenAuthed === 'true');
+
         if (greet) {
           if (name) { greet.textContent = `Signed in as ${name}`; greet.classList.remove('hidden'); }
           else { greet.textContent = ''; greet.classList.add('hidden'); }
         }
-        // Dashboard visibility for staff only
-        if (dashTab) dashTab.classList.toggle('hidden', !isStaff());
 
-        // Nav login/logout buttons (keep your originals working)
         if (loginTab) loginTab.classList.toggle('hidden', authed);
         if (logoutBtn) logoutBtn.classList.toggle('hidden', !authed);
+        if (dashTab) dashTab.classList.toggle('hidden', !isStaff());
       }
 
-      btn?.addEventListener('click', () => {
-        // Mirror your existing login/logout behavior
-        if (getToken()) {
-          // sign out: clear both known keys
-          localStorage.removeItem('lap_auth');
-          localStorage.removeItem('lap_auth_v1');
-          paintHeader();
-          show('feedback');
-        } else {
-          show('login');
-        }
-      });
-
-      // also repaint when hash changes (tab active state is handled below)
+      btn?.addEventListener('click', () => { location.hash = '#login'; });
       window.addEventListener('hashchange', paintHeader);
       document.addEventListener('DOMContentLoaded', paintHeader);
     })();
 
-    /* ---------- Office Hours (browse, optional queue join) ---------- */
-    const state = { user: null, role: null };
+    /* ---------- Office hours (list) ---------- */
     (function () {
       const list = $('#office-list'); if (!list) return;
-      const alert = $('#office-alert'); let ALL = [];
+      const alert = $('#office-alert');
       const render = rows => {
         list.innerHTML = '';
         if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; }
         alert.classList.add('hidden');
         rows.forEach(r => {
           const div = document.createElement('div'); div.className = 'card';
-          const canJoin = state.user && state.role === 'student' && (!r.course || (state.user?.course && state.user.course === r.course));
           div.innerHTML = `<div class="grid g-2" style="align-items:center">
             <div>
               <div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
               <div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${r.staff_name || 'Staff'}</span></div>
             </div>
-            <div style="text-align:right">${canJoin ? `<button class="btn-primary" data-join="${r.id}">Join queue</button>` : ''}</div>
+            <div style="text-align:right"></div>
           </div>`;
           list.appendChild(div);
         });
-        // wire join
-        $$('button[data-join]', list).forEach(b => b.addEventListener('click', async () => {
-          const id = b.getAttribute('data-join'); b.disabled = true; b.textContent = 'Joining…';
-          const { res, json } = await tryFetch('POST', [`/api/office-hours/${id}/queue`], {});
-          b.disabled = false; b.textContent = 'Join queue';
-          if (!res?.ok) alert.className = 'alert alert-error', alert.textContent = (json?.message || 'Could not join queue'), alert.classList.remove('hidden');
-          else alert.className = 'alert alert-success', alert.textContent = 'Added to queue!', alert.classList.remove('hidden');
-        }));
       };
-      const load = async () => { const { res, json } = await tryFetch('GET', ['/api/office-hours', '/office-hours']); const arr = json?.items || json || []; render(Array.isArray(arr) ? arr : []); };
+      const load = async () => {
+        const { res, json } = await tryFetch('GET', ['/api/office-hours', '/office-hours']);
+        const arr = json?.items || json || [];
+        render(Array.isArray(arr) ? arr : []);
+      };
       load();
+
+      // course filter
       $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => {
         $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
         const c = p.dataset.course;
@@ -732,7 +644,7 @@
       }));
     })();
 
-    /* ---------- Login / Logout ---------- */
+    /* ---------- login/logout ---------- */
     (function () {
       const form = $('#login-form'); if (!form) return;
       const alert = $('#login-alert'), userChip = $('#user-chip'), logoutBtn = $('#logout-btn'), loginTab = $('#login-tab'), dashTab = $('#dashboard-tab');
@@ -750,14 +662,14 @@
         if (res.status === 404) return bad('Login route not found (404). Ensure your server exposes POST /api/auth/login or /auth/login');
         if (!res.ok) return bad(json?.message || 'Invalid credentials');
 
-        // Save session for header greeting (store token + user if server returns them)
+        // Save session (token + user) if returned
         try {
           if (json?.token && json?.user) {
             localStorage.setItem('lap_auth_v1', JSON.stringify({ token: json.token, user: json.user }));
           }
         } catch { }
 
-        // Display name (never the NUID)
+        // Show name
         const who = (json?.user?.name) || (json?.user?.email) || (json?.name) || (json?.email) || login;
         userChip.textContent = who + (json?.user?.role ? ` (${json.user.role})` : (json?.role ? ` (${json.role})` : ''));
         userChip.classList.remove('hidden'); logoutBtn.classList.remove('hidden'); loginTab.classList.add('hidden');
@@ -765,8 +677,7 @@
         const isStaff = ['sl', 'cl', 'la'].includes(String(json?.user?.role || json?.role || '').toLowerCase());
         dashTab.classList.toggle('hidden', !isStaff);
 
-        // Jump to dashboard for staff; otherwise back to feedback
-        if (isStaff) { show('dashboard'); loadSchedule(); if ((json?.user?.role || json?.role || '').toUpperCase() === 'SL') loadAdmin(); }
+        if (isStaff) { show('dashboard'); loadSchedule(); }
         else { show('feedback'); }
       });
 
@@ -780,36 +691,96 @@
       });
     })();
 
-    /* ---------- Staff: My Schedule ---------- */
+    /* ---------- staff schedule (robust; friendly empty state) ---------- */
     async function loadSchedule() {
-      const tableBody = $('#sched-table tbody'); const alert = $('#sched-alert');
+      const tableBody = $('#sched-table tbody');
+      const alert = $('#sched-alert');
+      if (!tableBody) return;
       tableBody.innerHTML = '';
-      const { res, json } = await tryFetch('GET', ['/api/staff/schedule']);
-      if (!res?.ok) { alert.className = 'alert alert-error'; alert.textContent = json?.message || 'Could not load schedule'; alert.classList.remove('hidden'); return; }
+
+      const endpoints = [
+        '/api/staff/schedule',   // preferred if you add it in backend
+        '/api/schedule/mine',
+        '/api/schedule'
+      ];
+
+      let data = null, lastRes = null, lastJson = null;
+
+      for (const url of endpoints) {
+        try {
+          const res = await fetch(url, { credentials: 'include' });
+          lastRes = res;
+          try { lastJson = await res.clone().json(); } catch { lastJson = null; }
+          if (res.ok && Array.isArray(lastJson)) { data = lastJson; break; }
+          if (res.ok && lastJson?.items && Array.isArray(lastJson.items)) { data = lastJson.items; break; }
+        } catch { }
+      }
+
+      if (!data) data = [];
+
+      if (lastRes && !lastRes.ok && lastRes.status >= 500) {
+        alert.className = 'alert alert-error';
+        alert.textContent = (lastJson?.message || 'Could not load schedule');
+        alert.classList.remove('hidden');
+        return;
+      }
+
+      if (!data.length) {
+        alert.className = 'alert alert-success';
+        alert.textContent = 'You have no office hours yet. Use the form above to add your first block.';
+        alert.classList.remove('hidden');
+        return;
+      }
+
       alert.classList.add('hidden');
-      (json || []).forEach(row => {
+
+      const rows = data.map(r => ({
+        id: r.id,
+        course: r.course || r.course_code || '',
+        day: r.day || r.day_of_week || '',
+        start: r.start || r.start_time || '',
+        end: r.end || r.end_time || '',
+        location: r.location || ''
+      }));
+
+      rows.forEach(row => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${row.course}</td><td>${row.day}</td><td>${row.start}</td><td>${row.end}</td><td>${row.location || ''}</td>
+        tr.innerHTML = `
+          <td>${row.course}</td>
+          <td>${row.day}</td>
+          <td>${row.start}</td>
+          <td>${row.end}</td>
+          <td>${row.location}</td>
           <td class="row-actions">
             <span class="link" data-edit="${row.id}">Edit</span>
             <span class="link" data-del="${row.id}">Delete</span>
           </td>`;
         tableBody.appendChild(tr);
       });
-      // delete
+
+      // delete row
       $$('[data-del]').forEach(a => a.addEventListener('click', async () => {
         const id = a.getAttribute('data-del'); a.textContent = 'Deleting…'; a.style.pointerEvents = 'none';
-        const { res } = await tryFetch('DELETE', [`/api/staff/schedule/${id}`]); if (res?.ok) loadSchedule(); else { a.textContent = 'Delete'; a.style.pointerEvents = 'auto'; }
+        const res = await fetch(`/api/staff/schedule/${id}`, { method: 'DELETE', credentials: 'include' });
+        if (res.ok) loadSchedule(); else { a.textContent = 'Delete'; a.style.pointerEvents = 'auto'; }
       }));
-      // edit
+
+      // edit prefill
       $$('[data-edit]').forEach(a => a.addEventListener('click', () => {
-        const tr = a.closest('tr'); $('#sched-course').value = tr.children[0].textContent;
-        $('#sched-day').value = tr.children[1].textContent; $('#sched-start').value = tr.children[2].textContent;
-        $('#sched-end').value = tr.children[3].textContent; $('#sched-location').value = tr.children[4].textContent;
-        $('#sched-save').dataset.editId = a.getAttribute('data-edit'); $('#sched-save').textContent = 'Save changes';
-        window.scrollTo({ top: document.querySelector('#section-dashboard').offsetTop - 10, behavior: 'smooth' });
+        const tr = a.closest('tr');
+        $('#sched-course').value = tr.children[0].textContent;
+        $('#sched-day').value = tr.children[1].textContent;
+        $('#sched-start').value = tr.children[2].textContent;
+        $('#sched-end').value = tr.children[3].textContent;
+        $('#sched-location').value = tr.children[4].textContent;
+        const btn = $('#sched-save');
+        btn.dataset.editId = a.getAttribute('data-edit');
+        btn.textContent = 'Save changes';
+        window.scrollTo({ top: $('#section-dashboard').offsetTop - 10, behavior: 'smooth' });
       }));
     }
+
+    // schedule form (create/update)
     (function () {
       const form = $('#sched-form'); if (!form) return; const btn = $('#sched-save'); const alert = $('#sched-alert');
       const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') };
@@ -833,67 +804,6 @@
         ok('Saved.'); form.reset(); btn.dataset.editId = ''; btn.textContent = 'Add to schedule'; loadSchedule();
       });
     })();
-
-    /* ---------- SL Admin: staff + pending students ---------- */
-    async function loadAdmin() {
-      $('#admin-block').classList.remove('hidden');
-      // staff list
-      (async () => {
-        const body = $('#staff-table tbody'); body.innerHTML = '';
-        const { res, json } = await tryFetch('GET', ['/api/admin/staff']);
-        (json || []).forEach(s => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${s.nuid}</td><td>${s.name || ''}</td><td>${s.email || ''}</td><td>${s.role || ''}</td><td>${s.course || ''}</td>
-            <td><span class="link" data-rm="${s.nuid}">Remove</span></td>`;
-          body.appendChild(tr);
-        });
-        $$('[data-rm]').forEach(a => a.addEventListener('click', async () => {
-          const nuid = a.getAttribute('data-rm'); a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
-          const { res } = await tryFetch('DELETE', [`/api/admin/staff/${nuid}`]); if (res?.ok) loadAdmin();
-        }));
-      })();
-      // pending students
-      (async () => {
-        const body = $('#pending-table tbody'); body.innerHTML = '';
-        const { res, json } = await tryFetch('GET', ['/api/admin/students/pending']);
-        (json || []).forEach(s => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${s.name || ''}</td><td>${s.nuid || ''}</td><td>${s.email || ''}</td><td>${s.course || ''}</td>
-            <td class="row-actions">
-              <span class="link" data-approve="${s.id}">Approve</span>
-              <span class="link" data-reject="${s.id}">Reject</span>
-            </td>`;
-          body.appendChild(tr);
-        });
-        $$('[data-approve]').forEach(a => a.addEventListener('click', async () => {
-          const id = a.getAttribute('data-approve'); a.textContent = 'Approving…'; a.style.pointerEvents = 'none';
-          const { res } = await tryFetch('POST', [`/api/admin/students/${id}/approve`], {}); if (res?.ok) loadAdmin();
-        }));
-        $$('[data-reject]').forEach(a => a.addEventListener('click', async () => {
-          const id = a.getAttribute('data-reject'); a.textContent = 'Rejecting…'; a.style.pointerEvents = 'none';
-          const { res } = await tryFetch('POST', [`/api/admin/students/${id}/reject`], {}); if (res?.ok) loadAdmin();
-        }));
-      })();
-
-      // add staff form
-      (function () {
-        const form = $('#staff-form'); const alert = $('#staff-alert');
-        const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') };
-        const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') };
-        form.addEventListener('submit', async e => {
-          e.preventDefault(); alert.classList.add('hidden');
-          const payload = {
-            nuid: $('#staff-nuid').value.trim(), name: $('#staff-name').value.trim(),
-            email: $('#staff-email').value.trim(), role: $('#staff-role').value,
-            course: $('#staff-course').value || null
-          };
-          if (!payload.nuid || !payload.name || !payload.role) return bad('NUID, name, and role are required.');
-          const { res, json } = await tryFetch('POST', ['/api/admin/staff'], payload);
-          if (!res?.ok) return bad(json?.message || 'Could not add staff');
-          ok('Staff added.'); form.reset(); loadAdmin();
-        });
-      })();
-    }
   </script>
 </body>
 
