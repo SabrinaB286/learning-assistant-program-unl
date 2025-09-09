@@ -1,10 +1,9 @@
 // server/routes/feedback.js
 const express = require('express');
 const { supabase } = require('../supabase');
-
 const router = express.Router();
 
-// GET /api/feedback  (optional: ?course=CSCE%20101&year=2025)
+// GET /api/feedback
 router.get('/', async (req, res) => {
   try {
     const { course, year } = req.query || {};

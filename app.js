@@ -10,7 +10,7 @@ const fs = require('fs');
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
-// Optional morgan: if not installed, use a no-op logger
+// Optional morgan: if not installed, fallback to noop
 function loadMorgan() {
   try { return require('morgan'); }
   catch { return () => (_fmt) => (req, res, next) => next(); }
@@ -23,7 +23,7 @@ const cookieParser = require('cookie-parser');
 const app = express();
 
 // ----- Basic hardening & middleware
-app.set('trust proxy', 1); // trust Render/Heroku proxies
+app.set('trust proxy', 1);
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ origin: true, credentials: true }));
@@ -33,7 +33,7 @@ app.use(cookieParser());
 app.use(compression());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// ----- Health/diagnostic
+// ----- Health check
 app.get('/healthz', (_req, res) =>
   res.json({ ok: true, env: process.env.NODE_ENV || 'development', ts: new Date().toISOString() })
 );
@@ -42,9 +42,9 @@ app.get('/healthz', (_req, res) =>
 app.use('/api/auth', require('./server/routes/auth'));
 app.use('/api/feedback', require('./server/routes/feedback'));
 app.use('/api/schedule', require('./server/routes/schedule'));
-app.use('/api/office-hours', require('./server/routes/officehours')); // ensure this file exists
+app.use('/api/office-hours', require('./server/routes/officehours'));
 
-// ----- Static front-end (SPA)
+// ----- Static frontend (SPA)
 const FE_DIR =
   process.env.FEEDBACK_DIR ||
   (fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path.join(__dirname, 'public') :

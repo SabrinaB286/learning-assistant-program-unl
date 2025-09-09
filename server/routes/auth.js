@@ -29,11 +29,10 @@ router.post('/login', async (req, res) => {
   try {
     const { login, id, nuid, email, password } = req.body || {};
     const credential = login ?? id ?? nuid ?? email;
-    if (!credential || !password) return res.status(400).json({ error: 'Missing credentials' });
+    if (!credential || !password) return res.status(400).json({ message: 'Missing credentials' });
 
     const { kind, value } = normalizeLogin(credential);
 
-    // STAFF
     let staffQuery = supabase.from('staff').select('*').limit(1);
     if (kind === 'nuid') staffQuery = staffQuery.eq('nuid', value);
     else if (kind === 'email') staffQuery = staffQuery.eq('email', value);
@@ -46,9 +45,9 @@ router.post('/login', async (req, res) => {
       const row = staffRows[0];
       const ok =
         (row.password_hash && (await bcrypt.compare(password, row.password_hash))) ||
-        (row.password && row.password === password); // temporary fallback
+        (row.password && row.password === password);
 
-      if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+      if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
 
       const role = row.role || 'LA';
       const user = asClientUser(row, role);
@@ -56,12 +55,10 @@ router.post('/login', async (req, res) => {
       return res.json({ token, user });
     }
 
-    // If you later add students table, add a similar block here.
-
-    return res.status(401).json({ error: 'Invalid credentials' });
+    return res.status(401).json({ message: 'Invalid credentials' });
   } catch (err) {
     console.error('[auth/login]', err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -69,7 +66,7 @@ router.get('/me', async (req, res) => {
   try {
     const h = req.headers.authorization || '';
     const token = h.startsWith('Bearer ') ? h.slice(7) : null;
-    if (!token) return res.status(401).json({ error: 'No token' });
+    if (!token) return res.status(401).json({ message: 'No token' });
     const payload = jwt.verify(token, JWT_SECRET);
     let user = { id: payload.sub, name: payload.name, role: payload.role };
 
@@ -79,7 +76,34 @@ router.get('/me', async (req, res) => {
     }
     res.json({ user });
   } catch {
-    res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ message: 'Invalid token' });
+  }
+});
+
+router.put('/password', async (req, res) => {
+  try {
+    const h = req.headers.authorization || '';
+    const token = h.startsWith('Bearer ') ? h.slice(7) : null;
+    if (!token) return res.status(401).json({ message: 'No token' });
+    const payload = jwt.verify(token, JWT_SECRET);
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) return res.status(400).json({ message: 'Missing fields' });
+
+    const { data: rows } = await supabase.from('staff').select('*').eq('nuid', payload.sub).limit(1);
+    if (!rows || !rows.length) return res.status(404).json({ message: 'User not found' });
+
+    const row = rows[0];
+    const ok = row.password_hash && await bcrypt.compare(currentPassword, row.password_hash);
+    if (!ok) return res.status(401).json({ message: 'Invalid current password' });
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    const { error } = await supabase.from('staff').update({ password_hash: hash }).eq('nuid', row.nuid);
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[auth/password]', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
