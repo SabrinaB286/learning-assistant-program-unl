@@ -56,17 +56,19 @@
       opacity: .9
     }
 
-    .rowh {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 16px;
-      align-items: end
+    .navrow {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px
     }
 
     .nav {
       display: flex;
       gap: 10px;
-      align-items: center
+      align-items: center;
+      flex-wrap: wrap
     }
 
     .btn {
@@ -317,26 +319,26 @@
 <body>
   <header class="topbar">
     <div class="shell">
-      <div class="rowh">
-        <div>
-          <div class="brand">Learning Assistant Feedback</div>
-          <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
+      <div>
+        <div class="brand">Learning Assistant Feedback</div>
+        <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
 
-          <!-- Under-title actions -->
-          <div id="page-actions">
-            <button id="lap-primary-action" class="btn" data-hide-when-authed="true">Sign in</button>
-            <span id="lap-user-greeting" class="chip hidden" aria-live="polite"></span>
-          </div>
+        <!-- Under-title actions -->
+        <div id="page-actions">
+          <button id="lap-primary-action" class="btn" data-hide-when-authed="true">Sign in</button>
+          <span id="lap-user-greeting" class="chip hidden" aria-live="polite"></span>
         </div>
 
-        <!-- Right nav -->
-        <nav class="nav" style="justify-content:flex-start">
-          <button class="btn active" data-nav="feedback">Feedback</button>
-          <button class="btn" data-nav="office">Office Hours</button>
-          <button id="dashboard-tab" class="btn hidden" data-nav="dashboard">Dashboard</button>
-          <button id="login-tab" class="btn" data-nav="login">Login</button>
-          <button id="logout-btn" class="btn hidden" style="margin-left:auto">Log out</button>
-        </nav>
+        <!-- NEW: Nav row on its own line under the title -->
+        <div class="navrow">
+          <nav class="nav">
+            <button class="btn active" data-nav="feedback">Feedback</button>
+            <button class="btn" data-nav="office">Office Hours</button>
+            <button id="dashboard-tab" class="btn hidden" data-nav="dashboard">Dashboard</button>
+            <button id="login-tab" class="btn" data-nav="login">Login</button>
+          </nav>
+          <button id="logout-btn" class="btn hidden">Log out</button>
+        </div>
       </div>
     </div>
   </header>
@@ -505,7 +507,7 @@
         </table>
       </div>
 
-      <!-- NEW: My Feedback (visible for all staff) -->
+      <!-- My Feedback (all staff) -->
       <div id="my-feedback" class="card hidden">
         <h2>My Feedback</h2>
         <p class="lead">Feedback items mentioning you (by name or email).</p>
@@ -616,15 +618,16 @@
       });
     })();
 
+    /* ---------- session helpers ---------- */
+    const getSession = () => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw) } catch { } } return {} };
+    const getToken = () => getSession().token || null;
+    const getUser = () => getSession().user || null;
+    const getUserName = () => { const u = getUser(); return (u && (u.name || u.email || u.full_name)) || null };
+    const roleIs = r => String(getUser()?.role || '').toUpperCase() === r;
+    const isStaff = () => ['SL', 'CL', 'LA'].includes(String(getUser()?.role || '').toUpperCase());
+
     /* ---------- header logic ---------- */
     (function () {
-      const getSession = () => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw) } catch { } } return {} };
-      const getToken = () => getSession().token || null;
-      const getUser = () => getSession().user || null;
-      const getUserName = () => { const u = getUser(); return (u && (u.name || u.email || u.full_name)) || null };
-      const roleIs = r => String(getUser()?.role || '').toUpperCase() === r;
-      const isStaff = () => ['SL', 'CL', 'LA'].includes(String(getUser()?.role || '').toUpperCase());
-
       const leftBtn = $('#lap-primary-action'), greet = $('#lap-user-greeting'), loginTab = $('#login-tab'), logoutBtn = $('#logout-btn'), dashTab = $('#dashboard-tab');
 
       function paint() {
@@ -640,7 +643,6 @@
         if (logoutBtn) logoutBtn.classList.toggle('hidden', !authed);
         if (dashTab) dashTab.classList.toggle('hidden', !(authed && isStaff()));
 
-        // visibility: My Feedback for any staff; Admin for SL
         $('#my-feedback')?.classList.toggle('hidden', !(authed && isStaff()));
         $('#admin-block')?.classList.toggle('hidden', !(authed && roleIs('SL')));
       }
@@ -708,10 +710,10 @@
         } catch { }
 
         logoutBtn.classList.remove('hidden'); loginTab.classList.add('hidden');
-        const isStaff = ['sl', 'cl', 'la'].includes(String(json?.user?.role || json?.role || '').toLowerCase());
-        dashTab.classList.toggle('hidden', !isStaff);
+        const staff = ['sl', 'cl', 'la'].includes(String(json?.user?.role || json?.role || '').toLowerCase());
+        dashTab.classList.toggle('hidden', !staff);
 
-        if (isStaff) {
+        if (staff) {
           show('dashboard');
           loadSchedule();
           loadMyFeedback();
@@ -796,14 +798,7 @@
       const wrap = $('#my-feedback'); if (!wrap) return;
       const list = $('#myfb-list'); const alert = $('#myfb-alert');
       list.innerHTML = '';
-
-      // Try common patterns (adjust on your server if needed)
-      const endpoints = [
-        '/api/feedback/me',                         // preferred
-        '/api/feedback?me=1',                      // alt
-        '/api/feedback?assignee=self',             // alt
-        '/api/feedback?mine=true'                  // alt
-      ];
+      const endpoints = ['/api/feedback/me', '/api/feedback?me=1', '/api/feedback?assignee=self', '/api/feedback?mine=true'];
       let items = null, lastRes = null, lastJson = null;
       for (const url of endpoints) {
         try {
@@ -814,17 +809,13 @@
         } catch { }
       }
       if (!items) items = [];
-
       if (lastRes && !lastRes.ok && lastRes.status >= 500) {
         alert.className = 'alert alert-error'; alert.textContent = lastJson?.message || 'Could not load feedback'; alert.classList.remove('hidden'); return;
       }
-
       if (!items.length) {
         alert.className = 'alert alert-success'; alert.textContent = 'No feedback has been assigned to you yet.'; alert.classList.remove('hidden'); return;
       }
       alert.classList.add('hidden');
-
-      // Render simple list
       items.slice(0, 20).forEach(f => {
         const li = document.createElement('li');
         const when = f.created_at ? new Date(f.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '';
@@ -839,18 +830,49 @@
     async function loadAdmin() {
       const block = $('#admin-block'); if (!block) return; block.classList.remove('hidden');
 
+      // helper: try Supabase REST if available in the page
+      async function supabaseStaffFallback() {
+        try {
+          if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return null;
+          const url = `${window.SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/staff?select=nuid,name,email,role,course`;
+          const res = await fetch(url, { headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: `Bearer ${window.SUPABASE_ANON_KEY}` } });
+          if (!res.ok) return null;
+          return await res.json();
+        } catch { return null }
+      }
+
       // staff list
       (async () => {
         const body = $('#staff-table tbody'); const empty = $('#staff-empty');
         body.innerHTML = '';
-        const { res, json } = await tryFetch('GET', ['/api/admin/staff', '/admin/staff', '/api/staff']);  // multiple fallbacks
-        const rows = Array.isArray(json) ? json : (Array.isArray(json?.items) ? json.items : []);
-        if (!res?.ok) {
+        let rows = [], ok = false, json = null;
+
+        // try multiple backend routes
+        const attempts = ['/api/admin/staff', '/admin/staff', '/api/staff', '/api/staff/list'];
+        for (const path of attempts) {
+          try {
+            const res = await fetch(path, { credentials: 'include' });
+            try { json = await res.clone().json(); } catch { json = null }
+            if (res.ok) {
+              rows = Array.isArray(json) ? json : (Array.isArray(json?.items) ? json.items : []);
+              ok = true; break;
+            }
+          } catch { }
+        }
+
+        // final fallback: Supabase REST if exposed
+        if (!ok) {
+          const sb = await supabaseStaffFallback();
+          if (Array.isArray(sb)) { rows = sb; ok = true; }
+        }
+
+        if (!ok) {
           empty.className = 'alert alert-error';
           empty.textContent = json?.message || 'Could not load staff list';
           empty.classList.remove('hidden');
           return;
         }
+
         if (!rows.length) {
           empty.className = 'alert alert-success';
           empty.textContent = 'No staff found yet. Use “Add staff” to create the first entry.';
@@ -867,8 +889,9 @@
         });
         $$('[data-rm]').forEach(a => a.addEventListener('click', async () => {
           const id = a.getAttribute('data-rm'); a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
-          const { res } = await tryFetch('DELETE', [`/api/admin/staff/${id}`, `/admin/staff/${id}`]);
-          if (res?.ok) loadAdmin(); else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto'; }
+          const tries = [`/api/admin/staff/${id}`, `/admin/staff/${id}`];
+          let ok = false; for (const t of tries) { try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { ok = true; break } } catch { } }
+          if (ok) loadAdmin(); else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto'; }
         }));
       })();
 
