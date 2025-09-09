@@ -91,6 +91,30 @@
       border-radius: 999px
     }
 
+    /* NEW: under-title actions */
+    #page-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    #lap-primary-action.btn {
+      background: #fff;
+      color: var(--unl-red);
+      border-color: #fff
+    }
+
+    #lap-primary-action.btn:hover {
+      background: #ffe5ea
+    }
+
+    #lap-user-greeting {
+      background: rgba(255, 255, 255, .14);
+      color: #fff
+    }
+
     main {
       padding: 22px 0 40px
     }
@@ -303,7 +327,14 @@
         <div>
           <div class="brand">Learning Assistant Feedback</div>
           <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
+
+          <!-- NEW: action row directly under title -->
+          <div id="page-actions">
+            <button id="lap-primary-action" class="btn">Sign in</button>
+            <span id="lap-user-greeting" class="chip hidden" aria-live="polite"></span>
+          </div>
         </div>
+
         <nav class="nav" style="justify-content:flex-start">
           <button class="btn active" data-nav="feedback">Feedback</button>
           <button class="btn" data-nav="office">Office Hours</button>
@@ -600,29 +631,61 @@
       });
     })();
 
-    /* ---------- Feedback ---------- */
+    /* ---------- Header: under-title actions + greeting (name only) ---------- */
     (function () {
-      const form = $('#feedback-form'); if (!form) return;
-      const btn = $('#fb-submit'), alert = $('#fb-alert');
-      const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') };
-      const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') };
+      const getSession = () => {
+        for (const k of ['lap_auth_v1', 'lap_auth']) {
+          try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw); } catch { }
+        }
+        return {};
+      };
+      const getToken = () => getSession().token || null;
+      const getUser = () => getSession().user || null;
+      const getUserName = () => {
+        const u = getUser(); return (u && (u.name || u.email || u.full_name)) || null;
+      };
+      const isStaff = () => {
+        const u = getUser(); return u && ['SL', 'CL', 'LA'].includes(String(u.role || '').toUpperCase());
+      };
 
-      form.addEventListener('submit', async e => {
-        e.preventDefault(); alert.classList.add('hidden');
-        const payload = {
-          course: $('#course').value, type: $('#type').value,
-          rating: Number($('#rating').value || 0) || null,
-          text: $('#text').value || '', submitter: $('#submitter').value || '', year: $('#year').value || ''
-        };
-        if (!payload.course || !payload.type) return bad('Please select a course and type.');
-        btn.disabled = true; btn.textContent = 'Submitting…';
-        const { res, json } = await tryFetch('POST', ['/api/feedback', '/feedback'], payload);
-        btn.disabled = false; btn.textContent = 'Submit feedback';
-        if (!res) return bad('Request failed. Check your API route.');
-        if (!res.ok) return bad(json?.message || `Submit failed (HTTP ${res.status})`);
-        ok('Thanks! Your feedback was submitted.');
-        form.reset(); $('#rating').value = 0; $$('#stars .star').forEach(s => s.classList.remove('active'));
+      const btn = $('#lap-primary-action');
+      const greet = $('#lap-user-greeting');
+      const loginTab = $('#login-tab');
+      const logoutBtn = $('#logout-btn');
+      const dashTab = $('#dashboard-tab');
+
+      function paintHeader() {
+        const name = getUserName();
+        const authed = !!getToken();
+        if (btn) btn.textContent = authed ? 'Sign out' : 'Sign in';
+        if (greet) {
+          if (name) { greet.textContent = `Signed in as ${name}`; greet.classList.remove('hidden'); }
+          else { greet.textContent = ''; greet.classList.add('hidden'); }
+        }
+        // Dashboard visibility for staff only
+        if (dashTab) dashTab.classList.toggle('hidden', !isStaff());
+
+        // Nav login/logout buttons (keep your originals working)
+        if (loginTab) loginTab.classList.toggle('hidden', authed);
+        if (logoutBtn) logoutBtn.classList.toggle('hidden', !authed);
+      }
+
+      btn?.addEventListener('click', () => {
+        // Mirror your existing login/logout behavior
+        if (getToken()) {
+          // sign out: clear both known keys
+          localStorage.removeItem('lap_auth');
+          localStorage.removeItem('lap_auth_v1');
+          paintHeader();
+          show('feedback');
+        } else {
+          show('login');
+        }
       });
+
+      // also repaint when hash changes (tab active state is handled below)
+      window.addEventListener('hashchange', paintHeader);
+      document.addEventListener('DOMContentLoaded', paintHeader);
     })();
 
     /* ---------- Office Hours (browse, optional queue join) ---------- */
@@ -655,11 +718,17 @@
           else alert.className = 'alert alert-success', alert.textContent = 'Added to queue!', alert.classList.remove('hidden');
         }));
       };
-      const load = async () => { const { res, json } = await tryFetch('GET', ['/api/office-hours', '/office-hours']); ALL = Array.isArray(json) ? json : []; render(ALL); };
+      const load = async () => { const { res, json } = await tryFetch('GET', ['/api/office-hours', '/office-hours']); const arr = json?.items || json || []; render(Array.isArray(arr) ? arr : []); };
       load();
       $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => {
         $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
-        const c = p.dataset.course; render(c === 'ALL' ? ALL : ALL.filter(x => x.course === c));
+        const c = p.dataset.course;
+        const cards = Array.from($('#office-list').children);
+        cards.forEach(card => {
+          const txt = card.textContent || '';
+          const on = (c === 'ALL') || txt.includes(c);
+          card.style.display = on ? '' : 'none';
+        });
       }));
     })();
 
@@ -671,7 +740,6 @@
       const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') };
       const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') };
 
-      // Enter submits (native), button wired via submit handler
       form.addEventListener('submit', async e => {
         e.preventDefault(); alert.classList.add('hidden'); alert.textContent = '';
         const login = $('#login-input').value.trim(), password = $('#password-input').value;
@@ -682,21 +750,29 @@
         if (res.status === 404) return bad('Login route not found (404). Ensure your server exposes POST /api/auth/login or /auth/login');
         if (!res.ok) return bad(json?.message || 'Invalid credentials');
 
-        // expect JSON with {name,email,role,course,...}
-        state.user = json || {}; state.role = (json?.role || '').toLowerCase();
-        const who = json?.name || json?.email || login; userChip.textContent = who + (json?.role ? ` (${json.role})` : '');
+        // Save session for header greeting (store token + user if server returns them)
+        try {
+          if (json?.token && json?.user) {
+            localStorage.setItem('lap_auth_v1', JSON.stringify({ token: json.token, user: json.user }));
+          }
+        } catch { }
+
+        // Display name (never the NUID)
+        const who = (json?.user?.name) || (json?.user?.email) || (json?.name) || (json?.email) || login;
+        userChip.textContent = who + (json?.user?.role ? ` (${json.user.role})` : (json?.role ? ` (${json.role})` : ''));
         userChip.classList.remove('hidden'); logoutBtn.classList.remove('hidden'); loginTab.classList.add('hidden');
 
-        const isStaff = ['sl', 'cl', 'la'].includes(state.role);
+        const isStaff = ['sl', 'cl', 'la'].includes(String(json?.user?.role || json?.role || '').toLowerCase());
         dashTab.classList.toggle('hidden', !isStaff);
 
-        if (isStaff) { show('dashboard'); loadSchedule(); if (state.role === 'sl') loadAdmin(); }
+        // Jump to dashboard for staff; otherwise back to feedback
+        if (isStaff) { show('dashboard'); loadSchedule(); if ((json?.user?.role || json?.role || '').toUpperCase() === 'SL') loadAdmin(); }
         else { show('feedback'); }
       });
 
       logoutBtn.addEventListener('click', async () => {
         try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch { }
-        state.user = null; state.role = null;
+        localStorage.removeItem('lap_auth'); localStorage.removeItem('lap_auth_v1');
         $('#dashboard-tab').classList.add('hidden');
         $('#user-chip').classList.add('hidden'); $('#user-chip').textContent = '';
         $('#logout-btn').classList.add('hidden'); $('#login-tab').classList.remove('hidden');
@@ -725,7 +801,7 @@
         const id = a.getAttribute('data-del'); a.textContent = 'Deleting…'; a.style.pointerEvents = 'none';
         const { res } = await tryFetch('DELETE', [`/api/staff/schedule/${id}`]); if (res?.ok) loadSchedule(); else { a.textContent = 'Delete'; a.style.pointerEvents = 'auto'; }
       }));
-      // edit (simple: prefill form and upon save PUT)
+      // edit
       $$('[data-edit]').forEach(a => a.addEventListener('click', () => {
         const tr = a.closest('tr'); $('#sched-course').value = tr.children[0].textContent;
         $('#sched-day').value = tr.children[1].textContent; $('#sched-start').value = tr.children[2].textContent;
