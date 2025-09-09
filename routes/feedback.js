@@ -1,27 +1,21 @@
-// backend/routes/feedback.js
+// server/routes/feedback.js
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const { supabase } = require('../supabase');
 const router = express.Router();
-const feedbackPath = path.join(__dirname, '../data/feedback.json');
-const { supabase } = require('../lib/supabase');
 
-
-// Get feedback list
-router.get('/', (req, res) => {
-  fs.readFile(feedbackPath, (err, data) => {
-    if (err) return res.status(500).send('Failed to read feedback');
-    res.json(JSON.parse(data));
-  });
+// GET all feedback (optional: filter by course/year)
+router.get('/', async (_req, res) => {
+  const { data, error } = await supabase.from('feedback').select('*').order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ message: error.message });
+  res.json({ items: data });
 });
 
-// Submit feedback
-router.post('/', (req, res) => {
-  const newEntry = { ...req.body, id: Date.now(), timestamp: new Date().toISOString() };
-  const list = JSON.parse(fs.readFileSync(feedbackPath));
-  list.push(newEntry);
-  fs.writeFileSync(feedbackPath, JSON.stringify(list, null, 2));
-  res.status(201).json(newEntry);
+// POST feedback
+router.post('/', async (req, res) => {
+  const entry = { ...req.body, created_at: new Date().toISOString() };
+  const { data, error } = await supabase.from('feedback').insert(entry).select('*').single();
+  if (error) return res.status(400).json({ message: error.message });
+  res.status(201).json({ item: data });
 });
 
 module.exports = router;

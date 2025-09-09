@@ -1,58 +1,77 @@
-// app.js (CommonJS)
+// app.js
+// Main server for LA Portal (Auth, Feedback, Schedule, Office Hours + SPA)
+
+require('dotenv').config();
 
 const path = require('path');
+const fs = require('fs');
+
 const express = require('express');
 const helmet = require('helmet');
+const cors = require('cors');
+const morgan = require('morgan');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
-const cors = require('cors');
 
 const app = express();
 
-/* ---------- Paths ---------- */
-const ROOT_DIR     = __dirname;
-const FEEDBACK_DIR = path.join(ROOT_DIR, 'feedback'); // your index.html, feedback.js, supabase.js, etc.
-const PUBLIC_DIR   = path.join(ROOT_DIR, 'public');   // shared assets (images, css, favicon, config.js)
+// ----- Basic hardening & middleware
+app.set('trust proxy', 1); // Render/Heroku style proxies
 
-/* ---------- Middleware ---------- */
-app.use(helmet({ contentSecurityPolicy: false })); // keep CSP off unless you’ve authored a policy
-app.use(compression());
-app.use(cookieParser());
+app.use(helmet({
+  contentSecurityPolicy: false, // keep simple for SPA; tighten later if needed
+}));
+app.use(cors({
+  origin: true,
+  credentials: true,
+}));
 app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: false }));
-app.use(cors()); // useful if your API is called from other origins
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(compression());
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-/* ---------- API routes (keep your existing route files) ---------- */
-/* If a route file is missing, the try/catch prevents boot failure. */
-try { app.use('/api/auth',         require('./routes/auth')); }         catch {}
-try { app.use('/api/feedback',     require('./routes/feedback')); }     catch {}
-try { app.use('/api/office-hours', require('./routes/office-hours')); } catch {}
-try { app.use('/api/staff',        require('./routes/staff')); }        catch {}
-try { app.use('/api/password',     require('./routes/password')); }     catch {}
+// ----- Health/diagnostic
+app.get('/healthz', (_req, res) =>
+  res.json({ ok: true, env: process.env.NODE_ENV || 'development', ts: new Date().toISOString() })
+);
 
-/* ---------- Static files ---------- */
-/** Mount the feedback app at the site root (Option A). */
-app.use(express.static(FEEDBACK_DIR, { extensions: ['html'] }));
+// ----- API routes (make sure these files exist)
+app.use('/api/auth', require('./server/routes/auth'));
+app.use('/api/feedback', require('./server/routes/feedback'));
+app.use('/api/schedule', require('./server/routes/schedule'));
+app.use('/api/office-hours', require('./server/routes/officehours')); // implement this file to match your frontend
 
-/** Keep /public available for shared assets (don’t put index.html here). */
-app.use('/public', express.static(PUBLIC_DIR));
+// ----- Static front-end (SPA)
+// Choose a front-end dir automatically (ENV override ➜ public ➜ feedback)
+const FE_DIR =
+  process.env.FEEDBACK_DIR ||
+  (fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path.join(__dirname, 'public') :
+   fs.existsSync(path.join(__dirname, 'feedback', 'index.html')) ? path.join(__dirname, 'feedback') :
+   __dirname // fallback; expects index.html at project root
+  );
 
-/* ---------- SPA-style fallback for any non-API route ---------- */
-app.get(/^\/(?!api\/).*/, (_req, res) => {
-  res.sendFile(path.join(FEEDBACK_DIR, 'index.html'));
+app.use(express.static(FE_DIR, {
+  maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+  index: 'index.html',
+}));
+
+// For SPA routes, always return index.html (except for real API/asset paths)
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();         // let API handle it
+  if (path.extname(req.path)) return next();               // let static serve assets
+  res.sendFile(path.join(FE_DIR, 'index.html'));
 });
 
-/* ---------- Health check (handy for Render) ---------- */
-app.get('/health', (_req, res) => res.status(200).send('ok'));
-
-/* ---------- Error handling ---------- */
+// ----- Error handler (last)
 app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(500).json({ error: 'Internal Server Error' });
+  console.error('[unhandled]', err);
+  res.status(err.status || 500).json({ message: err.message || 'Server error' });
 });
 
-/* ---------- Start server ---------- */
-const PORT = process.env.PORT || 10000;
+// ----- Boot
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server listening on ${PORT}`);
+  console.log(`LA Portal server listening on :${PORT}`);
+  console.log(`Serving frontend from: ${FE_DIR}`);
 });
