@@ -101,16 +101,6 @@
       flex-wrap: wrap
     }
 
-    #lap-primary-action.btn {
-      background: #fff;
-      color: var(--unl-red);
-      border-color: #fff
-    }
-
-    #lap-primary-action.btn:hover {
-      background: #ffe5ea
-    }
-
     main {
       padding: 22px 0 40px
     }
@@ -323,16 +313,15 @@
         <div class="brand">Learning Assistant Feedback</div>
         <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
 
-        <!-- Under-title actions -->
+        <!-- Under-title actions (greeting only; removed duplicate Sign in button) -->
         <div id="page-actions">
-          <button id="lap-primary-action" class="btn" data-hide-when-authed="true">Sign in</button>
           <span id="lap-user-greeting" class="chip hidden" aria-live="polite"></span>
         </div>
 
         <!-- Nav row on its own line under the title -->
         <div class="navrow">
           <nav class="nav">
-            <button class="btn active" data-nav="feedback">Feedback</button>
+            <button class="btn" data-nav="feedback">Feedback</button>
             <button class="btn" data-nav="office">Office Hours</button>
             <button id="dashboard-tab" class="btn hidden" data-nav="dashboard">Dashboard</button>
             <button id="login-tab" class="btn" data-nav="login">Login</button>
@@ -345,7 +334,7 @@
 
   <main class="shell">
     <!-- FEEDBACK -->
-    <section id="section-feedback" class="card">
+    <section id="section-feedback" class="card hidden">
       <h2>Submit Feedback</h2>
       <p class="lead">Share course or LA feedback. Submissions are stored in Supabase.</p>
 
@@ -590,32 +579,19 @@
   </script>
 
   <script>
-    /* ---------- helpers ---------- */
+    /* ---------- tiny router (single source of truth) ---------- */
+    const PAGES = ['feedback', 'office', 'login', 'dashboard'];
     const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-    const show = id => {
-      ['feedback', 'office', 'login', 'dashboard'].forEach(k => $('#section-' + k).classList.toggle('hidden', k !== id));
+    function show(id) {
+      if (!PAGES.includes(id)) id = 'feedback';
+      PAGES.forEach(k => $('#section-' + k).classList.toggle('hidden', k !== id));
       $$('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
       history.replaceState(null, '', '#' + id);
-    };
-    $$('[data-nav]').forEach(b => b.addEventListener('click', () => show(b.dataset.nav)));
-    show('feedback');
-
-    const tryFetch = async (method, paths, body) => {
-      let lastRes = null, lastJson = null;
-      for (const p of paths) {
-        try {
-          const res = await fetch(p, { method, credentials: 'include', headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined });
-          let json = null; try { json = await res.clone().json() } catch { }
-          if (res.status === 404) { lastRes = res; lastJson = json; continue }
-          return { res, json }
-        } catch { }
-      }
-      return { res: lastRes, json: lastJson }
-    };
+    }
 
     /* ---------- stars ---------- */
     (function () {
-      const stars = $$('#stars .star'), hidden = $('#rating');
+      const stars = $$('#stars .star'), hidden = $('#rating'); if (!hidden) return;
       const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n));
       stars.forEach(s => {
         s.addEventListener('mouseenter', () => paint(Number(s.dataset.v)));
@@ -632,15 +608,13 @@
     const roleIs = r => String(getUser()?.role || '').toUpperCase() === r;
     const isStaff = () => ['SL', 'CL', 'LA'].includes(String(getUser()?.role || '').toUpperCase());
 
-    /* ---------- header logic ---------- */
+    /* ---------- header logic (single Login button; greeting chip only) ---------- */
     (function () {
-      const leftBtn = $('#lap-primary-action'), greet = $('#lap-user-greeting'), loginTab = $('#login-tab'), logoutBtn = $('#logout-btn'), dashTab = $('#dashboard-tab');
+      const greet = $('#lap-user-greeting'), loginTab = $('#login-tab'), logoutBtn = $('#logout-btn'), dashTab = $('#dashboard-tab');
 
       function paint() {
         const authed = !!getToken();
         const name = getUserName();
-
-        if (leftBtn) leftBtn.classList.toggle('hidden', authed || leftBtn.dataset.hideWhenAuthed === 'true');
         if (greet) {
           if (authed && name) { greet.textContent = `Signed in as ${name}`; greet.classList.remove('hidden') }
           else { greet.textContent = ''; greet.classList.add('hidden') }
@@ -653,9 +627,18 @@
         $('#admin-block')?.classList.toggle('hidden', !(authed && roleIs('SL')));
       }
 
-      leftBtn?.addEventListener('click', () => { location.hash = '#login'; });
-      window.addEventListener('hashchange', paint);
-      document.addEventListener('DOMContentLoaded', paint);
+      window.addEventListener('hashchange', () => paint());
+      document.addEventListener('DOMContentLoaded', () => { paint(); });
+    })();
+
+    /* ---------- nav bindings (after DOM ready) ---------- */
+    (function () {
+      document.addEventListener('DOMContentLoaded', () => {
+        $$('[data-nav]').forEach(b => b.addEventListener('click', () => show(b.dataset.nav)));
+        // initial route: hash > default
+        const initial = location.hash.replace('#', '');
+        show(PAGES.includes(initial) ? initial : 'feedback');
+      });
     })();
 
     /* ---------- Office hours list ---------- */
@@ -679,8 +662,21 @@
         });
       };
       (async () => {
-        const { json } = await tryFetch('GET', ['/api/office-hours', '/office-hours']);
-        const arr = json?.items || json || []; render(Array.isArray(arr) ? arr : []);
+        try {
+          const res = await fetch('/api/office-hours', { credentials: 'include' });
+          let json = null; try { json = await res.clone().json() } catch { }
+          if (!res.ok) { throw new Error(json?.message || 'Failed'); }
+          const arr = json?.items || json || [];
+          render(Array.isArray(arr) ? arr : []);
+        } catch {
+          // fallback route
+          try {
+            const res = await fetch('/office-hours', { credentials: 'include' });
+            let json = null; try { json = await res.clone().json() } catch { }
+            const arr = json?.items || json || [];
+            render(Array.isArray(arr) ? arr : []);
+          } catch { render([]); }
+        }
       })();
 
       $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => {
@@ -704,9 +700,16 @@
         const login = $('#login-input').value.trim(), password = $('#password-input').value;
         if (!login || !password) return bad('Missing login or password');
 
-        const { res, json } = await tryFetch('POST', ['/api/auth/login', '/auth/login'], { login, password });
+        let res, json;
+        try {
+          ({ res, json } = await (async () => { const r = await fetch('/api/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) }); let j = null; try { j = await r.clone().json() } catch { }; return { res: r, json: j }; })());
+        } catch { }
+        if (!res || res.status === 404) {
+          try {
+            const r = await fetch('/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) }); res = r; try { json = await r.clone().json() } catch { }
+          } catch { }
+        }
         if (!res) return bad('Login request failed. Check your API route.');
-        if (res.status === 404) return bad('Login route not found (404). Ensure your server exposes POST /api/auth/login or /auth/login');
         if (!res.ok) return bad(json?.message || 'Invalid credentials');
 
         try {
@@ -727,6 +730,7 @@
         } else {
           show('feedback');
         }
+        // repaint header widgets
         window.dispatchEvent(new Event('hashchange'));
       });
 
@@ -783,7 +787,7 @@
     }
 
     (function () {
-      const form = $('#sched-form'); if (!form) return; const btn = $('#sched-save'), alert = $('#sched-alert']);
+      const form = $('#sched-form'); if (!form) return; const btn = $('#sched-save'), alert = $('#sched-alert');
       const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') }
       const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') }
       form.addEventListener('submit', async e => {
@@ -792,7 +796,14 @@
         if (!payload.course || !payload.day || !payload.start || !payload.end) return bad('Fill in required fields.');
         btn.disabled = true;
         const editId = btn.dataset.editId;
-        const { res, json } = editId ? await tryFetch('PUT', [`/api/staff/schedule/${editId}`], payload) : await tryFetch('POST', ['/api/staff/schedule'], payload);
+        let res, json;
+        if (editId) {
+          res = await fetch(`/api/staff/schedule/${editId}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          try { json = await res.clone().json() } catch { }
+        } else {
+          res = await fetch(`/api/staff/schedule`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          try { json = await res.clone().json() } catch { }
+        }
         btn.disabled = false; btn.textContent = editId ? 'Save changes' : 'Add to schedule';
         if (!res?.ok) return bad(json?.message || 'Could not save schedule');
         ok('Saved.'); form.reset(); btn.dataset.editId = ''; btn.textContent = 'Add to schedule'; loadSchedule();
@@ -836,7 +847,6 @@
     async function loadAdmin() {
       const block = $('#admin-block'); if (!block) return; block.classList.remove('hidden');
 
-      // helper: Supabase REST fallback if server routes aren't available
       async function supabaseStaffFallback() {
         try {
           if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return null;
@@ -853,7 +863,6 @@
         body.innerHTML = '';
         let rows = [], ok = false, json = null;
 
-        // try multiple backend routes
         const attempts = ['/api/admin/staff', '/admin/staff', '/api/staff', '/api/staff/list'];
         for (const path of attempts) {
           try {
@@ -866,7 +875,6 @@
           } catch { }
         }
 
-        // final fallback: Supabase REST if exposed
         if (!ok) {
           const sb = await supabaseStaffFallback();
           if (Array.isArray(sb)) { rows = sb; ok = true; }
@@ -904,7 +912,16 @@
       // pending students
       (async () => {
         const body = $('#pending-table tbody'); body.innerHTML = '';
-        const { json } = await tryFetch('GET', ['/api/admin/students/pending', '/admin/students/pending']);
+        let json = null, res = null;
+        try {
+          res = await fetch('/api/admin/students/pending', { credentials: 'include' });
+          try { json = await res.clone().json() } catch { }
+        } catch { }
+        if (!res || !res.ok) {
+          try {
+            const r = await fetch('/admin/students/pending', { credentials: 'include' }); res = r; try { json = await r.clone().json() } catch { }
+          } catch { }
+        }
         (json || json?.items || []).forEach(s => {
           const tr = document.createElement('tr');
           tr.innerHTML = `<td>${s.name || ''}</td><td>${s.nuid || ''}</td><td>${s.email || ''}</td><td>${s.course || ''}</td>
@@ -913,17 +930,21 @@
         });
         $$('[data-approve]').forEach(a => a.addEventListener('click', async () => {
           const id = a.getAttribute('data-approve'); a.textContent = 'Approving…'; a.style.pointerEvents = 'none';
-          const { res } = await tryFetch('POST', [`/api/admin/students/${id}/approve`, `/admin/students/${id}/approve`], {}); if (res?.ok) loadAdmin();
+          let r = null; try { r = await fetch(`/api/admin/students/${id}/approve`, { method: 'POST', credentials: 'include' }) } catch { }
+          if (!r || !r.ok) { try { r = await fetch(`/admin/students/${id}/approve`, { method: 'POST', credentials: 'include' }) } catch { } }
+          if (r?.ok) loadAdmin();
         }));
         $$('[data-reject]').forEach(a => a.addEventListener('click', async () => {
           const id = a.getAttribute('data-reject'); a.textContent = 'Rejecting…'; a.style.pointerEvents = 'none';
-          const { res } = await tryFetch('POST', [`/api/admin/students/${id}/reject`, `/admin/students/${id}/reject`], {}); if (res?.ok) loadAdmin();
+          let r = null; try { r = await fetch(`/api/admin/students/${id}/reject`, { method: 'POST', credentials: 'include' }) } catch { }
+          if (!r || !r.ok) { try { r = await fetch(`/admin/students/${id}/reject`, { method: 'POST', credentials: 'include' }) } catch { } }
+          if (r?.ok) loadAdmin();
         }));
       })();
 
       // add staff
       (function () {
-        const form = $('#staff-form'), alert = $('#staff-alert']);
+        const form = $('#staff-form'), alert = $('#staff-alert');
         const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') }
         const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') }
         form.addEventListener('submit', async e => {
@@ -933,7 +954,8 @@
             email: $('#staff-email').value.trim(), role: $('#staff-role').value, course: $('#staff-course').value || null
           };
           if (!payload.nuid || !payload.name || !payload.role) return bad('NUID, name, and role are required.');
-          const { res, json } = await tryFetch('POST', ['/api/admin/staff', '/admin/staff'], payload);
+          let res, json; try { res = await fetch('/api/admin/staff', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); try { json = await res.clone().json() } catch { } } catch { }
+          if (!res || !res.ok) { try { res = await fetch('/admin/staff', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); try { json = await res.clone().json() } catch { } } catch { } }
           if (!res?.ok) return bad(json?.message || 'Could not add staff');
           ok('Staff added.'); form.reset(); loadAdmin();
         });
