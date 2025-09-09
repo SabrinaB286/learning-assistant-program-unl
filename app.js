@@ -1,312 +1,243 @@
+// app.js (ESM)
+import 'dotenv/config';
+
 import bcrypt from 'bcryptjs';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
-// app.mjs — Express server (ESM) for Learning Assistant site
-import dotenv from 'dotenv';
 import express from 'express';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import morgan from 'morgan';
 import path from 'path';
-dotenv.config();
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 10000;
 
-// ---------- Supabase ----------
-const hasSupabase = !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-const supabase = hasSupabase
-  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
-  : null;
+/* ---------- Middleware ---------- */
+app.use(helmet());
+app.use(compression());
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(morgan('tiny'));
 
-// ---------- Middleware ----------
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: '1mb' }));
-app.use(cookieParser(process.env.COOKIE_SECRET || 'dev-secret'));
+/* ---------- Supabase (server-side) ---------- */
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env variables.');
+  process.exit(1);
+}
+const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
 
-// attach req.user from signed cookie
-app.use((req, _res, next) => {
+/* ---------- Static file hosting ---------- */
+/* You said your main HTML is in /feedback; public assets are in /public */
+const FEEDBACK_DIR = path.resolve(__dirname, 'feedback');
+const PUBLIC_DIR = path.resolve(__dirname, 'public');
+
+/* Serve /public first (JS/CSS/config), then /feedback */
+app.use('/public', express.static(PUBLIC_DIR, { extensions: ['js', 'css', 'map'] }));
+app.use('/feedback', express.static(FEEDBACK_DIR));
+
+/* Root should show the feedback app (your original homepage) */
+app.get('/', (_req, res) => {
+  res.sendFile(path.join(FEEDBACK_DIR, 'index.html'));
+});
+
+/* Healthcheck */
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
+/* ---------- Auth helpers ---------- */
+function normalizeLoginField(body) {
+  // Accept multiple front-end field names
+  const raw =
+    body.login ||
+    body.nuidOrEmail ||
+    body.nuid ||
+    body.email ||
+    body.username ||
+    '';
+  return String(raw).trim();
+}
+
+function isEmail(str) {
+  return /@/.test(str);
+}
+
+function isNUID(str) {
+  return /^\d{7,9}$/.test(str); // allow 7-9 digits, you can tighten to 8 if needed
+}
+
+/**
+ * Attempt to find the user in the given table by NUID or email.
+ * We select common columns and tolerate missing ones.
+ */
+async function findUser(table, login) {
+  const columns = 'nuid, email, name, role, password_hash, password, is_approved';
+  let query;
+  if (isEmail(login)) {
+    query = sb.from(table).select(columns).eq('email', login).limit(1).maybeSingle();
+  } else {
+    query = sb.from(table).select(columns).eq('nuid', login).limit(1).maybeSingle();
+  }
+  const { data, error } = await query;
+  if (error) {
+    // If the table doesn't exist or column missing, surface null and let caller try another table
+    return { user: null, err: error };
+  }
+  return { user: data || null, err: null };
+}
+
+function getHashField(u) {
+  // Prefer password_hash, fallback to password (hashed)
+  if (u && typeof u.password_hash === 'string' && u.password_hash.length > 0) return u.password_hash;
+  if (u && typeof u.password === 'string' && u.password.length > 0) return u.password;
+  return null;
+}
+
+/* ---------- POST /api/auth/login ---------- */
+app.post('/api/auth/login', async (req, res) => {
   try {
-    const raw = req.signedCookies?.lap_user;
-    req.user = raw ? JSON.parse(raw) : null;
-  } catch { req.user = null; }
-  next();
-});
+    const login = normalizeLoginField(req.body);
+    const password = String(req.body.password || '').trim();
 
-// serve UI
-app.use(express.static(path.join(__dirname, 'public')));
-
-// helpers
-const send = (res, status, payload) => res.status(status).json(payload);
-const ensure = (cond, res, msg = 'Forbidden', code = 403) => { if (!cond) { res.status(code).json({ message: msg }); return false; } return true; };
-const isEmail = v => /@/.test(String(v || '').toLowerCase());
-
-// ---------- AUTH ----------
-const authRouter = express.Router();
-
-authRouter.post('/login', async (req, res) => {
-  const { login, password } = req.body || {};
-  if (!login || !password) return send(res, 400, { message: 'Missing login or password' });
-
-  if (supabase) {
-    // STAFF first
-    const staffQuery = isEmail(login)
-      ? supabase.from('staff').select('nuid,name,email,role,course,password_hash').eq('email', login).limit(1).maybeSingle()
-      : supabase.from('staff').select('nuid,name,email,role,course,password_hash').eq('nuid', login).limit(1).maybeSingle();
-
-    const { data: staff, error: staffErr } = await staffQuery;
-    if (staffErr) return send(res, 500, { message: staffErr.message });
-
-    if (staff?.password_hash && await bcrypt.compare(password, staff.password_hash)) {
-      const user = { kind: 'staff', nuid: staff.nuid, name: staff.name, email: staff.email, role: staff.role, course: staff.course };
-      res.cookie('lap_user', JSON.stringify(user), { httpOnly: true, sameSite: 'lax', signed: true });
-      return send(res, 200, user);
+    if (!login || !password) {
+      return res.status(400).json({ ok: false, error: 'Missing login or password' });
     }
 
-    // STUDENT
-    const stuQuery = isEmail(login)
-      ? supabase.from('students').select('id,nuid,name,email,course,approved,password_hash').eq('email', login).limit(1).maybeSingle()
-      : supabase.from('students').select('id,nuid,name,email,course,approved,password_hash').eq('nuid', login).limit(1).maybeSingle();
+    // Try staff first, then students
+    let user = null;
+    let tried = [];
 
-    const { data: student, error: stuErr } = await stuQuery;
-    if (stuErr) return send(res, 500, { message: stuErr.message });
-
-    if (student?.approved && student.password_hash && await bcrypt.compare(password, student.password_hash)) {
-      const user = { kind: 'student', id: student.id, nuid: student.nuid, name: student.name, email: student.email, course: student.course, role: 'student' };
-      res.cookie('lap_user', JSON.stringify(user), { httpOnly: true, sameSite: 'lax', signed: true });
-      return send(res, 200, user);
+    for (const table of ['staff', 'students']) {
+      const { user: u, err } = await findUser(table, login);
+      tried.push({ table, err: err ? err.message : null, found: !!u });
+      if (u) {
+        user = { ...u, _table: table };
+        break;
+      }
     }
 
-    return send(res, 401, { message: 'Invalid credentials' });
-  }
-
-  // No DB — demo success so the UI doesn’t 404:
-  const demoUser = { kind: 'staff', nuid: '00000000', name: 'Demo User', email: 'demo@huskers.unl.edu', role: 'SL', course: 'CSCE 101' };
-  res.cookie('lap_user', JSON.stringify(demoUser), { httpOnly: true, sameSite: 'lax', signed: true });
-  return send(res, 200, demoUser);
-});
-
-authRouter.post('/logout', (req, res) => {
-  res.clearCookie('lap_user');
-  return send(res, 200, { ok: true });
-});
-
-app.use(['/api/auth', '/auth'], authRouter);
-
-// ---------- FEEDBACK ----------
-const feedbackRouter = express.Router();
-
-feedbackRouter.post('/', async (req, res) => {
-  const { course, type, rating, text, submitter, year } = req.body || {};
-  if (!course || !type) return send(res, 400, { message: 'course and type are required' });
-
-  if (supabase) {
-    const { error } = await supabase.from('feedback').insert([{
-      course, type, rating: rating ?? null, text: text || '', submitter: submitter || '', year: year || null
-    }]);
-    if (error) return send(res, 500, { message: error.message });
-    return send(res, 200, { ok: true });
-  }
-
-  return send(res, 200, { ok: true });
-});
-
-feedbackRouter.get('/', async (_req, res) => {
-  if (!supabase) return send(res, 200, []);
-  const { data, error } = await supabase.from('feedback').select('*').order('created_at', { ascending: false }).limit(100);
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, data || []);
-});
-
-app.use(['/api/feedback', '/feedback'], feedbackRouter);
-
-// ---------- OFFICE HOURS ----------
-const officeRouter = express.Router();
-
-officeRouter.get('/', async (_req, res) => {
-  if (!supabase) {
-    return send(res, 200, [
-      { id: 1, course: 'CSCE 101', day: 'Mon', start: '14:00', end: '16:00', location: 'Avery 12', staff_name: 'Demo User' },
-      { id: 2, course: 'CSCE 155A', day: 'Tue', start: '10:00', end: '12:00', location: 'Zoom', staff_name: 'Demo User' },
-    ]);
-  }
-
-  const { data: schedules, error: sErr } = await supabase
-    .from('staff_schedules')
-    .select('id,staff_nuid,course,day,start,end,location')
-    .order('course', { ascending: true });
-
-  if (sErr) return send(res, 500, { message: sErr.message });
-
-  let names = {};
-  if (schedules?.length) {
-    const nuids = [...new Set(schedules.map(s => s.staff_nuid).filter(Boolean))];
-    if (nuids.length) {
-      const { data: staffRows, error: nErr } = await supabase.from('staff').select('nuid,name').in('nuid', nuids);
-      if (nErr) return send(res, 500, { message: nErr.message });
-      staffRows.forEach(r => { names[r.nuid] = r.name; });
+    if (!user) {
+      return res.status(401).json({
+        ok: false,
+        error: 'Invalid credentials',
+        debug: process.env.NODE_ENV === 'production' ? undefined : tried,
+      });
     }
+
+    // If there's an approval gate for students
+    if (user._table !== 'staff' && user.is_approved === false) {
+      return res.status(403).json({ ok: false, error: 'Account pending approval' });
+    }
+
+    // Verify password
+    const hash = getHashField(user);
+    if (!hash) {
+      return res.status(401).json({ ok: false, error: 'Password not set for this account' });
+    }
+    const match = await bcrypt.compare(password, hash);
+    if (!match) {
+      return res.status(401).json({ ok: false, error: 'Invalid credentials' });
+    }
+
+    // Build a small user payload for the front-end
+    const payload = {
+      nuid: user.nuid || null,
+      email: user.email || null,
+      name: user.name || null,
+      role: user.role || (user._table === 'staff' ? 'LA' : 'student'),
+      table: user._table,
+    };
+
+    // Optionally set a basic session cookie (not required by your UI, but handy)
+    const cookieData = Buffer.from(JSON.stringify({ nuid: payload.nuid, role: payload.role })).toString('base64url');
+    res.cookie('lap_session', cookieData, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      maxAge: 1000 * 60 * 60 * 8, // 8h
+    });
+
+    return res.json({ ok: true, user: payload });
+  } catch (e) {
+    console.error('Login error:', e);
+    return res.status(500).json({ ok: false, error: 'Server error' });
   }
-
-  const out = (schedules || []).map(s => ({
-    id: s.id, course: s.course, day: s.day, start: s.start, end: s.end, location: s.location, staff_name: names[s.staff_nuid] || ''
-  }));
-
-  return send(res, 200, out);
 });
 
-// Students join a queue
-officeRouter.post('/:id/queue', async (req, res) => {
-  if (!ensure(req.user && req.user.kind === 'student', res, 'Only students can join the queue', 401)) return;
+/* ---------- POST /api/auth/change-password ---------- */
+/* This route lets a user change their own password by providing the old one. */
+app.post('/api/auth/change-password', async (req, res) => {
+  try {
+    const login = normalizeLoginField(req.body);
+    const oldPassword = String(req.body.oldPassword || '').trim();
+    const newPassword = String(req.body.newPassword || '').trim();
+    if (!login || !oldPassword || !newPassword) {
+      return res.status(400).json({ ok: false, error: 'Missing fields' });
+    }
 
-  if (!supabase) return send(res, 200, { ok: true });
+    // Find user (staff first, then students)
+    let user = null;
+    let table = 'staff';
+    let recordId = null;
 
-  const scheduleId = Number(req.params.id);
-  if (!scheduleId) return send(res, 400, { message: 'Invalid schedule id' });
+    for (const t of ['staff', 'students']) {
+      const { user: u } = await findUser(t, login);
+      if (u) {
+        user = u;
+        table = t;
+        recordId = isEmail(login) ? { email: user.email } : { nuid: user.nuid };
+        break;
+      }
+    }
 
-  const { error } = await supabase
-    .from('office_hour_queue')
-    .insert([{ schedule_id: scheduleId, student_id: req.user.id }]);
+    if (!user) return res.status(404).json({ ok: false, error: 'User not found' });
 
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, { ok: true });
-});
+    const hash = getHashField(user);
+    if (!hash) return res.status(400).json({ ok: false, error: 'No existing password to change' });
 
-app.use(['/api/office-hours', '/office-hours'], officeRouter);
+    const match = await bcrypt.compare(oldPassword, hash);
+    if (!match) return res.status(401).json({ ok: false, error: 'Old password incorrect' });
 
-// ---------- STAFF SCHEDULE CRUD ----------
-const schedRouter = express.Router();
+    const newHash = await bcrypt.hash(newPassword, 10);
+    const updateData = user.password_hash !== undefined ? { password_hash: newHash } : { password: newHash };
 
-schedRouter.get('/', async (req, res) => {
-  if (!ensure(req.user && req.user.kind === 'staff', res, 'Not signed in as staff', 401)) return;
+    const { error: upErr } = await sb.from(table).update(updateData).match(recordId);
+    if (upErr) {
+      console.error('Change password update error:', upErr);
+      return res.status(500).json({ ok: false, error: 'Failed to update password' });
+    }
 
-  if (!supabase) {
-    return send(res, 200, [
-      { id: 1, course: 'CSCE 101', day: 'Mon', start: '14:00', end: '16:00', location: 'Avery 12' }
-    ]);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('Change password error:', e);
+    return res.status(500).json({ ok: false, error: 'Server error' });
   }
-
-  const { data, error } = await supabase
-    .from('staff_schedules')
-    .select('id,course,day,start,end,location')
-    .eq('staff_nuid', req.user.nuid)
-    .order('day', { ascending: true });
-
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, data || []);
 });
 
-schedRouter.post('/', async (req, res) => {
-  if (!ensure(req.user && req.user.kind === 'staff', res, 'Not signed in as staff', 401)) return;
+/* ---------- Catch-all for unknown /api ---------- */
+app.all('/api/*', (_req, res) => res.status(404).json({ ok: false, error: 'Not found' }));
 
-  const { course, day, start, end, location } = req.body || {};
-  if (!course || !day || !start || !end) return send(res, 400, { message: 'Missing fields' });
-
-  if (!supabase) return send(res, 200, { ok: true });
-
-  const { error } = await supabase.from('staff_schedules').insert([{
-    staff_nuid: req.user.nuid, course, day, start, end, location: location || null
-  }]);
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, { ok: true });
+/* ---------- Fallback: serve index for any other route ---------- */
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(FEEDBACK_DIR, 'index.html'));
 });
 
-schedRouter.put('/:id', async (req, res) => {
-  if (!ensure(req.user && req.user.kind === 'staff', res, 'Not signed in as staff', 401)) return;
-  const id = Number(req.params.id);
-  const patch = (({ course, day, start, end, location }) => ({ course, day, start, end, location }))(req.body || {});
-  Object.keys(patch).forEach(k => (patch[k] == null || patch[k] === '') && delete patch[k]);
-
-  if (!supabase) return send(res, 200, { ok: true });
-
-  const { error } = await supabase.from('staff_schedules').update(patch).eq('id', id).eq('staff_nuid', req.user.nuid);
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, { ok: true });
-});
-
-schedRouter.delete('/:id', async (req, res) => {
-  if (!ensure(req.user && req.user.kind === 'staff', res, 'Not signed in as staff', 401)) return;
-  const id = Number(req.params.id);
-
-  if (!supabase) return send(res, 200, { ok: true });
-
-  const { error } = await supabase.from('staff_schedules').delete().eq('id', id).eq('staff_nuid', req.user.nuid);
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, { ok: true });
-});
-
-app.use(['/api/staff/schedule', '/staff/schedule'], schedRouter);
-
-// ---------- SL ADMIN ----------
-const adminRouter = express.Router();
-
-adminRouter.use((req, res, next) => {
-  if (!ensure(req.user && req.user.kind === 'staff' && String(req.user.role).toUpperCase() === 'SL', res, 'SL role required', 401)) return;
-  next();
-});
-
-adminRouter.get('/staff', async (_req, res) => {
-  if (!supabase) return send(res, 200, []);
-  const { data, error } = await supabase.from('staff').select('nuid,name,email,role,course').order('nuid', { ascending: true });
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, data || []);
-});
-
-adminRouter.post('/staff', async (req, res) => {
-  if (!supabase) return send(res, 200, { ok: true });
-  const { nuid, name, email, role, course, password } = req.body || {};
-  if (!nuid || !name || !role) return send(res, 400, { message: 'nuid, name, role required' });
-  let password_hash = null;
-  if (password) password_hash = await bcrypt.hash(password, 10);
-  const { error } = await supabase.from('staff').insert([{ nuid, name, email: email || null, role, course: course || null, password_hash }]);
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, { ok: true });
-});
-
-adminRouter.delete('/staff/:nuid', async (req, res) => {
-  if (!supabase) return send(res, 200, { ok: true });
-  const { error } = await supabase.from('staff').delete().eq('nuid', req.params.nuid);
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, { ok: true });
-});
-
-adminRouter.get('/students/pending', async (_req, res) => {
-  if (!supabase) return send(res, 200, []);
-  const { data, error } = await supabase.from('students').select('id,name,nuid,email,course,approved').eq('approved', false);
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, data || []);
-});
-
-adminRouter.post('/students/:id/approve', async (req, res) => {
-  if (!supabase) return send(res, 200, { ok: true });
-  const { error } = await supabase.from('students').update({ approved: true }).eq('id', req.params.id);
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, { ok: true });
-});
-
-adminRouter.post('/students/:id/reject', async (req, res) => {
-  if (!supabase) return send(res, 200, { ok: true });
-  const { error } = await supabase.from('students').delete().eq('id', req.params.id);
-  if (error) return send(res, 500, { message: error.message });
-  return send(res, 200, { ok: true });
-});
-
-app.use(['/api/admin', '/admin'], adminRouter);
-
-// ---------- Health & Catch-all ----------
-app.get('/healthz', (_req, res) => res.type('text').send('ok'));
-
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api/') || req.path.startsWith('/auth') || req.path.startsWith('/feedback') || req.path.startsWith('/office-hours') || req.path.startsWith('/staff') || req.path.startsWith('/admin')) {
-    return next();
-  }
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
+/* ---------- Start ---------- */
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`Server listening on :${PORT} (hasSupabase=${hasSupabase})`);
+  console.log(`Server listening on ${PORT}`);
 });
-
