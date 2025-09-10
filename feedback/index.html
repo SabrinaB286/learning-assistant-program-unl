@@ -331,7 +331,7 @@
   </header>
 
   <main class="shell">
-    <!-- FEEDBACK is visible by default as a safe fallback -->
+    <!-- FEEDBACK visible by default so the page never looks empty -->
     <section id="section-feedback" class="card">
       <h2>Submit Feedback</h2>
       <p class="lead">Share course or LA feedback. Submissions are stored in Supabase.</p>
@@ -494,13 +494,15 @@
         </table>
       </div>
 
+      <!-- Course-wide feedback for staff -->
       <div id="my-feedback" class="card hidden">
         <h2>My Feedback</h2>
-        <p class="lead">Feedback items mentioning you (by name or email).</p>
+        <p class="lead">Feedback items for your assigned course(s).</p>
         <div id="myfb-alert" class="alert hidden"></div>
         <ul id="myfb-list"></ul>
       </div>
 
+      <!-- SL Admin -->
       <div id="admin-block" class="card hidden">
         <h2>SL Admin</h2>
         <p class="lead">Manage staff and approve students.</p>
@@ -575,7 +577,7 @@
   </script>
 
   <script>
-    /* ========== helpers / router ========== */
+    /* ---------- tiny helpers & router ---------- */
     const PAGES = ['feedback', 'office', 'login', 'dashboard'];
     const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
     function show(id) {
@@ -620,14 +622,14 @@
       document.addEventListener('DOMContentLoaded', paint);
     })();
 
-    /* Nav bindings + initial route */
+    /* Nav + initial route */
     document.addEventListener('DOMContentLoaded', () => {
       $$('[data-nav]').forEach(b => b.addEventListener('click', () => show(b.dataset.nav)));
       const initial = location.hash.replace('#', '');
       show(PAGES.includes(initial) ? initial : 'feedback');
     });
 
-    /* Office hours list (safe to fail without breaking router) */
+    /* Office hours (safe to fail) */
     (function () {
       const list = $('#office-list'); if (!list) return;
       const alert = $('#office-alert');
@@ -741,30 +743,88 @@
       }));
     }
 
-    /* My feedback */
+    /* Course-wide My Feedback */
     async function loadMyFeedback() {
       const wrap = $('#my-feedback'); if (!wrap) return;
-      const list = $('#myfb-list'); const alert = $('#myfb-alert');
-      list.innerHTML = '';
-      const endpoints = ['/api/feedback/me', '/api/feedback?me=1', '/api/feedback?assignee=self', '/api/feedback?mine=true'];
-      let items = null, lastRes = null, lastJson = null;
-      for (const url of endpoints) {
+      const list = $('#myfb-list'); const alert = $('#myfb-alert'); list.innerHTML = '';
+
+      const u = getUser() || {};
+      let courses = [];
+      if (Array.isArray(u.courses) && u.courses.length) courses = u.courses;
+      else if (u.course) courses = [u.course];
+
+      async function fetchStaffSelf() {
+        const tries = ['/api/admin/staff/me', '/api/staff/me'];
+        for (const t of tries) {
+          try { const r = await fetch(t, { credentials: 'include' }); if (r.ok) { return await r.json(); } } catch { }
+        }
         try {
-          const res = await fetch(url, { credentials: 'include' }); lastRes = res;
-          try { lastJson = await res.clone().json() } catch { lastJson = null }
-          if (res.ok && Array.isArray(lastJson)) { items = lastJson; break; }
-          if (res.ok && Array.isArray(lastJson?.items)) { items = lastJson.items; break; }
-        } catch { }
+          const URL = (window.SUPABASE_URL || '').replace(/\/+$/, '');
+          const KEY = window.SUPABASE_ANON_KEY;
+          const email = u.email || u.username || '';
+          if (!URL || !KEY || !email) return null;
+          const res = await fetch(`${URL}/rest/v1/staff_public?email=eq.${encodeURIComponent(email)}&select=*`, {
+            headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' }
+          });
+          if (!res.ok) return null;
+          const rows = await res.json();
+          return Array.isArray(rows) && rows.length ? rows[0] : null;
+        } catch { return null; }
       }
-      if (!items) items = [];
-      if (lastRes && !lastRes.ok && lastRes.status >= 500) {
-        alert.className = 'alert alert-error'; alert.textContent = lastJson?.message || 'Could not load feedback'; alert.classList.remove('hidden'); return;
+
+      if (!courses.length) {
+        const me = await fetchStaffSelf();
+        if (me?.courses && Array.isArray(me.courses)) courses = me.courses;
+        else if (me?.course) courses = [me.course];
       }
-      if (!items.length) {
-        alert.className = 'alert alert-success'; alert.textContent = 'No feedback has been assigned to you yet.'; alert.classList.remove('hidden'); return;
+      courses = (courses || []).map(c => String(c || '').trim()).filter(Boolean);
+
+      if (!courses.length) {
+        alert.className = 'alert alert-success';
+        alert.textContent = 'No course assigned to your account yet.';
+        alert.classList.remove('hidden');
+        return;
+      }
+
+      async function fetchByCourseServer(cs) {
+        const q = cs.map(c => `course=${encodeURIComponent(c)}`).join('&');
+        for (const path of [`/api/feedback?${q}&scope=course`, `/feedback?${q}`]) {
+          try {
+            const r = await fetch(path, { credentials: 'include' });
+            if (r.ok) {
+              const j = await r.json().catch(() => []);
+              return Array.isArray(j?.items) ? j.items : (Array.isArray(j) ? j : []);
+            }
+          } catch { }
+        }
+        return null;
+      }
+
+      async function fetchByCourseSupabase(cs) {
+        try {
+          const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''); const KEY = window.SUPABASE_ANON_KEY;
+          if (!URL || !KEY) return [];
+          const or = cs.map(c => `course.eq.${encodeURIComponent(c)}`).join(',');
+          const res = await fetch(`${URL}/rest/v1/feedback?select=*&or=(${or})&order=created_at.desc`, {
+            headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' }
+          });
+          if (!res.ok) return [];
+          return await res.json();
+        } catch { return [] }
+      }
+
+      let items = await fetchByCourseServer(courses);
+      if (!items) items = await fetchByCourseSupabase(courses);
+
+      if (!items || !items.length) {
+        alert.className = 'alert alert-success';
+        alert.textContent = 'No feedback yet for your course(s).';
+        alert.classList.remove('hidden');
+        return;
       }
       alert.classList.add('hidden');
-      items.slice(0, 20).forEach(f => {
+
+      items.slice(0, 100).forEach(f => {
         const li = document.createElement('li');
         const when = f.created_at ? new Date(f.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '';
         const rating = f.rating ? ` • ★${f.rating}` : '';
@@ -774,84 +834,93 @@
       });
     }
 
-    /* SL Admin (staff list with Supabase fallback) */
+    /* SL Admin (uses staff_public view first) */
     async function loadAdmin() {
       const block = $('#admin-block'); if (!block) return; block.classList.remove('hidden');
 
-      async function supabaseStaffFallback() {
-        const URL = (window.SUPABASE_URL || '').replace(/\/+$/, '');
-        const KEY = window.SUPABASE_ANON_KEY;
+      async function supabaseGetStaff() {
+        const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''); const KEY = window.SUPABASE_ANON_KEY;
         if (!URL || !KEY) return { ok: false, rows: [], error: 'Missing SUPABASE_URL or ANON key.' };
-        const tables = ['staff', 'Staff', 'la_staff', 'staff_view', 'employees', 'profiles'];
-        const selects = ['nuid,name,email,role,course', 'nuid,name,email,role,course_code', 'id,nuid,name,email,role,course', 'id,first_name,last_name,email,role,primary_course', '*'];
-        const norm = r => ({ nuid: r.nuid ?? r.id ?? '', name: r.name ?? [r.first_name, r.last_name].filter(Boolean).join(' ') ?? '', email: r.email ?? r.username ?? '', role: r.role ?? r.title ?? '', course: r.course ?? r.course_code ?? r.primary_course ?? r.course_assigned ?? '' });
+
+        // IMPORTANT: staff_public first (Option A)
+        const tables = ['staff_public', 'staff', 'staff_view', 'Staff', 'la_staff', 'employees', 'profiles'];
+        const toRow = (r) => ({
+          nuid: r.nuid ?? r.id ?? '',
+          name: r.name ?? [r.first_name, r.last_name].filter(Boolean).join(' ') ?? '',
+          email: r.email ?? r.username ?? '',
+          role: (r.role ?? r.title ?? '').toString().toUpperCase(),
+          course: r.course ?? r.course_code ?? r.primary_course ?? r.course_assigned ?? ''
+        });
+
         for (const t of tables) {
-          for (const sel of selects) {
-            try {
-              const res = await fetch(`${URL}/rest/v1/${encodeURIComponent(t)}?select=${encodeURIComponent(sel)}`, {
-                headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json', Prefer: 'count=exact' }
-              });
-              if (res.status === 401 || res.status === 403) { const j = await res.json().catch(() => null); return { ok: false, rows: [], error: `Supabase ${res.status}: ${j?.message || 'RLS forbids select on "' + t + '".'}` }; }
-              if (!res.ok) continue;
-              const data = await res.json().catch(() => []);
-              if (Array.isArray(data) && data.length) return { ok: true, rows: data.map(norm), error: null };
-            } catch { }
-          }
+          try {
+            const res = await fetch(`${URL}/rest/v1/${encodeURIComponent(t)}?select=*`, {
+              headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json', Prefer: 'count=exact' }
+            });
+            if (res.status === 401 || res.status === 403) {
+              const j = await res.json().catch(() => null);
+              return { ok: false, rows: [], error: `Supabase ${res.status}: ${j?.message || 'RLS is blocking reads on "' + t + '".'}` };
+            }
+            if (!res.ok) continue;
+            const data = await res.json();
+            if (Array.isArray(data) && data.length) return { ok: true, rows: data.map(toRow) };
+          } catch { }
         }
-        return { ok: true, rows: [], error: null };
+        return { ok: true, rows: [] };
       }
 
-      (async () => {
+      function paintStaff(rows) {
         const body = $('#staff-table tbody'); const empty = $('#staff-empty');
         body.innerHTML = '';
-        let rows = [], ok = false, json = null, lastErr = null;
-
-        for (const path of ['/api/admin/staff', '/admin/staff', '/api/staff', '/api/staff/list']) {
-          try {
-            const res = await fetch(path, { credentials: 'include' });
-            try { json = await res.clone().json(); } catch { json = null }
-            if (res.ok) { rows = Array.isArray(json) ? json : (Array.isArray(json?.items) ? json.items : []); ok = true; break; }
-            else { lastErr = json?.message || `HTTP ${res.status} on ${path}`; }
-          } catch (e) { lastErr = e?.message || 'Network error'; }
-        }
-
-        if (!ok) {
-          const sb = await supabaseStaffFallback();
-          if (sb.error && !rows.length) {
-            empty.className = 'alert alert-error'; empty.textContent = sb.error; empty.classList.remove('hidden'); return;
-          }
-          if (sb.ok && Array.isArray(sb.rows)) { rows = sb.rows; ok = true; }
-        }
-
-        if (!ok) {
-          empty.className = 'alert alert-error'; empty.textContent = lastErr || (json?.message || 'Could not load staff list'); empty.classList.remove('hidden'); return;
-        }
-
         if (!rows.length) {
           empty.className = 'alert alert-success';
           empty.textContent = 'No staff found yet. Use “Add staff” to create the first entry.';
-          empty.classList.remove('hidden');
-        } else { empty.classList.add('hidden'); }
-
-        const normRow = s => ({ nuid: s.nuid ?? s.id ?? '', name: s.name ?? [s.first_name, s.last_name].filter(Boolean).join(' ') ?? '', email: s.email ?? s.username ?? '', role: s.role ?? s.title ?? '', course: s.course ?? s.course_code ?? s.primary_course ?? s.course_assigned ?? '' });
-        rows.map(normRow).forEach(s => {
+          empty.classList.remove('hidden'); return;
+        }
+        empty.classList.add('hidden');
+        rows.forEach(s => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${s.nuid || ''}</td><td>${s.name || ''}</td><td>${s.email || ''}</td><td>${(s.role || '').toString().toUpperCase()}</td><td>${s.course || ''}</td>
+          tr.innerHTML = `<td>${s.nuid || ''}</td><td>${s.name || ''}</td><td>${s.email || ''}</td><td>${s.role || ''}</td><td>${s.course || ''}</td>
             <td><span class="link" data-rm="${s.nuid || s.id || ''}">Remove</span></td>`;
           body.appendChild(tr);
         });
         $$('[data-rm]').forEach(a => a.addEventListener('click', async () => {
           const id = a.getAttribute('data-rm'); if (!id) return;
           a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
-          let removed = false;
           for (const t of [`/api/admin/staff/${id}`, `/admin/staff/${id}`]) {
-            try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { removed = true; break } } catch { }
+            try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { loadAdmin(); return; } } catch { }
           }
-          if (removed) loadAdmin(); else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto'; }
+          a.textContent = 'Remove'; a.style.pointerEvents = 'auto';
         }));
-      })();
+      }
 
-      /* Pending students + Add staff (unchanged) */
+      // 1) Try backend
+      let rows = [], ok = false, lastErr = null;
+      for (const path of ['/api/admin/staff', '/admin/staff', '/api/staff', '/api/staff/list']) {
+        try {
+          const res = await fetch(path, { credentials: 'include' });
+          const j = await res.clone().json().catch(() => null);
+          if (res.ok) {
+            rows = Array.isArray(j) ? j : (Array.isArray(j?.items) ? j.items : []);
+            ok = true; break;
+          } else {
+            lastErr = j?.message || `HTTP ${res.status} on ${path}`;
+          }
+        } catch (e) { lastErr = e?.message || 'Network error'; }
+      }
+
+      // 2) Fallback to Supabase staff_public
+      if (!ok) {
+        const sb = await supabaseGetStaff();
+        if (sb.error) {
+          const empty = $('#staff-empty'); empty.className = 'alert alert-error'; empty.textContent = sb.error; empty.classList.remove('hidden'); return;
+        }
+        rows = sb.rows;
+      }
+
+      paintStaff(rows);
+
+      // Pending students
       (async () => {
         const body = $('#pending-table tbody'); body.innerHTML = '';
         let json = null, res = null;
@@ -871,12 +940,13 @@
         }));
         $$('[data-reject]').forEach(a => a.addEventListener('click', async () => {
           const id = a.getAttribute('data-reject'); a.textContent = 'Rejecting…'; a.style.pointerEvents = 'none';
-          let r = null; try { r = await fetch(`/admin/students/${id}/reject`, { method: 'POST', credentials: 'include' }) } catch { }
+          let r = null; try { r = await fetch(`/api/admin/students/${id}/reject`, { method: 'POST', credentials: 'include' }) } catch { }
           if (!r || !r.ok) { try { r = await fetch(`/admin/students/${id}/reject`, { method: 'POST', credentials: 'include' }) } catch { } }
           if (r?.ok) loadAdmin();
         }));
       })();
 
+      // Add staff
       (function () {
         const form = $('#staff-form'), alert = $('#staff-alert');
         const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') }
