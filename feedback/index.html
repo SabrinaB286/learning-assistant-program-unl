@@ -87,18 +87,18 @@
       color: var(--unl-red)
     }
 
-    .chip {
-      background: rgba(255, 255, 255, .14);
-      padding: 6px 10px;
-      border-radius: 999px
-    }
-
     #page-actions {
       margin-top: 8px;
       display: flex;
       gap: 10px;
       align-items: center;
       flex-wrap: wrap
+    }
+
+    .chip {
+      background: rgba(255, 255, 255, .14);
+      padding: 6px 10px;
+      border-radius: 999px
     }
 
     main {
@@ -331,7 +331,7 @@
   </header>
 
   <main class="shell">
-    <!-- FEEDBACK visible by default so the page never looks empty -->
+    <!-- FEEDBACK visible by default -->
     <section id="section-feedback" class="card">
       <h2>Submit Feedback</h2>
       <p class="lead">Share course or LA feedback. Submissions are stored in Supabase.</p>
@@ -522,17 +522,6 @@
               <option>LA</option>
             </select>
           </div>
-          <div>
-            <label>Primary course</label>
-            <select id="staff-course">
-              <option value="">None</option>
-              <option>CSCE 101</option>
-              <option>CSCE 155A</option>
-              <option>CSCE 155E</option>
-              <option>CSCE 155H</option>
-              <option>CSCE 156</option>
-            </select>
-          </div>
           <div class="actions"><button id="staff-add" class="btn-primary" type="submit">Add staff</button></div>
         </form>
 
@@ -545,7 +534,7 @@
               <th>Name</th>
               <th>Email</th>
               <th>Role</th>
-              <th>Course</th>
+              <th>Course(s)</th>
               <th></th>
             </tr>
           </thead>
@@ -570,7 +559,7 @@
     </section>
   </main>
 
-  <!-- Supabase REST config (for client fallback) -->
+  <!-- Supabase REST config (client fallback / RPC calls) -->
   <script>
     window.SUPABASE_URL = 'https://wmeijbsvlnjvnhptudfh.supabase.co';
     window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtZWlqYnN2bG5qdm5ocHR1ZGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MDQ5NzksImV4cCI6MjA3MTM4MDk3OX0.YT_435s_FFsqNJs6M_yW9iIGzxeCu1BHpPVH1cwJlX8';
@@ -834,39 +823,60 @@
       });
     }
 
-    /* SL Admin (uses staff_public view first) */
+    /* SL Admin (RPC-first, with clear error messages) */
     async function loadAdmin() {
       const block = $('#admin-block'); if (!block) return; block.classList.remove('hidden');
 
       async function supabaseGetStaff() {
-        const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''); const KEY = window.SUPABASE_ANON_KEY;
+        const URL = (window.SUPABASE_URL || '').replace(/\/+$/, '');
+        const KEY = window.SUPABASE_ANON_KEY;
         if (!URL || !KEY) return { ok: false, rows: [], error: 'Missing SUPABASE_URL or ANON key.' };
 
-        // IMPORTANT: staff_public first (Option A)
-        const tables = ['staff_public', 'staff', 'staff_view', 'Staff', 'la_staff', 'employees', 'profiles'];
-        const toRow = (r) => ({
-          nuid: r.nuid ?? r.id ?? '',
-          name: r.name ?? [r.first_name, r.last_name].filter(Boolean).join(' ') ?? '',
-          email: r.email ?? r.username ?? '',
-          role: (r.role ?? r.title ?? '').toString().toUpperCase(),
-          course: r.course ?? r.course_code ?? r.primary_course ?? r.course_assigned ?? ''
-        });
+        const hdr = { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json', Prefer: 'count=exact' };
 
-        for (const t of tables) {
-          try {
-            const res = await fetch(`${URL}/rest/v1/${encodeURIComponent(t)}?select=*`, {
-              headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json', Prefer: 'count=exact' }
-            });
-            if (res.status === 401 || res.status === 403) {
-              const j = await res.json().catch(() => null);
-              return { ok: false, rows: [], error: `Supabase ${res.status}: ${j?.message || 'RLS is blocking reads on "' + t + '".'}` };
+        // 1) SECURITY DEFINER RPC (recommended)
+        try {
+          const r = await fetch(`${URL}/rest/v1/rpc/staff_public_list`, { method: 'POST', headers: hdr });
+          if (r.ok) {
+            const data = await r.json();
+            if (Array.isArray(data)) {
+              const toRow = (x) => ({
+                nuid: x.nuid,
+                name: x.name,
+                email: x.email,
+                role: String(x.role || '').toUpperCase(),
+                courses: Array.isArray(x.courses) ? x.courses : []
+              });
+              return { ok: true, rows: data.map(toRow) };
             }
-            if (!res.ok) continue;
-            const data = await res.json();
-            if (Array.isArray(data) && data.length) return { ok: true, rows: data.map(toRow) };
-          } catch { }
+          } else {
+            const j = await r.json().catch(() => null);
+            return { ok: false, rows: [], error: `RPC staff_public_list: HTTP ${r.status} — ${j?.message || 'no message'}` };
+          }
+        } catch (e) {
+          return { ok: false, rows: [], error: `RPC call failed: ${e?.message || e}` };
         }
-        return { ok: true, rows: [] };
+
+        // 2) Fallback: direct view (only if you allowed select)
+        try {
+          const r = await fetch(`${URL}/rest/v1/staff_public?select=*`, { headers: hdr });
+          if (r.ok) {
+            const data = await r.json();
+            const toRow = (x) => ({
+              nuid: x.nuid,
+              name: x.name,
+              email: x.email,
+              role: String(x.role || '').toUpperCase(),
+              courses: Array.isArray(x.courses) ? x.courses : []
+            });
+            return { ok: true, rows: data.map(toRow) };
+          } else {
+            const j = await r.json().catch(() => null);
+            return { ok: false, rows: [], error: `View staff_public: HTTP ${r.status} — ${j?.message || 'no message'}` };
+          }
+        } catch (e) {
+          return { ok: false, rows: [], error: `View call failed: ${e?.message || e}` };
+        }
       }
 
       function paintStaff(rows) {
@@ -880,7 +890,12 @@
         empty.classList.add('hidden');
         rows.forEach(s => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${s.nuid || ''}</td><td>${s.name || ''}</td><td>${s.email || ''}</td><td>${s.role || ''}</td><td>${s.course || ''}</td>
+          tr.innerHTML = `
+            <td>${s.nuid || ''}</td>
+            <td>${s.name || ''}</td>
+            <td>${s.email || ''}</td>
+            <td>${s.role || ''}</td>
+            <td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td>
             <td><span class="link" data-rm="${s.nuid || s.id || ''}">Remove</span></td>`;
           body.appendChild(tr);
         });
@@ -894,7 +909,7 @@
         }));
       }
 
-      // 1) Try backend
+      // 1) Try backend first
       let rows = [], ok = false, lastErr = null;
       for (const path of ['/api/admin/staff', '/admin/staff', '/api/staff', '/api/staff/list']) {
         try {
@@ -909,11 +924,15 @@
         } catch (e) { lastErr = e?.message || 'Network error'; }
       }
 
-      // 2) Fallback to Supabase staff_public
+      // 2) Supabase RPC/view
       if (!ok) {
         const sb = await supabaseGetStaff();
         if (sb.error) {
-          const empty = $('#staff-empty'); empty.className = 'alert alert-error'; empty.textContent = sb.error; empty.classList.remove('hidden'); return;
+          const empty = $('#staff-empty');
+          empty.className = 'alert alert-error';
+          empty.textContent = `Supabase error: ${sb.error}`;
+          empty.classList.remove('hidden');
+          return;
         }
         rows = sb.rows;
       }
@@ -941,29 +960,29 @@
         $$('[data-reject]').forEach(a => a.addEventListener('click', async () => {
           const id = a.getAttribute('data-reject'); a.textContent = 'Rejecting…'; a.style.pointerEvents = 'none';
           let r = null; try { r = await fetch(`/api/admin/students/${id}/reject`, { method: 'POST', credentials: 'include' }) } catch { }
-          if (!r || !r.ok) { try { r = await fetch(`/admin/students/${id}/reject`, { method: 'POST', credentials: 'include' }) } catch { } }
+        }
           if (r?.ok) loadAdmin();
-        }));
-      })();
+      }));
+    }) ();
 
-      // Add staff
-      (function () {
-        const form = $('#staff-form'), alert = $('#staff-alert');
-        const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') }
-        const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') }
-        form.addEventListener('submit', async e => {
-          e.preventDefault(); alert.classList.add('hidden');
-          const payload = {
-            nuid: $('#staff-nuid').value.trim(), name: $('#staff-name').value.trim(),
-            email: $('#staff-email').value.trim(), role: $('#staff-role').value, course: $('#staff-course').value || null
-          };
-          if (!payload.nuid || !payload.name || !payload.role) return bad('NUID, name, and role are required.');
-          let res, json; try { res = await fetch('/api/admin/staff', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); try { json = await res.clone().json() } catch { } } catch { }
-          if (!res || !res.ok) { try { res = await fetch('/admin/staff', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); try { json = await res.clone().json() } catch { } } catch { } }
-          if (!res?.ok) return bad(json?.message || 'Could not add staff');
-          ok('Staff added.'); form.reset(); loadAdmin();
-        });
-      })();
+    // Add staff (delegates to your backend)
+    (function () {
+      const form = $('#staff-form'), alert = $('#staff-alert');
+      const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') }
+      const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') }
+      form.addEventListener('submit', async e => {
+        e.preventDefault(); alert.classList.add('hidden');
+        const payload = {
+          nuid: $('#staff-nuid').value.trim(), name: $('#staff-name').value.trim(),
+          email: $('#staff-email').value.trim(), role: $('#staff-role').value
+        };
+        if (!payload.nuid || !payload.name || !payload.role) return bad('NUID, name, and role are required.');
+        let res, json; try { res = await fetch('/api/admin/staff', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); try { json = await res.clone().json() } catch { } } catch { }
+        if (!res || !res.ok) { try { res = await fetch('/admin/staff', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); try { json = await res.clone().json() } catch { } } catch { } }
+        if (!res?.ok) return bad(json?.message || 'Could not add staff');
+        ok('Staff added.'); form.reset(); loadAdmin();
+      });
+    })();
     }
   </script>
 </body>
