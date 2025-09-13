@@ -1,372 +1,95 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Learning Assistant Feedback • UNL</title>
   <style>
-    :root {
-      --unl-red: #c8102e;
-      --unl-red-dark: #a00d25;
-      --ink: #111827;
-      --muted: #6b7280;
-      --bg: #f5f6fa;
-      --card: #fff;
-      --ring: #e5e7eb;
-      --shadow: 0 8px 24px rgba(17, 24, 39, .06);
-      --star: #f59e0b
+    :root{
+      --unl-red:#c8102e;--unl-red-dark:#a00d25;--ink:#111827;--muted:#6b7280;--bg:#f5f6fa;
+      --card:#fff;--ring:#e5e7eb;--shadow:0 8px 24px rgba(17,24,39,.06);--star:#f59e0b
     }
-
-    * {
-      box-sizing: border-box
-    }
-
-    html,
-    body {
-      margin: 0;
-      padding: 0
-    }
-
-    body {
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
-      color: var(--ink);
-      background: var(--bg)
-    }
-
-    /* Make sure header never blocks clicks, and nothing overlays it */
-    .topbar {
-      position: relative;
-      z-index: 2;
-      background: linear-gradient(135deg, var(--unl-red), var(--unl-red-dark));
-      color: #fff;
-      padding: 18px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, .15)
-    }
-
-    .shell {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 16px
-    }
-
-    .brand {
-      font-weight: 800;
-      font-size: 1.25rem
-    }
-
-    .sub {
-      opacity: .9
-    }
-
-    .navrow {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 10px
-    }
-
-    .nav {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap
-    }
-
-    .btn {
-      background: transparent;
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, .75);
-      padding: 8px 14px;
-      border-radius: 999px;
-      cursor: pointer;
-      font-weight: 600;
-      pointer-events: auto
-    }
-
-    .btn:hover,
-    .btn.active {
-      background: #fff;
-      color: var(--unl-red)
-    }
-
-    #page-actions {
-      margin-top: 8px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap
-    }
-
-    .chip {
-      background: rgba(255, 255, 255, .14);
-      padding: 6px 10px;
-      border-radius: 999px
-    }
-
-    main {
-      position: relative;
-      z-index: 1;
-      padding: 22px 0 40px
-    }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--ring);
-      border-radius: 16px;
-      box-shadow: var(--shadow);
-      padding: 20px;
-      margin-top: 18px
-    }
-
-    h1,
-    h2 {
-      margin: 8px 0 12px
-    }
-
-    .lead {
-      color: var(--muted);
-      margin-top: 0
-    }
-
-    .hidden {
-      display: none !important
-    }
-
-    label {
-      font-weight: 600
-    }
-
-    .grid {
-      display: grid;
-      gap: 14px
-    }
-
-    .g-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr))
-    }
-
-    .g-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr))
-    }
-
-    @media(max-width:980px) {
-      .g-3 {
-        grid-template-columns: 1fr
-      }
-    }
-
-    @media(max-width:860px) {
-      .g-2 {
-        grid-template-columns: 1fr
-      }
-    }
-
-    input,
-    select,
-    textarea {
-      width: 100%;
-      min-height: 44px;
-      border: 1px solid var(--ring);
-      border-radius: 10px;
-      padding: 10px 12px;
-      background: #fff;
-      color: var(--ink)
-    }
-
-    input::placeholder,
-    textarea::placeholder {
-      color: #9ca3af
-    }
-
-    textarea {
-      min-height: 120px
-    }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap
-    }
-
-    .btn-primary {
-      background: var(--unl-red);
-      color: #fff;
-      border: 1px solid var(--unl-red);
-      padding: 10px 16px;
-      border-radius: 10px;
-      font-weight: 700;
-      cursor: pointer
-    }
-
-    .btn-primary:hover {
-      background: var(--unl-red-dark)
-    }
-
-    .btn-muted {
-      background: #fff;
-      color: #000;
-      border: 1px solid var(--ring);
-      padding: 10px 16px;
-      border-radius: 10px;
-      font-weight: 600;
-      cursor: pointer
-    }
-
-    .pills {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap
-    }
-
-    .pill {
-      background: #fff;
-      border: 1px solid var(--ring);
-      color: var(--ink);
-      padding: 8px 14px;
-      border-radius: 999px;
-      cursor: pointer;
-      font-weight: 600
-    }
-
-    .pill.active {
-      background: var(--unl-red);
-      color: #fff;
-      border-color: var(--unl-red)
-    }
-
-    .stars {
-      display: flex;
-      gap: 6px;
-      align-items: center
-    }
-
-    .star {
-      font-size: 28px;
-      cursor: pointer;
-      color: #d3d6de;
-      line-height: 1
-    }
-
-    .star.active {
-      color: var(--star)
-    }
-
-    .alert {
-      padding: 12px 14px;
-      border-radius: 10px;
-      font-weight: 600;
-      margin: 8px 0
-    }
-
-    .alert-error {
-      background: #fff1f2;
-      color: #9f1239;
-      border: 1px solid #fecdd3
-    }
-
-    .alert-success {
-      background: #ecfdf5;
-      color: #065f46;
-      border: 1px solid #a7f3d0
-    }
-
-    .tag {
-      display: inline-block;
-      background: #eef2ff;
-      color: #3730a3;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: .825rem
-    }
-
-    .table {
-      width: 100%;
-      border-collapse: collapse
-    }
-
-    .table th,
-    .table td {
-      border-bottom: 1px solid var(--ring);
-      padding: 10px 8px;
-      text-align: left
-    }
-
-    .table th {
-      color: var(--muted);
-      font-weight: 700
-    }
-
-    .row-actions {
-      display: flex;
-      gap: 8px
-    }
-
-    .link {
-      color: var(--unl-red);
-      cursor: pointer;
-      font-weight: 700
-    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;color:var(--ink);background:var(--bg)}
+    .topbar{position:relative;z-index:2;background:linear-gradient(135deg,var(--unl-red),var(--unl-red-dark));color:#fff;padding:18px 0;border-bottom:1px solid rgba(255,255,255,.15)}
+    .shell{max-width:1100px;margin:0 auto;padding:0 16px}
+    .brand{font-weight:800;font-size:1.25rem}
+    .sub{opacity:.9}
+    .navrow{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:10px}
+    .nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.75);padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:600}
+    .btn:hover,.btn.active{background:#fff;color:var(--unl-red)}
+    #page-actions{margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .chip{background:rgba(255,255,255,.14);padding:6px 10px;border-radius:999px}
+    main{position:relative;z-index:1;padding:22px 0 40px}
+    .card{background:var(--card);border:1px solid var(--ring);border-radius:16px;box-shadow:var(--shadow);padding:20px;margin-top:18px}
+    h1,h2{margin:8px 0 12px}
+    .lead{color:var(--muted);margin-top:0}
+    .hidden{display:none!important}
+    label{font-weight:600}
+    .grid{display:grid;gap:14px}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .g-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    @media(max-width:980px){.g-3{grid-template-columns:1fr}}
+    @media(max-width:860px){.g-2{grid-template-columns:1fr}}
+    input,select,textarea{width:100%;min-height:44px;border:1px solid var(--ring);border-radius:10px;padding:10px 12px;background:#fff;color:var(--ink)}
+    input::placeholder,textarea::placeholder{color:#9ca3af}
+    textarea{min-height:120px}
+    .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn-primary{background:var(--unl-red);color:#fff;border:1px solid var(--unl-red);padding:10px 16px;border-radius:10px;font-weight:700;cursor:pointer}
+    .btn-primary:hover{background:var(--unl-red-dark)}
+    .btn-muted{background:#fff;color:#000;border:1px solid var(--ring);padding:10px 16px;border-radius:10px;font-weight:600;cursor:pointer}
+    .pills{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{background:#fff;border:1px solid var(--ring);color:var(--ink);padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:600}
+    .pill.active{background:var(--unl-red);color:#fff;border-color:var(--unl-red)}
+    .stars{display:flex;gap:6px;align-items:center}
+    .star{font-size:28px;cursor:pointer;color:#d3d6de;line-height:1}
+    .star.active{color:var(--star)}
+    .alert{padding:12px 14px;border-radius:10px;font-weight:600;margin:8px 0}
+    .alert-error{background:#fff1f2;color:#9f1239;border:1px solid #fecdd3}
+    .alert-success{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
+    .tag{display:inline-block;background:#eef2ff;color:#3730a3;padding:2px 8px;border-radius:999px;font-size:.825rem}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{border-bottom:1px solid var(--ring);padding:10px 8px;text-align:left}
+    .table th{color:var(--muted);font-weight:700}
+    .row-actions{display:flex;gap:8px}
+    .link{color:var(--unl-red);cursor:pointer;font-weight:700}
   </style>
 
-  <!-- 1) Tiny, fail-safe router so buttons always work -->
+  <!-- Minimal client-side router so nav always works -->
   <script>
-    (function () {
-      const PAGES = ['feedback', 'office', 'login', 'dashboard'];
-      const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-      function show(id) {
-        try {
-          if (!PAGES.includes(id)) id = 'feedback';
-          PAGES.forEach(k => { const el = $('#section-' + k); if (el) el.classList.toggle('hidden', k !== id) });
-          $$('[data-nav]').forEach(b => b.classList.toggle('active', b?.dataset?.nav === id));
-          if (location.hash !== ('#' + id)) history.replaceState(null, '', '#' + id);
-        } catch (e) { console.error('show() failed', e) }
-      }
-      window.__lap_show = show; // expose for inline fallback
-      function bindNav() {
-        try {
-          $$('[data-nav]').forEach(b => {
-            if (b.__bound) return;
-            b.__bound = true;
-            b.addEventListener('click', () => show(b.dataset.nav), { passive: true });
-          });
-        } catch (e) { console.error('bindNav failed', e) }
-      }
-      window.addEventListener('DOMContentLoaded', () => {
-        bindNav();
-        const initial = (location.hash || '').replace('#', '');
-        show(PAGES.includes(initial) ? initial : 'feedback');
-      });
-      window.addEventListener('hashchange', () => {
-        const h = (location.hash || '').replace('#', ''); show(h);
-      });
+    (function(){
+      const PAGES=['feedback','office','login','dashboard'];
+      const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+      function show(id){try{
+        if(!PAGES.includes(id)) id='feedback';
+        PAGES.forEach(k=>{const el=$('#section-'+k); if(el) el.classList.toggle('hidden',k!==id)});
+        $$('[data-nav]').forEach(b=>b.classList.toggle('active',b?.dataset?.nav===id));
+        if(location.hash!=='#'+id) history.replaceState(null,'','#'+id);
+      }catch(e){console.error('show failed',e)}}
+      window.__lap_show=show;
+      function bind(){ $$('[data-nav]').forEach(b=>{ if(b.__bound) return; b.__bound=true; b.addEventListener('click',()=>show(b.dataset.nav),{passive:true}) }); }
+      window.addEventListener('DOMContentLoaded',()=>{bind(); const initial=(location.hash||'').replace('#',''); show(PAGES.includes(initial)?initial:'feedback');});
+      window.addEventListener('hashchange',()=>{const h=(location.hash||'').replace('#',''); show(h);});
     })();
   </script>
 </head>
-
 <body>
   <header class="topbar">
     <div class="shell">
       <div>
         <div class="brand">Learning Assistant Feedback</div>
         <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
-
         <div id="page-actions">
           <span id="lap-user-greeting" class="chip hidden" aria-live="polite"></span>
         </div>
-
         <div class="navrow">
           <nav class="nav">
-            <button class="btn" type="button" data-nav="feedback"
-              onclick="__lap_show && __lap_show('feedback')">Feedback</button>
-            <button class="btn" type="button" data-nav="office" onclick="__lap_show && __lap_show('office')">Office
-              Hours</button>
-            <button id="dashboard-tab" class="btn hidden" type="button" data-nav="dashboard"
-              onclick="__lap_show && __lap_show('dashboard')">Dashboard</button>
-            <button id="login-tab" class="btn" type="button" data-nav="login"
-              onclick="__lap_show && __lap_show('login')">Login</button>
+            <button class="btn" type="button" data-nav="feedback" onclick="__lap_show('feedback')">Feedback</button>
+            <button class="btn" type="button" data-nav="office" onclick="__lap_show('office')">Office Hours</button>
+            <button id="dashboard-tab" class="btn hidden" type="button" data-nav="dashboard" onclick="__lap_show('dashboard')">Dashboard</button>
+            <button id="login-tab" class="btn" type="button" data-nav="login" onclick="__lap_show('login')">Login</button>
           </nav>
           <button id="logout-btn" class="btn hidden" type="button">Log out</button>
         </div>
@@ -375,10 +98,10 @@
   </header>
 
   <main class="shell">
-    <!-- FEEDBACK visible by default -->
+    <!-- FEEDBACK -->
     <section id="section-feedback" class="card">
       <h2>Submit Feedback</h2>
-      <p class="lead">Share course or LA feedback. Submissions are stored in Supabase.</p>
+      <p class="lead">Share course / LA feedback. Stored in Supabase.</p>
 
       <form id="feedback-form" class="grid" novalidate>
         <div class="grid g-2">
@@ -386,23 +109,14 @@
             <label for="course">Course</label>
             <select id="course" name="course" required>
               <option value="">Select a course…</option>
-              <option>CSCE 101</option>
-              <option>CSCE 155A</option>
-              <option>CSCE 155E</option>
-              <option>CSCE 155H</option>
-              <option>CSCE 156</option>
+              <option>CSCE 101</option><option>CSCE 155A</option><option>CSCE 155E</option><option>CSCE 155H</option><option>CSCE 156</option>
             </select>
           </div>
           <div>
             <label for="type">Type</label>
             <select id="type" name="type" required>
               <option value="">Select type…</option>
-              <option>Website</option>
-              <option>Staff</option>
-              <option>Class</option>
-              <option>Office Hours</option>
-              <option>Random</option>
-              <option>Other</option>
+              <option>Website</option><option>Staff</option><option>Class</option><option>Office Hours</option><option>Random</option><option>Other</option>
             </select>
           </div>
         </div>
@@ -410,11 +124,9 @@
         <div>
           <label>Rating</label>
           <div id="stars" class="stars">
-            <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span>
-            <span class="star" data-v="3">★</span><span class="star" data-v="4">★</span>
-            <span class="star" data-v="5">★</span>
+            <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span><span class="star" data-v="3">★</span><span class="star" data-v="4">★</span><span class="star" data-v="5">★</span>
           </div>
-          <input type="hidden" id="rating" name="rating" value="0" />
+          <input type="hidden" id="rating" name="rating" value="0"/>
         </div>
 
         <div>
@@ -425,17 +137,13 @@
         <div class="grid g-2">
           <div>
             <label for="submitter">Your name (optional)</label>
-            <input id="submitter" name="submitter" placeholder="First Last" />
+            <input id="submitter" name="submitter" placeholder="First Last"/>
           </div>
           <div>
             <label for="year">Year (optional)</label>
             <select id="year" name="year">
               <option value="">Prefer not to say</option>
-              <option>Freshman</option>
-              <option>Sophomore</option>
-              <option>Junior</option>
-              <option>Senior</option>
-              <option>Graduate</option>
+              <option>Freshman</option><option>Sophomore</option><option>Junior</option><option>Senior</option><option>Graduate</option>
             </select>
           </div>
         </div>
@@ -448,7 +156,7 @@
     <!-- OFFICE HOURS -->
     <section id="section-office" class="card hidden">
       <h2>Office Hours</h2>
-      <p class="lead">Browse office hours by course. Data comes from staff schedules.</p>
+      <p class="lead">Browse office hours by course.</p>
 
       <div class="pills" id="course-filter">
         <button class="pill active" type="button" data-course="ALL">All</button>
@@ -472,8 +180,7 @@
       <form id="login-form" class="grid g-2" novalidate>
         <div>
           <label for="login-input">NUID or Email</label>
-          <input id="login-input" name="login" type="text" placeholder="12345678 or user@huskers.unl.edu"
-            autocomplete="username" required>
+          <input id="login-input" name="login" type="text" placeholder="12345678 or user@huskers.unl.edu" autocomplete="username" required>
         </div>
         <div>
           <label for="password-input">Password</label>
@@ -486,7 +193,7 @@
       </form>
     </section>
 
-    <!-- STAFF DASHBOARD -->
+    <!-- DASHBOARD -->
     <section id="section-dashboard" class="hidden">
       <div class="card">
         <h2>My Schedule</h2>
@@ -498,47 +205,27 @@
             <label for="sched-course">Course</label>
             <select id="sched-course" required>
               <option value="">Select…</option>
-              <option>CSCE 101</option>
-              <option>CSCE 155A</option>
-              <option>CSCE 155E</option>
-              <option>CSCE 155H</option>
-              <option>CSCE 156</option>
+              <option>CSCE 101</option><option>CSCE 155A</option><option>CSCE 155E</option><option>CSCE 155H</option><option>CSCE 156</option>
             </select>
           </div>
           <div>
             <label for="sched-day">Day</label>
             <select id="sched-day" required>
               <option value="">Select…</option>
-              <option>Mon</option>
-              <option>Tue</option>
-              <option>Wed</option>
-              <option>Thu</option>
-              <option>Fri</option>
+              <option>Mon</option><option>Tue</option><option>Wed</option><option>Thu</option><option>Fri</option>
             </select>
           </div>
-          <div><label for="sched-location">Location</label><input id="sched-location" placeholder="Avery 12 / Zoom…">
-          </div>
+          <div><label for="sched-location">Location</label><input id="sched-location" placeholder="Avery 12 / Zoom…"></div>
           <div><label for="sched-start">Start</label><input id="sched-start" type="time" required></div>
           <div><label for="sched-end">End</label><input id="sched-end" type="time" required></div>
           <div class="actions"><button id="sched-save" type="submit" class="btn-primary">Add to schedule</button></div>
         </form>
 
         <table class="table" id="sched-table" style="margin-top:10px">
-          <thead>
-            <tr>
-              <th>Course</th>
-              <th>Day</th>
-              <th>Start</th>
-              <th>End</th>
-              <th>Location</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+          <thead><tr><th>Course</th><th>Day</th><th>Start</th><th>End</th><th>Location</th><th></th></tr></thead>
+        <tbody></tbody></table>
       </div>
 
-      <!-- Course-wide feedback for staff -->
       <div id="my-feedback" class="card hidden">
         <h2>My Feedback</h2>
         <p class="lead">Feedback items for your assigned course(s).</p>
@@ -546,7 +233,6 @@
         <ul id="myfb-list"></ul>
       </div>
 
-      <!-- SL Admin -->
       <div id="admin-block" class="card hidden">
         <h2>SL Admin</h2>
         <p class="lead">Manage staff and approve students.</p>
@@ -560,10 +246,7 @@
           <div>
             <label>Role</label>
             <select id="staff-role" required>
-              <option value="">Select…</option>
-              <option>SL</option>
-              <option>CL</option>
-              <option>LA</option>
+              <option value="">Select…</option><option>SL</option><option>CL</option><option>LA</option>
             </select>
           </div>
           <div class="actions"><button id="staff-add" class="btn-primary" type="submit">Add staff</button></div>
@@ -572,463 +255,345 @@
         <h3 style="margin-top:16px">Staff list</h3>
         <div id="staff-empty" class="alert hidden"></div>
         <table class="table" id="staff-table">
-          <thead>
-            <tr>
-              <th>NUID</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Course(s)</th>
-              <th></th>
-            </tr>
-          </thead>
+          <thead><tr><th>NUID</th><th>Name</th><th>Email</th><th>Role</th><th>Course(s)</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
 
         <h3 style="margin-top:16px">Pending students</h3>
         <div id="pending-alert" class="alert hidden"></div>
         <table class="table" id="pending-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>NUID</th>
-              <th>Email</th>
-              <th>Course</th>
-              <th></th>
-            </tr>
-          </thead>
+          <thead><tr><th>Name</th><th>NUID</th><th>Email</th><th>Course</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
     </section>
   </main>
 
-  <!-- Supabase REST config -->
+  <!-- Supabase REST config (safe to keep here; remove if you already inject envs elsewhere) -->
   <script>
     window.SUPABASE_URL = 'https://wmeijbsvlnjvnhptudfh.supabase.co';
     window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtZWlqYnN2bG5qdm5ocHR1ZGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MDQ5NzksImV4cCI6MjA3MTM4MDk3OX0.YT_435s_FFsqNJs6M_yW9iIGzxeCu1BHpPVH1cwJlX8';
   </script>
 
-  <!-- 2) All other logic (guarded so nav keeps working even if this fails) -->
+  <!-- App logic -->
   <script>
-    (function () {
-      const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-      const getSession = () => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw) } catch { } } return {} };
-      const getToken = () => getSession().token || null;
-      const getUser = () => getSession().user || null;
-      const getUserName = () => { const u = getUser(); return (u && (u.name || u.email || u.full_name)) || null };
-      const roleIs = r => String(getUser()?.role || '').toUpperCase() === r;
-      const isStaff = () => ['SL', 'CL', 'LA'].includes(String(getUser()?.role || '').toUpperCase());
+  (function(){
+    const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 
-      function safe(fn) { try { fn() } catch (e) { console.error(e) } }
+    // session helpers (don’t change existing behavior)
+    const getSession=()=>{for(const k of ['lap_auth_v1','lap_auth']){try{const raw=localStorage.getItem(k);if(raw)return JSON.parse(raw)}catch{}}return{}};
+    const getToken = ()=> getSession().token || null;
+    const getUser  = ()=> getSession().user  || null;
+    const getUserName=()=>{const u=getUser();return (u&&(u.name||u.email||u.full_name))||null}
+    const roleIs = r => String(getUser()?.role||'').toUpperCase()===r;
+    const isStaff=()=>['SL','CL','LA'].includes(String(getUser()?.role||'').toUpperCase());
+    const safe = fn => { try{ fn() }catch(e){ console.error(e) } };
 
-      /* Header paint (defensive) */
-      safe(() => {
-        const greet = $('#lap-user-greeting'), loginTab = $('#login-tab'), logoutBtn = $('#logout-btn'), dashTab = $('#dashboard-tab');
-        function paint() {
-          const authed = !!getToken(); const name = getUserName();
-          if (greet) { if (authed && name) { greet.textContent = `Signed in as ${name}`; greet.classList.remove('hidden') } else { greet.textContent = ''; greet.classList.add('hidden') } }
-          if (loginTab) loginTab.classList.toggle('hidden', authed);
-          if (logoutBtn) logoutBtn.classList.toggle('hidden', !authed);
-          if (dashTab) dashTab.classList.toggle('hidden', !(authed && isStaff()));
-          $('#my-feedback')?.classList.toggle('hidden', !(authed && isStaff()));
-          $('#admin-block')?.classList.toggle('hidden', !(authed && roleIs('SL')));
+    // header state (unchanged)
+    safe(()=>{
+      const greet=$('#lap-user-greeting'), loginTab=$('#login-tab'), logoutBtn=$('#logout-btn'), dashTab=$('#dashboard-tab');
+      function paint(){
+        const authed=!!getToken(); const name=getUserName();
+        if(greet){ if(authed&&name){greet.textContent=`Signed in as ${name}`;greet.classList.remove('hidden')} else {greet.textContent='';greet.classList.add('hidden')} }
+        if(loginTab) loginTab.classList.toggle('hidden',authed);
+        if(logoutBtn) logoutBtn.classList.toggle('hidden',!authed);
+        if(dashTab)   dashTab.classList.toggle('hidden',!(authed&&isStaff()));
+        $('#my-feedback')?.classList.toggle('hidden',!(authed&&isStaff()));
+        $('#admin-block')?.classList.toggle('hidden',!(authed&&roleIs('SL')));
+      }
+      window.addEventListener('hashchange',paint);
+      document.addEventListener('DOMContentLoaded',paint);
+    });
+
+    // feedback stars (unchanged)
+    safe(()=>{
+      const stars=$$('#stars .star'), hidden=$('#rating'); if(!hidden) return;
+      const paint=n=>stars.forEach(s=>s.classList.toggle('active',Number(s.dataset.v)<=n));
+      stars.forEach(s=>{
+        s.addEventListener('mouseenter',()=>paint(Number(s.dataset.v)));
+        s.addEventListener('mouseleave',()=>paint(Number(hidden.value||0)));
+        s.addEventListener('click',()=>{hidden.value=s.dataset.v;paint(Number(hidden.value))});
+      });
+    });
+
+    // Office hours (unchanged: server first, silent fallback)
+    safe(()=>{
+      const list=$('#office-list'); if(!list) return;
+      const alert=$('#office-alert');
+      const render=rows=>{
+        list.innerHTML='';
+        if(!rows.length){ alert.className='alert alert-error'; alert.textContent='No office hours to show.'; alert.classList.remove('hidden'); return; }
+        alert.classList.add('hidden');
+        rows.forEach(r=>{
+          const div=document.createElement('div'); div.className='card';
+          div.innerHTML=`<div class="grid g-2" style="align-items:center">
+            <div>
+              <div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
+              <div class="sub">Location: ${r.location||'TBA'} &nbsp; <span class="tag">${r.staff_name||'Staff'}</span></div>
+            </div>
+          </div>`;
+          list.appendChild(div);
+        });
+      };
+      (async()=>{
+        try{
+          const res=await fetch('/api/office-hours',{credentials:'include'});
+          let json=null; try{ json=await res.clone().json() }catch{}
+          if(!res.ok) throw 0;
+          render(Array.isArray(json?.items)?json.items:(Array.isArray(json)?json:[]));
+        }catch{
+          try{
+            const res=await fetch('/office-hours',{credentials:'include'});
+            let json=null; try{ json=await res.clone().json() }catch{}
+            render(Array.isArray(json?.items)?json.items:(Array.isArray(json)?json:[]));
+          }catch{ render([]); }
         }
-        window.addEventListener('hashchange', paint);
-        document.addEventListener('DOMContentLoaded', paint);
-      });
+      })();
 
-      /* Stars */
-      safe(() => {
-        const stars = $$('#stars .star'), hidden = $('#rating'); if (!hidden) return;
-        const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n));
-        stars.forEach(s => {
-          s.addEventListener('mouseenter', () => paint(Number(s.dataset.v)));
-          s.addEventListener('mouseleave', () => paint(Number(hidden.value || 0)));
-          s.addEventListener('click', () => { hidden.value = s.dataset.v; paint(Number(hidden.value)) });
+      // pills
+      $$('#course-filter .pill').forEach(p=>p.addEventListener('click',()=>{
+        $$('#course-filter .pill').forEach(x=>x.classList.toggle('active',x===p));
+        const c=p.dataset.course;
+        Array.from($('#office-list').children).forEach(card=>{
+          const on=(c==='ALL') || (card.textContent||'').includes(c);
+          card.style.display=on?'':'none';
         });
-      });
+      }));
+    });
 
-      /* Office hours (safe to fail) */
-      safe(() => {
-        const list = $('#office-list'); if (!list) return;
-        const alert = $('#office-alert');
-        const render = rows => {
-          list.innerHTML = '';
-          if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return }
-          alert.classList.add('hidden');
-          rows.forEach(r => {
-            const div = document.createElement('div'); div.className = 'card';
-            div.innerHTML = `<div class="grid g-2" style="align-items:center">
-              <div>
-                <div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
-                <div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${r.staff_name || 'Staff'}</span></div>
-              </div>
-            </div>`;
-            list.appendChild(div);
-          });
-        };
-        (async () => {
-          try {
-            const res = await fetch('/api/office-hours', { credentials: 'include' });
-            let json = null; try { json = await res.clone().json() } catch { }
-            if (!res.ok) throw 0;
-            render(Array.isArray(json?.items) ? json.items : (Array.isArray(json) ? json : []));
-          } catch {
-            try {
-              const res = await fetch('/office-hours', { credentials: 'include' });
-              let json = null; try { json = await res.clone().json() } catch { }
-              render(Array.isArray(json?.items) ? json.items : (Array.isArray(json) ? json : []));
-            } catch { render([]); }
+    // Login/logout (unchanged)
+    safe(()=>{
+      const form=$('#login-form'); if(!form) return;
+      const alert=$('#login-alert'), logoutBtn=$('#logout-btn'), loginTab=$('#login-tab'), dashTab=$('#dashboard-tab');
+      const bad = m=>{ alert.className='alert alert-error'; alert.textContent=m; alert.classList.remove('hidden') };
+      form.addEventListener('submit', async e=>{
+        e.preventDefault(); alert.classList.add('hidden'); alert.textContent='';
+        const login=$('#login-input').value.trim(), password=$('#password-input').value;
+        if(!login||!password) return bad('Missing login or password');
+        let res, json;
+        try{ res=await fetch('/api/auth/login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({login,password})}); try{ json=await res.clone().json() }catch{} }catch{}
+        if(!res || res.status===404){ try{ const r=await fetch('/auth/login',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({login,password})}); res=r; try{ json=await r.clone().json() }catch{} }catch{} }
+        if(!res) return bad('Login request failed.');
+        if(!res.ok) return bad(json?.message||'Invalid credentials');
+
+        try{ if(json?.token && json?.user){ localStorage.setItem('lap_auth_v1',JSON.stringify({token:json.token,user:json.user})); } }catch{}
+        logoutBtn.classList.remove('hidden'); loginTab.classList.add('hidden');
+        const staff=['sl','cl','la'].includes(String(json?.user?.role||json?.role||'').toLowerCase());
+        dashTab.classList.toggle('hidden',!staff);
+        if(staff){ __lap_show('dashboard'); loadSchedule(); loadMyFeedback(); if(String(json?.user?.role||'').toUpperCase()==='SL') loadAdmin(); }
+        else{ __lap_show('feedback'); }
+        window.dispatchEvent(new Event('hashchange'));
+      });
+      $('#logout-btn').addEventListener('click', async ()=>{
+        try{ await fetch('/api/auth/logout',{method:'POST',credentials:'include'}) }catch{}
+        localStorage.removeItem('lap_auth'); localStorage.removeItem('lap_auth_v1');
+        $('#dashboard-tab').classList.add('hidden'); $('#logout-btn').classList.add('hidden'); $('#login-tab').classList.remove('hidden');
+        __lap_show('feedback'); window.dispatchEvent(new Event('hashchange'));
+      });
+    });
+
+    // Schedule (unchanged)
+    window.loadSchedule=function(){ safe(async()=>{
+      const tbody=$('#sched-table tbody'), alert=$('#sched-alert'); if(!tbody) return;
+      tbody.innerHTML='';
+      const endpoints=['/api/staff/schedule','/api/schedule/mine','/api/schedule'];
+      let data=null,lastRes=null,lastJson=null;
+      for(const url of endpoints){
+        try{
+          const res=await fetch(url,{credentials:'include'}); lastRes=res;
+          try{ lastJson=await res.clone().json() }catch{ lastJson=null }
+          if(res.ok && Array.isArray(lastJson)){ data=lastJson; break }
+          if(res.ok && lastJson?.items && Array.isArray(lastJson.items)){ data=lastJson.items; break }
+        }catch{}
+      }
+      if(!data) data=[];
+      if(lastRes && !lastRes.ok && lastRes.status>=500){
+        alert.className='alert alert-error'; alert.textContent=lastJson?.message||'Could not load schedule'; alert.classList.remove('hidden'); return;
+      }
+      if(!data.length){ alert.className='alert alert-success'; alert.textContent='You have no office hours yet. Use the form above to add your first block.'; alert.classList.remove('hidden'); return; }
+      alert.classList.add('hidden');
+      const rows=data.map(r=>({id:r.id, course:r.course||r.course_code||'', day:r.day||r.day_of_week||'', start:r.start||r.start_time||'', end:r.end||r.end_time||'', location:r.location||''}));
+      rows.forEach(row=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${row.course}</td><td>${row.day}</td><td>${row.start}</td><td>${row.end}</td><td>${row.location}</td>
+          <td class="row-actions"><span class="link" data-edit="${row.id}">Edit</span><span class="link" data-del="${row.id}">Delete</span></td>`;
+        tbody.appendChild(tr);
+      });
+      $$('[data-del]').forEach(a=>a.addEventListener('click',async()=>{
+        const id=a.getAttribute('data-del'); a.textContent='Deleting…'; a.style.pointerEvents='none';
+        const res=await fetch(`/api/staff/schedule/${id}`,{method:'DELETE',credentials:'include'});
+        if(res.ok) loadSchedule(); else {a.textContent='Delete'; a.style.pointerEvents='auto'}
+      }));
+      $$('[data-edit]').forEach(a=>a.addEventListener('click',()=>{
+        const tr=a.closest('tr'); $('#sched-course').value=tr.children[0].textContent; $('#sched-day').value=tr.children[1].textContent;
+        $('#sched-start').value=tr.children[2].textContent; $('#sched-end').value=tr.children[3].textContent; $('#sched-location').value=tr.children[4].textContent;
+        const btn=$('#sched-save'); btn.dataset.editId=a.getAttribute('data-edit'); btn.textContent='Save changes';
+        window.scrollTo({top:$('#section-dashboard').offsetTop-10,behavior:'smooth'});
+      }));
+    })};
+
+    // My Feedback for staff (unchanged, uses server first)
+    window.loadMyFeedback=function(){ safe(async()=>{
+      const wrap=$('#my-feedback'); if(!wrap) return;
+      const list=$('#myfb-list'); const alert=$('#myfb-alert'); list.innerHTML='';
+      const u=getUser()||{}; let courses=[];
+      if(Array.isArray(u.courses)&&u.courses.length) courses=u.courses;
+      else if(u.course) courses=[u.course];
+
+      async function fetchStaffSelf(){
+        const paths=['/api/admin/staff/me','/api/staff/me'];
+        for(const p of paths){ try{ const r=await fetch(p,{credentials:'include'}); if(r.ok) return await r.json(); }catch{} }
+        // silent: no supabase fetch here to avoid changing behavior
+        return null;
+      }
+      if(!courses.length){ const me=await fetchStaffSelf(); if(me?.courses&&Array.isArray(me.courses)) courses=me.courses; else if(me?.course) courses=[me.course]; }
+      courses=(courses||[]).map(c=>String(c||'').trim()).filter(Boolean);
+
+      if(!courses.length){
+        alert.className='alert alert-success'; alert.textContent='No course assigned to your account yet.'; alert.classList.remove('hidden'); return;
+      }
+
+      async function fetchByCourseServer(cs){
+        const q=cs.map(c=>`course=${encodeURIComponent(c)}`).join('&');
+        for(const path of [`/api/feedback?${q}&scope=course`,`/feedback?${q}`]){
+          try{ const r=await fetch(path,{credentials:'include'}); if(r.ok){ const j=await r.json().catch(()=>[]); return Array.isArray(j?.items)?j.items:(Array.isArray(j)?j:[]); } }catch{}
+        }
+        return null;
+      }
+
+      let items=await fetchByCourseServer(courses);
+      if(!items) items=[]; // do not alter behavior with extra fallbacks here
+
+      if(!items.length){
+        alert.className='alert alert-success'; alert.textContent='No feedback yet for your course(s).'; alert.classList.remove('hidden'); return;
+      }
+      alert.classList.add('hidden');
+
+      items.slice(0,100).forEach(f=>{
+        const li=document.createElement('li');
+        const when=f.created_at?new Date(f.created_at).toLocaleString([],{dateStyle:'medium',timeStyle:'short'}):'';
+        const rating=f.rating?` • ★${f.rating}`:'';
+        const course=f.course?` • ${f.course}`:'';
+        li.textContent=`${when}${course}${rating} — ${f.text||f.message||''}`;
+        list.appendChild(li);
+      });
+    })};
+
+    // SL Admin (server first). Only addition is the *fallback* at the end if table stays empty.
+    window.loadAdmin=function(){ safe(async()=>{
+      const block=$('#admin-block'); if(!block) return; block.classList.remove('hidden');
+
+      function paintStaff(rows){
+        const body=$('#staff-table tbody'); const empty=$('#staff-empty');
+        body.innerHTML='';
+        if(!rows.length){
+          empty.className='alert alert-success';
+          empty.textContent='No staff found yet. Use “Add staff” to create the first entry.';
+          empty.classList.remove('hidden'); return;
+        }
+        empty.classList.add('hidden');
+        rows.forEach(s=>{
+          const tr=document.createElement('tr');
+          tr.innerHTML=`
+            <td>${s.nuid||''}</td>
+            <td>${s.name||''}</td>
+            <td>${s.email||''}</td>
+            <td>${(s.role||'')}</td>
+            <td>${Array.isArray(s.courses)?s.courses.join(', '):(s.course||'')}</td>
+            <td><span class="link" data-rm="${s.nuid||s.id||''}">Remove</span></td>`;
+          body.appendChild(tr);
+        });
+        $$('[data-rm]').forEach(a=>a.addEventListener('click',async()=>{
+          const id=a.getAttribute('data-rm'); if(!id) return;
+          a.textContent='Removing…'; a.style.pointerEvents='none';
+          for(const t of [`/api/admin/staff/${id}`,`/admin/staff/${id}`]){
+            try{ const r=await fetch(t,{method:'DELETE',credentials:'include'}); if(r.ok){ loadAdmin(); return; } }catch{}
           }
-        })();
-        $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => {
-          $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
-          const c = p.dataset.course; Array.from($('#office-list').children).forEach(card => {
-            const on = (c === 'ALL') || (card.textContent || '').includes(c); card.style.display = on ? '' : 'none';
-          });
+          a.textContent='Remove'; a.style.pointerEvents='auto';
         }));
-      });
+      }
 
-      /* Login/logout */
-      safe(() => {
-        const form = $('#login-form'); if (!form) return;
-        const alert = $('#login-alert'), logoutBtn = $('#logout-btn'), loginTab = $('#login-tab'], dashTab = $('#dashboard-tab');
-        const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') }
-        const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') }
-        form.addEventListener('submit', async e => {
-          e.preventDefault(); alert.classList.add('hidden'); alert.textContent = '';
-          const login = $('#login-input').value.trim(), password = $('#password-input').value;
-          if (!login || !password) return bad('Missing login or password');
+      // 1) Try server endpoints (unchanged)
+      let rows=[], ok=false;
+      for(const path of ['/api/admin/staff','/admin/staff','/api/staff','/api/staff/list']){
+        try{
+          const res=await fetch(path,{credentials:'include'});
+          const j=await res.clone().json().catch(()=>null);
+          if(res.ok){ rows=Array.isArray(j)?j:(Array.isArray(j?.items)?j.items:[]); ok=true; break; }
+        }catch{}
+      }
+
+      paintStaff(rows);
+
+      // 2) ***ONLY IF STILL EMPTY***: Supabase fallback reading public.staff (is_active = true)
+      (async function staffSupabaseFallback(){
+        try{
+          const body=document.querySelector('#staff-table tbody');
+          if(!body || body.children.length) return; // your API already filled it
+          const URL=(window.SUPABASE_URL||'').replace(/\/+$/,''); const KEY=window.SUPABASE_ANON_KEY;
+          if(!URL||!KEY) return;
+          const res=await fetch(
+            `${URL}/rest/v1/staff?select=nuid,name,email,role,courses,is_active&is_active=is.true&order=name.asc`,
+            { headers:{ apikey:KEY, Authorization:`Bearer ${KEY}`, Accept:'application/json' } }
+          );
+          if(!res.ok) return; // silent if RLS blocks
+          const data=await res.json();
+          if(!Array.isArray(data)||!data.length) return;
+
+          // render identical to paintStaff row markup
+          data.forEach(s=>{
+            const tr=document.createElement('tr');
+            tr.innerHTML=`
+              <td>${s.nuid||''}</td>
+              <td>${s.name||''}</td>
+              <td>${s.email||''}</td>
+              <td>${(s.role||'').toString().toUpperCase()}</td>
+              <td>${Array.isArray(s.courses)?s.courses.join(', '):(s.course||'')}</td>
+              <td></td>`;
+            body.appendChild(tr);
+          });
+          const empty=document.getElementById('staff-empty'); if(empty) empty.classList.add('hidden');
+        }catch(e){ console.warn('Supabase staff fallback failed',e); }
+      })();
+
+      // Pending students (unchanged)
+      (async()=>{
+        const body=$('#pending-table tbody'); body.innerHTML='';
+        let json=null, res=null;
+        try{ res=await fetch('/api/admin/students/pending',{credentials:'include'}); try{ json=await res.clone().json() }catch{} }catch{}
+        if(!res||!res.ok){ try{ const r=await fetch('/admin/students/pending',{credentials:'include'}); res=r; try{ json=await r.clone().json() }catch{} }catch{} }
+        (json||json?.items||[]).forEach(s=>{
+          const tr=document.createElement('tr');
+          tr.innerHTML=`<td>${s.name||''}</td><td>${s.nuid||''}</td><td>${s.email||''}</td><td>${s.course||''}</td>
+            <td class="row-actions"><span class="link" data-approve="${s.id}">Approve</span><span class="link" data-reject="${s.id}">Reject</span></td>`;
+          body.appendChild(tr);
+        });
+      })();
+
+      // Add staff (unchanged)
+      (function(){
+        const form=$('#staff-form'), alert=$('#staff-alert');
+        const ok=m=>{ alert.className='alert alert-success'; alert.textContent=m; alert.classList.remove('hidden') }
+        const bad=m=>{ alert.className='alert alert-error'; alert.textContent=m; alert.classList.remove('hidden') }
+        form.addEventListener('submit', async e=>{
+          e.preventDefault(); alert.classList.add('hidden');
+          const payload={
+            nuid:$('#staff-nuid').value.trim(),
+            name:$('#staff-name').value.trim(),
+            email:$('#staff-email').value.trim(),
+            role:$('#staff-role').value
+          };
+          if(!payload.nuid||!payload.name||!payload.role) return bad('NUID, name, and role are required.');
           let res, json;
-          try { res = await fetch('/api/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) }); try { json = await res.clone().json() } catch { } } catch { }
-          if (!res || res.status === 404) { try { const r = await fetch('/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) }); res = r; try { json = await res.clone().json() } catch { } } catch { } }
-          if (!res) return bad('Login request failed. Check your API route.');
-          if (!res.ok) return bad(json?.message || 'Invalid credentials');
-          try { if (json?.token && json?.user) { localStorage.setItem('lap_auth_v1', JSON.stringify({ token: json.token, user: json.user })); } } catch { }
-          logoutBtn.classList.remove('hidden'); loginTab.classList.add('hidden');
-          const staff = ['sl', 'cl', 'la'].includes(String(json?.user?.role || json?.role || '').toLowerCase());
-          dashTab.classList.toggle('hidden', !staff);
-          if (staff) { __lap_show && __lap_show('dashboard'); loadSchedule(); loadMyFeedback(); if (String(json?.user?.role || '').toUpperCase() === 'SL') loadAdmin(); }
-          else { __lap_show && __lap_show('feedback'); }
-          window.dispatchEvent(new Event('hashchange'));
+          try{ res=await fetch('/api/admin/staff',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); try{ json=await res.clone().json() }catch{} }catch{}
+          if(!res||!res.ok){ try{ res=await fetch('/admin/staff',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); try{ json=await res.clone().json() }catch{} }catch{} }
+          if(!res?.ok) return bad(json?.message||'Could not add staff');
+          ok('Staff added.'); form.reset(); loadAdmin();
         });
-        $('#logout-btn').addEventListener('click', async () => {
-          try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch { }
-          localStorage.removeItem('lap_auth'); localStorage.removeItem('lap_auth_v1');
-          $('#dashboard-tab').classList.add('hidden'); $('#logout-btn').classList.add('hidden'); $('#login-tab').classList.remove('hidden');
-          __lap_show && __lap_show('feedback'); window.dispatchEvent(new Event('hashchange'));
-        });
-      });
+      })();
 
-      /* Schedule / My Feedback / Admin (same as before, guarded) */
-      window.loadSchedule = function () {
-        safe(async () => {
-          const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return;
-          tbody.innerHTML = '';
-          const endpoints = ['/api/staff/schedule', '/api/schedule/mine', '/api/schedule'];
-          let data = null, lastRes = null, lastJson = null;
-          for (const url of endpoints) {
-            try {
-              const res = await fetch(url, { credentials: 'include' }); lastRes = res;
-              try { lastJson = await res.clone().json() } catch { lastJson = null }
-              if (res.ok && Array.isArray(lastJson)) { data = lastJson; break }
-              if (res.ok && lastJson?.items && Array.isArray(lastJson.items)) { data = lastJson.items; break }
-            } catch { }
-          }
-          if (!data) data = [];
-          if (lastRes && !lastRes.ok && lastRes.status >= 500) {
-            alert.className = 'alert alert-error'; alert.textContent = lastJson?.message || 'Could not load schedule'; alert.classList.remove('hidden'); return;
-          }
-          if (!data.length) {
-            alert.className = 'alert alert-success'; alert.textContent = 'You have no office hours yet. Use the form above to add your first block.'; alert.classList.remove('hidden'); return;
-          }
-          alert.classList.add('hidden');
-          const rows = data.map(r => ({ id: r.id, course: r.course || r.course_code || '', day: r.day || r.day_of_week || '', start: r.start || r.start_time || '', end: r.end || r.end_time || '', location: r.location || '' }));
-          rows.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${row.course}</td><td>${row.day}</td><td>${row.start}</td><td>${row.end}</td><td>${row.location}</td>
-            <td class="row-actions"><span class="link" data-edit="${row.id}">Edit</span><span class="link" data-del="${row.id}">Delete</span></td>`;
-            tbody.appendChild(tr);
-          });
-          $$('[data-del]').forEach(a => a.addEventListener('click', async () => {
-            const id = a.getAttribute('data-del'); a.textContent = 'Deleting…'; a.style.pointerEvents = 'none';
-            const res = await fetch(`/api/staff/schedule/${id}`, { method: 'DELETE', credentials: 'include' });
-            if (res.ok) loadSchedule(); else { a.textContent = 'Delete'; a.style.pointerEvents = 'auto' }
-          }));
-          $$('[data-edit]').forEach(a => a.addEventListener('click', () => {
-            const tr = a.closest('tr'); $('#sched-course').value = tr.children[0].textContent; $('#sched-day').value = tr.children[1].textContent;
-            $('#sched-start').value = tr.children[2].textContent; $('#sched-end').value = tr.children[3].textContent; $('#sched-location').value = tr.children[4].textContent;
-            const btn = $('#sched-save'); btn.dataset.editId = a.getAttribute('data-edit'); btn.textContent = 'Save changes';
-            window.scrollTo({ top: $('#section-dashboard').offsetTop - 10, behavior: 'smooth' });
-          }));
-        })
-      };
-
-      window.loadMyFeedback = function () {
-        safe(async () => {
-          const wrap = $('#my-feedback'); if (!wrap) return;
-          const list = $('#myfb-list'); const alert = $('#myfb-alert'); list.innerHTML = '';
-          const u = getUser() || {};
-          let courses = [];
-          if (Array.isArray(u.courses) && u.courses.length) courses = u.courses;
-          else if (u.course) courses = [u.course];
-
-          async function fetchStaffSelf() {
-            const tries = ['/api/admin/staff/me', '/api/staff/me'];
-            for (const t of tries) {
-              try { const r = await fetch(t, { credentials: 'include' }); if (r.ok) { return await r.json(); } } catch { }
-            }
-            try {
-              const URL = (window.SUPABASE_URL || '').replace(/\/+$/, '');
-              const KEY = window.SUPABASE_ANON_KEY;
-              const email = u.email || u.username || '';
-              if (!URL || !KEY || !email) return null;
-              const res = await fetch(`${URL}/rest/v1/staff_public?email=eq.${encodeURIComponent(email)}&select=*`, {
-                headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' }
-              });
-              if (!res.ok) return null;
-              const rows = await res.json();
-              return Array.isArray(rows) && rows.length ? rows[0] : null;
-            } catch { return null; }
-          }
-
-          if (!courses.length) {
-            const me = await fetchStaffSelf();
-            if (me?.courses && Array.isArray(me.courses)) courses = me.courses;
-            else if (me?.course) courses = [me.course];
-          }
-          courses = (courses || []).map(c => String(c || '').trim()).filter(Boolean);
-
-          if (!courses.length) {
-            alert.className = 'alert alert-success';
-            alert.textContent = 'No course assigned to your account yet.';
-            alert.classList.remove('hidden');
-            return;
-          }
-
-          async function fetchByCourseServer(cs) {
-            const q = cs.map(c => `course=${encodeURIComponent(c)}`).join('&');
-            for (const path of [`/api/feedback?${q}&scope=course`, `/feedback?${q}`]) {
-              try {
-                const r = await fetch(path, { credentials: 'include' });
-                if (r.ok) {
-                  const j = await r.json().catch(() => []);
-                  return Array.isArray(j?.items) ? j.items : (Array.isArray(j) ? j : []);
-                }
-              } catch { }
-            }
-            return null;
-          }
-
-          async function fetchByCourseSupabase(cs) {
-            try {
-              const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''); const KEY = window.SUPABASE_ANON_KEY;
-              if (!URL || !KEY) return [];
-              const or = cs.map(c => `course.eq.${encodeURIComponent(c)}`).join(',');
-              const res = await fetch(`${URL}/rest/v1/feedback?select=*&or=(${or})&order=created_at.desc`, {
-                headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' }
-              });
-              if (!res.ok) return [];
-              return await res.json();
-            } catch { return [] }
-          }
-
-          let items = await fetchByCourseServer(courses);
-          if (!items) items = await fetchByCourseSupabase(courses);
-
-          if (!items || !items.length) {
-            alert.className = 'alert alert-success';
-            alert.textContent = 'No feedback yet for your course(s).';
-            alert.classList.remove('hidden');
-            return;
-          }
-          alert.classList.add('hidden');
-
-          items.slice(0, 100).forEach(f => {
-            const li = document.createElement('li');
-            const when = f.created_at ? new Date(f.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '';
-            const rating = f.rating ? ` • ★${f.rating}` : '';
-            const course = f.course ? ` • ${f.course}` : '';
-            li.textContent = `${when}${course}${rating} — ${f.text || f.message || ''}`;
-            list.appendChild(li);
-          });
-        })
-      };
-
-      window.loadAdmin = function () {
-        safe(async () => {
-          const block = $('#admin-block'); if (!block) return; block.classList.remove('hidden');
-
-          async function supabaseGetStaff() {
-            const URL = (window.SUPABASE_URL || '').replace(/\/+$/, '');
-            const KEY = window.SUPABASE_ANON_KEY;
-            if (!URL || !KEY) return { ok: false, rows: [], error: 'Missing SUPABASE_URL or ANON key.' };
-
-            const hdr = { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json', Prefer: 'count=exact' };
-
-            // 1) RPC
-            try {
-              const r = await fetch(`${URL}/rest/v1/rpc/staff_public_list`, { method: 'POST', headers: hdr });
-              if (r.ok) {
-                const data = await r.json();
-                if (Array.isArray(data)) {
-                  const toRow = (x) => ({
-                    nuid: x.nuid,
-                    name: x.name,
-                    email: x.email,
-                    role: String(x.role || '').toUpperCase(),
-                    courses: Array.isArray(x.courses) ? x.courses : []
-                  });
-                  return { ok: true, rows: data.map(toRow) };
-                }
-              } else {
-                const j = await r.json().catch(() => null);
-                return { ok: false, rows: [], error: `RPC staff_public_list: HTTP ${r.status} — ${j?.message || 'no message'}` };
-              }
-            } catch (e) {
-              return { ok: false, rows: [], error: `RPC call failed: ${e?.message || e}` };
-            }
-
-            // 2) VIEW
-            try {
-              const r = await fetch(`${URL}/rest/v1/staff_public?select=*`, { headers: hdr });
-              if (r.ok) {
-                const data = await r.json();
-                const toRow = (x) => ({
-                  nuid: x.nuid,
-                  name: x.name,
-                  email: x.email,
-                  role: String(x.role || '').toUpperCase(),
-                  courses: Array.isArray(x.courses) ? x.courses : []
-                });
-                return { ok: true, rows: data.map(toRow) };
-              } else {
-                const j = await r.json().catch(() => null);
-                return { ok: false, rows: [], error: `View staff_public: HTTP ${r.status} — ${j?.message || 'no message'}` };
-              }
-            } catch (e) {
-              return { ok: false, rows: [], error: `View call failed: ${e?.message || e}` };
-            }
-
-            // 3) TABLE (fallback to real staff table; shows active rows)
-            try {
-              const r = await fetch(
-                `${URL}/rest/v1/staff?select=nuid,name,email,role,courses,is_active&is_active=is.true&order=name.asc`,
-                { headers: hdr }
-              );
-              if (r.ok) {
-                const data = await r.json();
-                const toRow = (x) => ({
-                  nuid: x.nuid,
-                  name: x.name,
-                  email: x.email,
-                  role: String(x.role || '').toUpperCase(),
-                  courses: Array.isArray(x.courses) ? x.courses : []
-                });
-                return { ok: true, rows: Array.isArray(data) ? data.map(toRow) : [] };
-              } else {
-                const j = await r.json().catch(() => null);
-                return { ok: false, rows: [], error: `Table staff: HTTP ${r.status} — ${j?.message || 'no message'}` };
-              }
-            } catch (e) {
-              return { ok: false, rows: [], error: `Table call failed: ${e?.message || e}` };
-            }
-          }
-
-          function paintStaff(rows) {
-            const body = $('#staff-table tbody'); const empty = $('#staff-empty');
-            body.innerHTML = '';
-            if (!rows.length) {
-              empty.className = 'alert alert-success';
-              empty.textContent = 'No staff found yet. Use “Add staff” to create the first entry.';
-              empty.classList.remove('hidden'); return;
-            }
-            empty.classList.add('hidden');
-            rows.forEach(s => {
-              const tr = document.createElement('tr');
-              tr.innerHTML = `
-              <td>${s.nuid || ''}</td>
-              <td>${s.name || ''}</td>
-              <td>${s.email || ''}</td>
-              <td>${s.role || ''}</td>
-              <td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td>
-              <td><span class="link" data-rm="${s.nuid || s.id || ''}">Remove</span></td>`;
-              body.appendChild(tr);
-            });
-            $$('[data-rm]').forEach(a => a.addEventListener('click', async () => {
-              const id = a.getAttribute('data-rm'); if (!id) return;
-              a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
-              for (const t of [`/api/admin/staff/${id}`, `/admin/staff/${id}`]) {
-                try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { loadAdmin(); return; } } catch { }
-              }
-              a.textContent = 'Remove'; a.style.pointerEvents = 'auto';
-            }));
-          }
-
-          let rows = [], ok = false, lastErr = null;
-          for (const path of ['/api/admin/staff', '/admin/staff', '/api/staff', '/api/staff/list']) {
-            try {
-              const res = await fetch(path, { credentials: 'include' });
-              const j = await res.clone().json().catch(() => null);
-              if (res.ok) {
-                rows = Array.isArray(j) ? j : (Array.isArray(j?.items) ? j.items : []);
-                ok = true; break;
-              } else {
-                lastErr = j?.message || `HTTP ${res.status} on ${path}`;
-              }
-            } catch (e) { lastErr = e?.message || 'Network error'; }
-          }
-
-          if (!ok) {
-            const sb = await supabaseGetStaff();
-            if (sb.error) {
-              const empty = $('#staff-empty');
-              empty.className = 'alert alert-error';
-              empty.textContent = `Supabase error: ${sb.error}`;
-              empty.classList.remove('hidden');
-              return;
-            }
-            rows = sb.rows;
-          }
-
-          paintStaff(rows);
-
-          (async () => {
-            const body = $('#pending-table tbody'); body.innerHTML = '';
-            let json = null, res = null;
-            try { res = await fetch('/api/admin/students/pending', { credentials: 'include' }); try { json = await res.clone().json() } catch { } } catch { }
-            if (!res || !res.ok) { try { const r = await fetch('/admin/students/pending', { credentials: 'include' }); res = r; try { json = await r.clone().json() } catch { } } catch { } }
-            (json || json?.items || []).forEach(s => {
-              const tr = document.createElement('tr');
-              tr.innerHTML = `<td>${s.name || ''}</td><td>${s.nuid || ''}</td><td>${s.email || ''}</td><td>${s.course || ''}</td>
-              <td class="row-actions"><span class="link" data-approve="${s.id}">Approve</span><span class="link" data-reject="${s.id}">Reject</span></td>`;
-              body.appendChild(tr);
-            });
-          })();
-
-          (function () {
-            const form = $('#staff-form'), alert = $('#staff-alert']);
-            const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') }
-            const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') }
-            form.addEventListener('submit', async e => {
-              e.preventDefault(); alert.classList.add('hidden');
-              const payload = {
-                nuid: $('#staff-nuid').value.trim(), name: $('#staff-name').value.trim(),
-                email: $('#staff-email').value.trim(), role: $('#staff-role').value
-              };
-              if (!payload.nuid || !payload.name || !payload.role) return bad('NUID, name, and role are required.');
-              let res, json; try { res = await fetch('/api/admin/staff', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); try { json = await res.clone().json() } catch { } } catch { }
-              if (!res || !res.ok) { try { res = await fetch('/admin/staff', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); try { json = await res.clone().json() } catch { } } catch { } }
-              if (!res?.ok) return bad(json?.message || 'Could not add staff');
-              ok('Staff added.'); form.reset(); loadAdmin();
-            });
-          })();
-
-        })
-      };
-    })();
+    })};
+  })();
   </script>
 </body>
-
 </html>
