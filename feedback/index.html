@@ -852,7 +852,17 @@
                 `${URL}/rest/v1/staff?select=nuid,name,email,role,courses,is_active&is_active=is.true&order=name.asc`,
                 { headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' } }
               );
-              if (!res.ok) return; // silent if RLS blocks
+              if (!res.ok) {
+                const err = await res.json().catch(() => null);
+                const empty = document.getElementById('staff-empty');
+                if (empty) {
+                  empty.className = 'alert alert-error';
+                  empty.textContent = `Supabase error: HTTP ${res.status}` + (err?.message ? ` — ${err.message}` : '');
+                  empty.classList.remove('hidden');
+                }
+                return;
+              }
+
               const data = await res.json();
               if (!Array.isArray(data) || !data.length) return;
 
