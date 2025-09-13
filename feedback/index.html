@@ -800,6 +800,7 @@
           const block = $('#admin-block'); if (!block) return; block.classList.remove('hidden');
 
           function paintStaff(rows) {
+            window.__API_FILLED_STAFF = Array.isArray(rows) && rows.length > 0;
             const body = $('#staff-table tbody'); const empty = $('#staff-empty');
             body.innerHTML = '';
             if (!rows.length) {
@@ -845,7 +846,9 @@
           (async function staffSupabaseFallback() {
             try {
               const body = document.querySelector('#staff-table tbody');
-              if (!body || body.children.length) return; // your API already filled it
+              if (!body) return;
+              if (window.__API_FILLED_STAFF) return; // only skip if API actually drew rows
+
               const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''); const KEY = window.SUPABASE_ANON_KEY;
               if (!URL || !KEY) return;
               const res = await fetch(
