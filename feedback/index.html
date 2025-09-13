@@ -863,8 +863,10 @@
                   empty.textContent = `Supabase error: HTTP ${res.status}` + (err?.message ? ` — ${err.message}` : '');
                   empty.classList.remove('hidden');
                 }
+                console.warn('Supabase staff fallback error', res.status, err);
                 return;
               }
+
 
               const data = await res.json();
               if (!Array.isArray(data) || !data.length) return;
