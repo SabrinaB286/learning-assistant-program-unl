@@ -657,7 +657,51 @@
               const res = await fetch('/office-hours', { credentials: 'include' });
               let json = null; try { json = await res.clone().json() } catch { }
               render(Array.isArray(json?.items) ? json.items : (Array.isArray(json) ? json : []));
-            } catch { render([]); }
+            } catch {
+              // Supabase fallback (public view first, then table) — browser-side read-only
+              try {
+                const URL = (window.SUPABASE_URL || '').replace(/\/+$/, '');
+                const KEY = window.SUPABASE_ANON_KEY;
+
+                if (URL && KEY) {
+                  // 1) Try office_hours_public view (preferred)
+                  const v1 = await fetch(
+                    `${URL}/rest/v1/office_hours_public?select=course,day,start,end,location,staff_name&order=course.asc`,
+                    { headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' } }
+                  );
+                  if (v1.ok) {
+                    let json = null; try { json = await v1.clone().json(); } catch { }
+                    const rows = Array.isArray(json) ? json : [];
+                    if (rows.length) { render(rows); return; }
+                  }
+
+                  // 2) Fallback: office_hours table (best-effort shape)
+                  const v2 = await fetch(
+                    `${URL}/rest/v1/office_hours?select=course,day,start,end,location,staff_name&order=course.asc`,
+                    { headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' } }
+                  );
+                  if (v2.ok) {
+                    let json = null; try { json = await v2.clone().json(); } catch { }
+                    const rows = (Array.isArray(json) ? json : []).map(r => ({
+                      course: r.course || r.course_code || r.course_id || '',
+                      day: r.day || r.weekday || '',
+                      start: r.start || r.start_time || '',
+                      end: r.end || r.end_time || '',
+                      location: r.location || r.room || '',
+                      staff_name: r.staff_name || r.name || r.staff || ''
+                    }));
+                    if (rows.length) { render(rows); return; }
+                  }
+                }
+
+                console.warn('[office-hours] No rows from API or Supabase; rendering empty.');
+                render([]);
+              } catch {
+                console.warn('[office-hours] Supabase fallback failed; rendering empty.');
+                render([]);
+              }
+            }
+
           }
         })();
 
