@@ -852,7 +852,7 @@
               const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''); const KEY = window.SUPABASE_ANON_KEY;
               if (!URL || !KEY) return;
               const res = await fetch(
-                `${URL}/rest/v1/staff?select=nuid,name,email,role,courses,is_active&is_active=is.true&order=name.asc`,
+                `${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`,
                 { headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' } }
               );
               if (!res.ok) {
