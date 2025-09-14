@@ -626,6 +626,30 @@
           s.addEventListener('click', () => { hidden.value = s.dataset.v; paint(Number(hidden.value)) });
         });
       });
+      // ---- Supabase helpers & logger ----
+      function getSupabaseEnv() {
+        const URL = (window.SUPABASE_URL || '').replace(/\/+$/, '');
+        const KEY = window.SUPABASE_ANON_KEY || '';
+        return { URL, KEY };
+      }
+
+      async function fetchJSON(url, headers = {}) {
+        const res = await fetch(url, { headers });
+        let body = null;
+        try { body = await res.clone().json(); } catch { }
+        console.log('[DEBUG] fetch', { url, status: res.status, ok: res.ok, bodySample: Array.isArray(body) ? body.slice(0, 3) : body });
+        return { res, body };
+      }
+
+      function supabaseHeaders(key) {
+        return {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          Accept: 'application/json'
+        };
+      }
+
+      function ensureArray(x) { return Array.isArray(x) ? x : (x ? [x] : []); }
 
       // Office hours (unchanged: server first, silent fallback)
       safe(() => {
