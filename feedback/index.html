@@ -720,7 +720,7 @@
               const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY = window.SUPABASE_ANON_KEY || '';
               if (URL && KEY) {
                 const me = getUser();
-                const params = me?.email ? `?select=*&staff_email=eq.${encodeURIComponent(me.email)}` : '?select=*';
+                const params = me?.email ? `?select=*&staff_email=eq.${encodeURIComponent(me.email)}` : `?select=*`;
                 const r = await fetch(`${URL}/rest/v1/office_hours${params}`, { headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' } });
                 if (r.ok) { const j = await r.json().catch(() => []); data = Array.isArray(j) ? j : [] }
               }
@@ -990,8 +990,8 @@
         form.addEventListener('submit', async (e) => {
           // Let any existing handler run first
           await new Promise(r => setTimeout(r, 250));
-          // If it already succeeded (alert hidden or success), skip
-          if (alert && (alert.classList.contains('alert-success') || alert.classList.contains('hidden'))) return;
+          // 🔧 Only skip when SUCCESS is already shown (do not skip just because alert is hidden)
+          if (alert && alert.classList.contains('alert-success')) return;
 
           const payload = {
             course: ($('#course') || {}).value?.trim(),
@@ -1016,7 +1016,6 @@
           if (!ok) {
             try {
               const { URL, KEY } = env(); if (URL && KEY) {
-                // Try flexible column shapes
                 const variants = [
                   { course: payload.course, type: payload.type, rating: payload.rating, text: payload.text, submitter: payload.submitter, year: payload.year },
                   { course_code: payload.course, type: payload.type, rating: payload.rating, message: payload.text, submitter: payload.submitter, year: payload.year },
