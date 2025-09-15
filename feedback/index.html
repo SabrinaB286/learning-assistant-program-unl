@@ -876,7 +876,9 @@
               empty.textContent = 'No staff found yet. Use “Add staff” to create the first entry.';
               empty.classList.remove('hidden'); return;
             }
-            empty.classList.add('hidden');
+            const noStaff = document.getElementById('staff-empty');
+            if (noStaff) empty.classList.add('hidden');
+
             rows.forEach(s => {
               const tr = document.createElement('tr');
               tr.innerHTML = `
@@ -915,7 +917,7 @@
             try {
               const body = document.querySelector('#staff-table tbody');
               if (!body) return;
-              if (window.__API_FILLED_STAFF) return; // only skip if API actually drew rows
+              //if (window.__API_FILLED_STAFF) return; // only skip if API actually drew rows
 
               const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''); const KEY = window.SUPABASE_ANON_KEY;
               if (!URL || !KEY) return;
