@@ -595,7 +595,7 @@
       const getSession = () => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw) } catch { } } return {} };
       const getToken = () => getSession().token || null;
       const getUser = () => getSession().user || null;
-      const getUserName = () => { const u = getUser(); return (u && (u.name || u.email || u.full_name)) || null }
+      const getUserName = () => { const u = getUser(); return (u && (u.name || u.email || u.full_name)) || null };
       const roleIs = r => String(getUser()?.role || '').toUpperCase() === r;
       const isStaff = () => ['SL', 'CL', 'LA'].includes(String(getUser()?.role || '').toUpperCase());
       const safe = fn => { try { fn() } catch (e) { console.error(e) } };
@@ -610,6 +610,7 @@
           if (logoutBtn) logoutBtn.classList.toggle('hidden', !authed);
           if (dashTab) dashTab.classList.toggle('hidden', !(authed && isStaff()));
           $('#my-feedback')?.classList.toggle('hidden', !(authed && isStaff()));
+          // Show admin when signed in (was SL-only; keep liberal visibility so SLs can see immediately)
           $('#admin-block')?.classList.toggle('hidden', !authed);
         }
         window.addEventListener('hashchange', paint);
@@ -626,32 +627,25 @@
           s.addEventListener('click', () => { hidden.value = s.dataset.v; paint(Number(hidden.value)) });
         });
       });
+
       // ---- Supabase helpers & logger ----
       function getSupabaseEnv() {
         const URL = (window.SUPABASE_URL || '').replace(/\/+$/, '');
         const KEY = window.SUPABASE_ANON_KEY || '';
         return { URL, KEY };
       }
-
       async function fetchJSON(url, headers = {}) {
         const res = await fetch(url, { headers });
-        let body = null;
-        try { body = await res.clone().json(); } catch { }
+        let body = null; try { body = await res.clone().json(); } catch { }
         console.log('[DEBUG] fetch', { url, status: res.status, ok: res.ok, bodySample: Array.isArray(body) ? body.slice(0, 3) : body });
         return { res, body };
       }
-
       function supabaseHeaders(key) {
-        return {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-          Accept: 'application/json'
-        };
+        return { apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/json' };
       }
-
       function ensureArray(x) { return Array.isArray(x) ? x : (x ? [x] : []); }
 
-      // Office hours (unchanged: server first, silent fallback)
+      // Office hours (server first, then Supabase)
       safe(() => {
         const list = $('#office-list'); if (!list) return;
         const alert = $('#office-alert');
@@ -662,11 +656,11 @@
           rows.forEach(r => {
             const div = document.createElement('div'); div.className = 'card';
             div.innerHTML = `<div class="grid g-2" style="align-items:center">
-            <div>
-              <div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
-              <div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${r.staff_name || 'Staff'}</span></div>
-            </div>
-          </div>`;
+              <div>
+                <div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
+                <div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${r.staff_name || 'Staff'}</span></div>
+              </div>
+            </div>`;
             list.appendChild(div);
           });
         };
@@ -682,17 +676,12 @@
               let json = null; try { json = await res.clone().json() } catch { }
               render(Array.isArray(json?.items) ? json.items : (Array.isArray(json) ? json : []));
             } catch {
-              // Supabase fallback (public view first, then table) — browser-side read-only
+              // Supabase fallback (public view first, then table)
               try {
-                const URL = (window.SUPABASE_URL || '').replace(/\/+$/, '');
-                const KEY = window.SUPABASE_ANON_KEY;
-
+                const { URL, KEY } = getSupabaseEnv();
                 if (URL && KEY) {
-                  // 1) Try office_hours_public view (preferred)
-                  const v1 = await fetch(
-                    `${URL}/rest/v1/office_hours_public?select=course,day,start,end,location,staff_name&order=course.asc`,
-                    { headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' } }
-                  );
+                  // 1) View (map to expected keys)
+                  const v1 = await fetch(`${URL}/rest/v1/office_hours_public?select=*`, { headers: supabaseHeaders(KEY) });
                   if (v1.ok) {
                     let json = null; try { json = await v1.clone().json(); } catch { }
                     const raw = Array.isArray(json) ? json : [];
@@ -706,18 +695,13 @@
                     }));
                     if (rows.length) { render(rows); return; }
                   }
-
-
-                  // 2) Fallback: office_hours table (best-effort shape)
-                  const v2 = await fetch(
-                    `${URL}/rest/v1/office_hours?select=course,day,start,end,location,staff_name&order=course.asc`,
-                    { headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' } }
-                  );
+                  // 2) Table fallback
+                  const v2 = await fetch(`${URL}/rest/v1/office_hours?select=*`, { headers: supabaseHeaders(KEY) });
                   if (v2.ok) {
                     let json = null; try { json = await v2.clone().json(); } catch { }
                     const rows = (Array.isArray(json) ? json : []).map(r => ({
                       course: r.course || r.course_code || r.course_id || '',
-                      day: r.day || r.weekday || '',
+                      day: r.day || r.weekday || r.day_of_week || '',
                       start: r.start || r.start_time || '',
                       end: r.end || r.end_time || '',
                       location: r.location || r.room || '',
@@ -726,19 +710,14 @@
                     if (rows.length) { render(rows); return; }
                   }
                 }
-
                 console.warn('[office-hours] No rows from API or Supabase; rendering empty.');
                 render([]);
-              } catch {
-                console.warn('[office-hours] Supabase fallback failed; rendering empty.');
-                render([]);
-              }
+              } catch { console.warn('[office-hours] Supabase fallback failed; rendering empty.'); render([]); }
             }
-
           }
         })();
 
-        // pills
+        // pills filter
         $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => {
           $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
           const c = p.dataset.course;
@@ -749,7 +728,7 @@
         }));
       });
 
-      // Login/logout (unchanged)
+      // Login/logout (server endpoints only — unchanged)
       safe(() => {
         const form = $('#login-form'); if (!form) return;
         const alert = $('#login-alert'), logoutBtn = $('#logout-btn'), loginTab = $('#login-tab'), dashTab = $('#dashboard-tab');
@@ -780,7 +759,7 @@
         });
       });
 
-      // Schedule (unchanged)
+      // Schedule (server first; unchanged)
       window.loadSchedule = function () {
         safe(async () => {
           const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return;
@@ -805,7 +784,7 @@
           rows.forEach(row => {
             const tr = document.createElement('tr');
             tr.innerHTML = `<td>${row.course}</td><td>${row.day}</td><td>${row.start}</td><td>${row.end}</td><td>${row.location}</td>
-          <td class="row-actions"><span class="link" data-edit="${row.id}">Edit</span><span class="link" data-del="${row.id}">Delete</span></td>`;
+              <td class="row-actions"><span class="link" data-edit="${row.id}">Edit</span><span class="link" data-del="${row.id}">Delete</span></td>`;
             tbody.appendChild(tr);
           });
           $$('[data-del]').forEach(a => a.addEventListener('click', async () => {
@@ -822,7 +801,7 @@
         })
       };
 
-      // My Feedback for staff (unchanged, uses server first)
+      // My Feedback for staff — server first, then Supabase course-scoped fallback
       window.loadMyFeedback = function () {
         safe(async () => {
           const wrap = $('#my-feedback'); if (!wrap) return;
@@ -834,7 +813,6 @@
           async function fetchStaffSelf() {
             const paths = ['/api/admin/staff/me', '/api/staff/me'];
             for (const p of paths) { try { const r = await fetch(p, { credentials: 'include' }); if (r.ok) return await r.json(); } catch { } }
-            // silent: no supabase fetch here to avoid changing behavior
             return null;
           }
           if (!courses.length) { const me = await fetchStaffSelf(); if (me?.courses && Array.isArray(me.courses)) courses = me.courses; else if (me?.course) courses = [me.course]; }
@@ -853,9 +831,32 @@
           }
 
           let items = await fetchByCourseServer(courses);
-          if (!items) items = []; // do not alter behavior with extra fallbacks here
 
-          if (!items.length) {
+          // Supabase fallback (read-only) if server returned nothing
+          if (!items || !items.length) {
+            try {
+              const { URL, KEY } = getSupabaseEnv();
+              if (URL && KEY) {
+                // if we don't know courses from session/server, try resolving via staff_public by email
+                if (!courses.length && u?.email) {
+                  const r = await fetch(`${URL}/rest/v1/staff_public?select=courses&email=eq.${encodeURIComponent(u.email)}&limit=1`, { headers: supabaseHeaders(KEY) });
+                  const j = await r.json().catch(() => []);
+                  if (Array.isArray(j) && j[0]?.courses) courses = ensureArray(j[0].courses).filter(Boolean);
+                }
+                if (courses.length) {
+                  const inList = '(' + courses.map(c => `"${String(c).replace(/\"/g, '\\\"')}"`).join(',') + ')';
+                  const url = `${URL}/rest/v1/feedback?select=course,text,rating,created_at&course=in.${encodeURIComponent(inList)}&order=created_at.desc.nullslast`;
+                  const res = await fetch(url, { headers: supabaseHeaders(KEY) });
+                  if (res.ok) {
+                    const j = await res.json().catch(() => []);
+                    items = Array.isArray(j) ? j : [];
+                  }
+                }
+              }
+            } catch { }
+          }
+
+          if (!items || !items.length) {
             alert.className = 'alert alert-success'; alert.textContent = 'No feedback yet for your course(s).'; alert.classList.remove('hidden'); return;
           }
           alert.classList.add('hidden');
@@ -871,7 +872,7 @@
         })
       };
 
-      // SL Admin (server first). Only addition is the *fallback* at the end if table stays empty.
+      // SL Admin (server first, Supabase read-only fallback for list)
       window.loadAdmin = function () {
         safe(async () => {
           const block = $('#admin-block'); if (!block) return; block.classList.remove('hidden');
@@ -885,18 +886,17 @@
               empty.textContent = 'No staff found yet. Use “Add staff” to create the first entry.';
               empty.classList.remove('hidden'); return;
             }
-            const noStaff = document.getElementById('staff-empty');
-            if (noStaff) empty.classList.add('hidden');
+            if (empty) empty.classList.add('hidden');
 
             rows.forEach(s => {
               const tr = document.createElement('tr');
               tr.innerHTML = `
-            <td>${s.nuid || ''}</td>
-            <td>${s.name || ''}</td>
-            <td>${s.email || ''}</td>
-            <td>${(s.role || '')}</td>
-            <td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td>
-            <td><span class="link" data-rm="${s.nuid || s.id || ''}">Remove</span></td>`;
+                <td>${s.nuid || ''}</td>
+                <td>${s.name || ''}</td>
+                <td>${s.email || ''}</td>
+                <td>${(s.role || '')}</td>
+                <td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td>
+                <td><span class="link" data-rm="${s.nuid || s.id || ''}">Remove</span></td>`;
               body.appendChild(tr);
             });
             $$('[data-rm]').forEach(a => a.addEventListener('click', async () => {
@@ -918,56 +918,33 @@
               if (res.ok) { rows = Array.isArray(j) ? j : (Array.isArray(j?.items) ? j.items : []); ok = true; break; }
             } catch { }
           }
-
           paintStaff(rows);
 
-          // 2) ***ONLY IF STILL EMPTY***: Supabase fallback reading public.staff (is_active = true)
+          // 2) Supabase fallback (read-only) if still empty
           (async function staffSupabaseFallback() {
             try {
-              const body = document.querySelector('#staff-table tbody');
-              if (!body) return;
-              //if (window.__API_FILLED_STAFF) return; // only skip if API actually drew rows
-
-              const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''); const KEY = window.SUPABASE_ANON_KEY;
-              if (!URL || !KEY) return;
-              const res = await fetch(
-                `${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`,
-                { headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' } }
-              );
-              if (!res.ok) {
-                let msg = 'HTTP ' + res.status;
-                try { const j = await res.json(); if (j?.message) msg += ' — ' + j.message; } catch { }
-                const box = document.getElementById('staff-error') || document.getElementById('staff-empty');
-                if (box) {
-                  box.className = 'alert alert--danger';
-                  box.textContent = 'Supabase error: ' + msg;
-                  box.classList.remove('hidden');
-                }
-                return;
-              }
-
-
-
-              const data = await res.json();
-              if (!Array.isArray(data) || !data.length) return;
-
-              // render identical to paintStaff row markup
+              const body = document.querySelector('#staff-table tbody'); if (!body) return;
+              if (window.__API_FILLED_STAFF) return; // skip if API already populated
+              const { URL, KEY } = getSupabaseEnv(); if (!URL || !KEY) return;
+              const res = await fetch(`${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`, { headers: supabaseHeaders(KEY) });
+              if (!res.ok) return;
+              const data = await res.json(); if (!Array.isArray(data) || !data.length) return;
               data.forEach(s => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-              <td>${s.nuid || ''}</td>
-              <td>${s.name || ''}</td>
-              <td>${s.email || ''}</td>
-              <td>${(s.role || '').toString().toUpperCase()}</td>
-              <td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td>
-              <td></td>`;
+                  <td>${s.nuid || ''}</td>
+                  <td>${s.name || ''}</td>
+                  <td>${s.email || ''}</td>
+                  <td>${(s.role || '').toString().toUpperCase()}</td>
+                  <td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td>
+                  <td></td>`;
                 body.appendChild(tr);
               });
               const empty = document.getElementById('staff-empty'); if (empty) empty.classList.add('hidden');
             } catch (e) { console.warn('Supabase staff fallback failed', e); }
           })();
 
-          // Pending students (unchanged)
+          // Pending students (server first; unchanged)
           (async () => {
             const body = $('#pending-table tbody'); body.innerHTML = '';
             let json = null, res = null;
@@ -976,16 +953,16 @@
             (json || json?.items || []).forEach(s => {
               const tr = document.createElement('tr');
               tr.innerHTML = `<td>${s.name || ''}</td><td>${s.nuid || ''}</td><td>${s.email || ''}</td><td>${s.course || ''}</td>
-            <td class="row-actions"><span class="link" data-approve="${s.id}">Approve</span><span class="link" data-reject="${s.id}">Reject</span></td>`;
+                <td class="row-actions"><span class="link" data-approve="${s.id}">Approve</span><span class="link" data-reject="${s.id}">Reject</span></td>`;
               body.appendChild(tr);
             });
           })();
 
-          // Add staff (unchanged)
+          // Add staff (server endpoints; unchanged)
           (function () {
             const form = $('#staff-form'), alert = $('#staff-alert');
-            const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') }
-            const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') }
+            const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') };
+            const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') };
             form.addEventListener('submit', async e => {
               e.preventDefault(); alert.classList.add('hidden');
               const payload = {
