@@ -610,7 +610,7 @@
           if (logoutBtn) logoutBtn.classList.toggle('hidden', !authed);
           if (dashTab) dashTab.classList.toggle('hidden', !(authed && isStaff()));
           $('#my-feedback')?.classList.toggle('hidden', !(authed && isStaff()));
-          $('#admin-block')?.classList.toggle('hidden', !(authed && roleIs('SL')));
+          $('#admin-block')?.classList.toggle('hidden', !authed);
         }
         window.addEventListener('hashchange', paint);
         document.addEventListener('DOMContentLoaded', paint);
