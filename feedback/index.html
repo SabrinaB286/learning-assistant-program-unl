@@ -695,9 +695,18 @@
                   );
                   if (v1.ok) {
                     let json = null; try { json = await v1.clone().json(); } catch { }
-                    const rows = Array.isArray(json) ? json : [];
+                    const raw = Array.isArray(json) ? json : [];
+                    const rows = raw.map(r => ({
+                      course: r.course ?? r.course_code ?? r.course_id ?? '',
+                      day: r.day ?? r.weekday ?? r.day_of_week ?? '',
+                      start: r.start ?? r.start_time ?? r.begin ?? '',
+                      end: r.end ?? r.end_time ?? r.finish ?? '',
+                      location: r.location ?? r.room ?? r.place ?? '',
+                      staff_name: r.staff_name ?? r.name ?? r.instructor ?? r.staff ?? ''
+                    }));
                     if (rows.length) { render(rows); return; }
                   }
+
 
                   // 2) Fallback: office_hours table (best-effort shape)
                   const v2 = await fetch(
