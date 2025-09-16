@@ -533,6 +533,17 @@
               <option>CL</option>
               <option>LA</option>
             </select></div>
+          <div>
+            <label>Courses</label>
+            <select id="staff-courses" multiple size="6">
+              <option value="CSCE 101">CSCE 101</option>
+              <option value="CSCE 155A">CSCE 155A</option>
+              <option value="CSCE 155E">CSCE 155E</option>
+              <option value="CSCE 155H">CSCE 155H</option>
+              <option value="CSCE 156">CSCE 156</option>
+            </select>
+            <div class="sub" style="color:var(--muted);margin-top:6px">Hold Ctrl/⌘ to select multiple</div>
+          </div>
           <div class="actions"><button id="staff-add" class="btn-primary" type="submit">Save staff</button><button
               id="staff-cancel" class="btn-muted" type="button">Cancel</button></div>
         </form>
@@ -657,7 +668,7 @@
         })()
       };
 
-      /* SAVE SCHEDULE */
+      /* SAVE SCHEDULE — fix: schedule fallback uses {course: …} not course_code */
       (function () {
         const form = $('#sched-form'); if (!form) return; const alert = $('#sched-alert'), btn = $('#sched-save');
         form.addEventListener('submit', async e => {
@@ -671,7 +682,8 @@
             const { URL, KEY } = SB(); if (!URL || !KEY) throw new Error('Supabase not configured');
             const tries = [
               [`${URL}/rest/v1/staff_schedules`, 'POST', base],
-              [`${URL}/rest/v1/schedule`, 'POST', { ...base, course_code: base.course }],
+              // fixed line ↓↓↓ (use course, not course_code)
+              [`${URL}/rest/v1/schedule`, 'POST', { ...base, course: base.course }],
             ];
             for (const [url, method, body] of tries) {
               const r = await fetch(url, { method, headers: H(KEY), body: JSON.stringify(body) });
@@ -686,48 +698,68 @@
         });
       })();
 
-      /* FEEDBACK list (restored) */
+      /* FEEDBACK list — SL/Admin see ALL; others see their courses (staff_public → fallback staff_courses) */
       window.loadMyFeedback = function () {
         (async () => {
           const list = $('#myfb-list'), alert = $('#myfb-alert'); if (!list) return; list.innerHTML = '';
           const u = getUser() || {}; let courses = [];
-          if (Array.isArray(u.courses) && u.courses.length) courses = u.courses;
+          const wantAll = isSLorAdmin(); // SL/Admin see everything
 
-          if (!courses.length && u.email) {
+          if (!wantAll) {
+            // 1) try staff_public (aggregated)
             try {
-              const { URL, KEY } = SB(); if (URL && KEY) {
-                const r = await fetch(`${URL}/rest/v1/staff_public?select=courses&email=eq.${encodeURIComponent(u.email)}`, { headers: H(KEY) });
+              const { URL, KEY } = SB(); if (URL && KEY && u.email) {
+                const r = await fetch(`${URL}/rest/v1/staff_public?select=courses,nuid&email=eq.${encodeURIComponent(u.email)}`, { headers: H(KEY) });
                 if (r.ok) { const j = await r.json().catch(() => []); if (Array.isArray(j) && j[0]?.courses) courses = j[0].courses; }
               }
             } catch { }
+            // 2) fallback to staff_courses by NUID/email if still empty
+            if (!courses.length) {
+              try {
+                const { URL, KEY } = SB(); if (URL && KEY) {
+                  let by = ''; if (u.nuid) by = `staff_nuid=eq.${encodeURIComponent(u.nuid)}`;
+                  else if (u.email) by = `staff_email=eq.${encodeURIComponent(u.email)}`;
+                  if (by) {
+                    const r = await fetch(`${URL}/rest/v1/staff_courses?select=course&${by}`, { headers: H(KEY) });
+                    if (r.ok) { const j = await r.json().catch(() => []); courses = j.map(x => x.course).filter(Boolean); }
+                  }
+                }
+              } catch { }
+            }
           }
-          courses = courses.map(c => String(c || '').trim()).filter(Boolean);
 
           let all = [];
           try {
             const { URL, KEY } = SB(); if (URL && KEY) {
               let url = `${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&order=created_at.desc.nullslast`;
-              if (courses.length) {
-                const inList = '(' + courses.map(c => '"' + String(c).replace(/"/g, '\\"') + '"').join(',') + ')';
-                url = `${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&or=(course.in.${encodeURIComponent(inList)},course_code.in.${encodeURIComponent(inList)})&order=created_at.desc.nullslast`;
+              if (!wantAll) {
+                const norm = (courses || []).map(c => String(c || '').trim()).filter(Boolean);
+                if (norm.length) {
+                  const inList = '(' + norm.map(c => '"' + String(c).replace(/"/g, '\\"') + '"').join(',') + ')';
+                  url = `${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&or=(course.in.${encodeURIComponent(inList)},course_code.in.${encodeURIComponent(inList)})&order=created_at.desc.nullslast`;
+                }
               }
               const r = await fetch(url, { headers: H(KEY) }); if (r.ok) { all = await r.json().catch(() => []); }
             }
           } catch { }
+          // dedupe
           const uniq = new Map();
           all.forEach(f => { const when = f.created_at ? new Date(f.created_at).toISOString().slice(0, 19) : ''; const course = String(f.course || f.course_code || '').trim().toUpperCase(); const text = String(f.text || f.message || '').trim(); const rating = f.rating ?? ''; const key = `${when}|${course}|${text}|${rating}`; if (!uniq.has(key)) uniq.set(key, f); });
           const items = Array.from(uniq.values()).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-          if (!items.length) { alert.className = 'alert alert-success'; alert.textContent = 'No feedback yet for your course(s).'; alert.classList.remove('hidden'); return; }
+          if (!items.length) { alert.className = 'alert alert-success'; alert.textContent = 'No feedback yet.'; alert.classList.remove('hidden'); return; }
           alert.classList.add('hidden');
-          items.slice(0, 100).forEach(f => { const li = document.createElement('li'); const when = f.created_at ? new Date(f.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''; const rating = f.rating ? ` • ★${f.rating}` : ''; const course = (f.course || f.course_code) ? ` • ${(f.course || f.course_code)}` : ''; li.textContent = `${when}${course}${rating} — ${(f.text || f.message || '').trim()}`; list.appendChild(li); });
+          items.slice(0, 150).forEach(f => { const li = document.createElement('li'); const when = f.created_at ? new Date(f.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''; const rating = f.rating ? ` • ★${f.rating}` : ''; const course = (f.course || f.course_code) ? ` • ${(f.course || f.course_code)}` : ''; li.textContent = `${when}${course}${rating} — ${(f.text || f.message || '').trim()}`; list.appendChild(li); });
         })()
       };
 
-      /* SL ADMIN — read + edit/remove restored */
+      /* SL ADMIN — list + edit/remove + courses assign (server-first; Supabase fallback) */
       window.loadAdmin = function () {
         (async () => {
           const body = $('#staff-table tbody'), empty = $('#staff-empty'); if (!body) return; body.innerHTML = '';
           const headersSup = k => ({ apikey: k, Authorization: `Bearer ${k}`, Accept: 'application/json', 'Content-Type': 'application/json' });
+          const getCoursesFromUI = () => Array.from($('#staff-courses').selectedOptions || []).map(o => o.value);
+          const setCoursesUI = (arr = []) => { const sel = $('#staff-courses'); if (!sel) return; Array.from(sel.options).forEach(o => o.selected = (arr || []).includes(o.value)); };
+
           const paint = rows => {
             body.innerHTML = '';
             if (!rows.length) { empty.className = 'alert alert-success'; empty.textContent = 'No staff found yet.'; empty.classList.remove('hidden'); return; }
@@ -740,13 +772,13 @@
                       <td>${s.role || ''}</td>
                       <td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td>
                       <td class="row-actions">
-                        <span class="link" data-edit="${s.nuid || s.id || ''}">Edit</span>
+                        <span class="link" data-edit="${s.nuid || s.id || ''}" data-courses='${JSON.stringify(s.courses || [])}'>Edit</span>
                         <span class="link" data-rm="${s.nuid || s.id || ''}">Remove</span>
                       </td>`;
               body.appendChild(tr);
             });
 
-            // Edit/Remove handlers
+            // Edit fill
             $$('#staff-table [data-edit]').forEach(a => a.addEventListener('click', () => {
               const tr = a.closest('tr');
               $('#staff-edit-id').value = a.getAttribute('data-edit');
@@ -754,20 +786,22 @@
               $('#staff-name').value = tr.children[1].textContent.trim();
               $('#staff-email').value = tr.children[2].textContent.trim();
               $('#staff-role').value = tr.children[3].textContent.trim();
+              try { setCoursesUI(JSON.parse(a.getAttribute('data-courses') || '[]')); } catch { setCoursesUI([]); }
               window.scrollTo({ top: document.getElementById('staff-form').offsetTop - 60, behavior: 'smooth' });
             }));
 
+            // Remove
             $$('#staff-table [data-rm]').forEach(a => a.addEventListener('click', async () => {
               const id = a.getAttribute('data-rm'); a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
               let ok = false;
-              for (const t of [`/api/admin/staff/${encodeURIComponent(id)}`]) {
-                try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { ok = true; break; } } catch { }
-              }
-              if (!ok) { // Supabase fallback (requires RLS insert/delete policies on staff)
+              try { const r = await fetch(`/api/admin/staff/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'include' }); ok = r.ok; } catch { }
+              if (!ok) {
+                // fallback delete in Supabase (requires RLS)
                 try {
                   const { URL, KEY } = SB(); if (URL && KEY) {
-                    const r = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: headersSup(KEY) });
-                    ok = r.ok;
+                    await fetch(`${URL}/rest/v1/staff_courses?staff_nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: headersSup(KEY) });
+                    const rr = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: headersSup(KEY) });
+                    ok = rr.ok;
                   }
                 } catch { }
               }
@@ -775,7 +809,7 @@
             }));
           };
 
-          // Load list
+          // Load staff list
           let rows = [];
           try {
             const { URL, KEY } = SB(); if (URL && KEY) {
@@ -785,17 +819,17 @@
           } catch { }
           paint(rows);
 
-          // Save (server-first; Supabase fallback)
+          // Save staff (server-first; fall back to Supabase staff + staff_courses)
           (function () {
             const form = $('#staff-form'), alert = $('#staff-alert');
             const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
             const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden'); };
-            $('#staff-cancel').addEventListener('click', () => { form.reset(); $('#staff-edit-id').value = ''; });
+            $('#staff-cancel').addEventListener('click', () => { form.reset(); $('#staff-edit-id').value = ''; setCoursesUI([]); });
 
             form.addEventListener('submit', async e => {
               e.preventDefault(); alert.classList.add('hidden');
               const id = $('#staff-edit-id').value.trim();
-              const payload = { nuid: $('#staff-nuid').value.trim(), name: $('#staff-name').value.trim(), email: $('#staff-email').value.trim(), role: $('#staff-role').value, is_active: true };
+              const payload = { nuid: $('#staff-nuid').value.trim(), name: $('#staff-name').value.trim(), email: $('#staff-email').value.trim(), role: $('#staff-role').value, is_active: true, courses: getCoursesFromUI() };
               if (!payload.nuid || !payload.name || !payload.role) return bad('NUID, name, and role are required.');
 
               let good = false, err = '';
@@ -809,6 +843,7 @@
               if (!good) {
                 try {
                   const { URL, KEY } = SB(); if (URL && KEY) {
+                    // upsert staff
                     if (id) {
                       const r = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: headersSup(KEY), body: JSON.stringify(payload) });
                       good = r.ok;
@@ -816,12 +851,20 @@
                       const r = await fetch(`${URL}/rest/v1/staff`, { method: 'POST', headers: headersSup(KEY), body: JSON.stringify(payload) });
                       good = r.ok;
                     }
+                    // maintain staff_courses
+                    if (good) {
+                      await fetch(`${URL}/rest/v1/staff_courses?staff_nuid=eq.${encodeURIComponent(payload.nuid)}`, { method: 'DELETE', headers: headersSup(KEY) });
+                      if (Array.isArray(payload.courses) && payload.courses.length) {
+                        const rows = payload.courses.map(c => ({ staff_nuid: payload.nuid, course: String(c) }));
+                        await fetch(`${URL}/rest/v1/staff_courses`, { method: 'POST', headers: headersSup(KEY), body: JSON.stringify(rows) });
+                      }
+                    }
                   }
                 } catch { }
               }
 
               if (!good) return bad('Could not save staff' + (err ? `: ${err}` : ''));
-              ok('Saved.'); form.reset(); $('#staff-edit-id').value = ''; loadAdmin();
+              ok('Saved.'); form.reset(); $('#staff-edit-id').value = ''; setCoursesUI([]); loadAdmin();
             });
           })();
         })()
