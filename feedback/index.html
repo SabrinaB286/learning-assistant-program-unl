@@ -312,13 +312,15 @@
       const getSession = () => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw) } catch { } } return {} };
       const getToken = () => getSession().token || null;
       const getUser = () => getSession().user || null;
-      const isStaff = () => ['SL', 'CL', 'LA'].includes(String(getUser()?.role || '').toUpperCase());
+      const roleStr = () => String(getUser()?.role || '').toUpperCase();
+      const isAnyStaff = () => ['SL', 'CL', 'LA', 'STAFF', 'ADMIN', 'INSTRUCTOR'].some(r => roleStr().includes(r));
+      const isSLorAdmin = () => ['SL', 'ADMIN'].some(r => roleStr().includes(r));
 
       function runDashboardLoaders() {
-        if (!(getToken() && isStaff())) return;
+        if (!getToken()) return;
         try { if (typeof window.loadSchedule === 'function') window.loadSchedule(); } catch { }
         try { if (typeof window.loadMyFeedback === 'function') window.loadMyFeedback(); } catch { }
-        try { if (String(getUser()?.role || '').toUpperCase() === 'SL' && typeof window.loadAdmin === 'function') window.loadAdmin(); } catch { }
+        try { if (isSLorAdmin() && typeof window.loadAdmin === 'function') window.loadAdmin(); } catch { }
       }
 
       function show(id) {
@@ -343,16 +345,19 @@
         const paint = () => {
           const authed = !!getToken(); const name = (getUser()?.name || getUser()?.email || getUser()?.full_name);
           if (greet) { if (authed && name) { greet.textContent = `Signed in as ${name}`; greet.classList.remove('hidden'); } else { greet.textContent = ''; greet.classList.add('hidden'); } }
+          // Dashboard tab: show for any signed-in user (prevents unwanted bounces)
+          if (dashTab) dashTab.classList.toggle('hidden', !authed);
           if (loginTab) loginTab.classList.toggle('hidden', authed);
           if (logoutBtn) logoutBtn.classList.toggle('hidden', !authed);
-          if (dashTab) dashTab.classList.toggle('hidden', !(authed && isStaff()));
-          $('#my-feedback')?.classList.toggle('hidden', !(authed && isStaff()));
-          $('#admin-block')?.classList.toggle('hidden', !authed);
+          // My Feedback visible for any signed-in user
+          $('#my-feedback')?.classList.toggle('hidden', !authed);
+          // SL admin only for SL/ADMIN roles
+          $('#admin-block')?.classList.toggle('hidden', !(authed && isSLorAdmin()));
         };
         paint();
         runDashboardLoaders();
 
-        // Logout always clears local storage; server call is best-effort
+        // Reliable logout (even if listener fails)
         $('#logout-btn')?.addEventListener('click', async () => {
           try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { }
           localStorage.removeItem('lap_auth'); localStorage.removeItem('lap_auth_v1');
@@ -381,7 +386,6 @@
             <button id="login-tab" class="btn" type="button" data-nav="login"
               onclick="__lap_show('login')">Login</button>
           </nav>
-          <!-- inline fallback makes logout work even if binding fails -->
           <button id="logout-btn" class="btn hidden" type="button"
             onclick="try{fetch('/api/auth/logout',{method:'POST',credentials:'include'})}catch(e){};localStorage.removeItem('lap_auth');localStorage.removeItem('lap_auth_v1');location.hash='#feedback';location.reload();">
             Log out
@@ -615,7 +619,6 @@
 
   <!-- Supabase REST config -->
   <script>
-    // You can override these with <script> before this file or via window env injection
     window.SUPABASE_URL = window.SUPABASE_URL || 'https://wmeijbsvlnjvnhptudfh.supabase.co';
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtZWlqYnN2bG5qdm5ocHR1ZGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MDQ5NzksImV4cCI6MjA3MTM4MDk3OX0.YT_435s_FFsqNJs6M_yW9iIGzxeCu1BHpPVH1cwJlX8';
   </script>
@@ -627,7 +630,7 @@
       const SB = () => ({ URL: (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY: window.SUPABASE_ANON_KEY || '' });
       const H = k => ({ apikey: k, Authorization: `Bearer ${k}`, Accept: 'application/json', 'Content-Type': 'application/json' });
 
-      /* ---------------- Stars ---------------- */
+      /* Stars */
       (function () {
         const stars = $$('#stars .star'), hidden = $('#rating'); if (!hidden) return;
         const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n));
@@ -638,7 +641,7 @@
         });
       })();
 
-      /* ----------- Office hours listing (server + Supabase) ----------- */
+      /* Office hours listing */
       (function () {
         const list = $('#office-list'); if (!list) return; const alert = $('#office-alert');
         const mapRow = r => ({ course: r.course ?? r.course_code ?? r.course_id ?? '', day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? r.begin ?? '', end: r.end ?? r.end_time ?? r.finish ?? '', location: r.location ?? r.room ?? r.place ?? '', staff_name: r.staff_name ?? r.name ?? r.instructor ?? r.staff ?? '' });
@@ -675,10 +678,10 @@
         }));
       })();
 
-      /* ---------------- LOGIN (server; fallback to Supabase RPC) ---------------- */
+      /* LOGIN (server → Supabase RPC) */
       (function () {
         const form = $('#login-form'); if (!form) return;
-        const alert = $('#login-alert'), logoutBtn = $('#logout-btn'), loginTab = $('#login-tab'), dashTab = $('#dashboard-tab');
+        const alert = $('#login-alert'), logoutBtn = $('#logout-btn'), loginTab = $('#login-tab'), dashTab = $('#dashboard-tab']);
         const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden'); };
         const ok = () => { alert.classList.add('hidden'); alert.textContent = ''; };
 
@@ -716,13 +719,13 @@
 
           try { localStorage.setItem('lap_auth_v1', JSON.stringify(session)); } catch { }; try { localStorage.setItem('lap_auth', JSON.stringify(session)); } catch { };
           logoutBtn?.classList.remove('hidden'); loginTab?.classList.add('hidden');
-          const isStaff = ['sl', 'cl', 'la'].includes(String(session.user?.role || '').toLowerCase());
-          if (dashTab) dashTab.classList.toggle('hidden', !isStaff);
-          if (typeof window.__lap_show === 'function') window.__lap_show(isStaff ? 'dashboard' : 'feedback'); else location.hash = isStaff ? '#dashboard' : '#feedback';
+          // Let the user pick tabs freely; just land on dashboard once
+          if (dashTab) dashTab.classList.toggle('hidden', false);
+          if (typeof window.__lap_show === 'function') window.__lap_show('dashboard'); else location.hash = '#dashboard';
         });
       })();
 
-      /* ---------------- LOAD SCHEDULE ---------------- */
+      /* LOAD SCHEDULE */
       window.loadSchedule = function () {
         (async () => {
           const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return; tbody.innerHTML = '';
@@ -779,7 +782,7 @@
         })();
       };
 
-      /* ---------------- SAVE SCHEDULE (server → Supabase) ---------------- */
+      /* SAVE SCHEDULE (server → Supabase; try multiple shapes) */
       (function () {
         const fmt = t => (!t ? '' : (/^\d{1,2}:\d{2}$/.test(t) ? t + ':00' : t));
         const form = $('#sched-form'); if (!form) return; const alert = $('#sched-alert'); const btn = $('#sched-save');
@@ -791,37 +794,47 @@
           const user = sess?.user || {};
           const id = btn.dataset.editId || '';
 
-          let ok = false, lastErr = '';
+          let ok = false; let errs = [];
+          // Try server first
           try {
             const r = await fetch(id ? `/api/staff/schedule/${id}` : '/api/staff/schedule', { method: id ? 'PUT' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            ok = r.ok; if (!ok) { const j = await r.json().catch(() => null); lastErr = j?.message || j?.hint || `${r.status} ${r.statusText}`; }
-          } catch (e) { lastErr = String(e || ''); }
+            if (r.ok) ok = true; else { const j = await r.json().catch(() => null); errs.push(j?.message || j?.hint || `${r.status}`); }
+          } catch (e) { errs.push(String(e || '')); }
 
+          // Supabase fallback with multiple shapes/targets
           if (!ok) {
             const { URL, KEY } = SB(); if (URL && KEY) {
               const base = { course: payload.course, day: payload.day, start: payload.start, end: payload.end, location: payload.location, staff_email: user?.email || null, staff_name: user?.name || user?.full_name || user?.email || null, staff_nuid: user?.nuid || null };
               const method = id ? 'PATCH' : 'POST', qs = id ? `?id=eq.${encodeURIComponent(id)}` : '';
-              const variants = [
-                b => ({ table: 'schedule', body: { course: b.course, day: b.day, start: b.start, end: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name } }),
-                b => ({ table: 'staff_schedules', body: { course: b.course, day: b.day, start: b.start, end: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid } })
+              const tables = ['schedule', 'staff_schedules'];
+              const shapes = [
+                // common
+                b => ({ body: { course: b.course, day: b.day, start: b.start, end: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid } }),
+                // course_code variant
+                b => ({ body: { course_code: b.course, day: b.day, start: b.start, end: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid } }),
+                // legacy time/day names
+                b => ({ body: { course: b.course, day_of_week: b.day, start_time: b.start, end_time: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid } }),
+                b => ({ body: { course_code: b.course, day_of_week: b.day, start_time: b.start, end_time: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid } })
               ];
-              for (const mk of variants) {
-                try {
-                  const a = mk(base);
-                  const r = await fetch(`${URL}/rest/v1/${a.table}${qs}`, { method, headers: H(KEY), body: JSON.stringify(a.body) });
-                  if (r.ok) { ok = true; break; }
-                  const j = await r.json().catch(() => null); if (!lastErr) lastErr = j?.message || j?.hint || `${r.status} ${r.statusText}`;
-                } catch (e) { if (!lastErr) lastErr = String(e); }
+              outer: for (const t of tables) {
+                for (const mk of shapes) {
+                  try {
+                    const body = mk(base).body;
+                    const r = await fetch(`${URL}/rest/v1/${t}${qs}`, { method, headers: H(KEY), body: JSON.stringify(body) });
+                    if (r.ok) { ok = true; break outer; }
+                    const j = await r.json().catch(() => null); errs.push(j?.message || j?.hint || `${r.status}`);
+                  } catch (e) { errs.push(String(e)); }
+                }
               }
-            }
+            } else { errs.push('Supabase not configured'); }
           }
 
-          if (!ok) { alert.className = 'alert alert-error'; alert.textContent = `Could not save office hour. ${lastErr}`; alert.classList.remove('hidden'); return; }
+          if (!ok) { alert.className = 'alert alert-error'; alert.textContent = `Could not save office hour. ${errs.filter(Boolean)[0] || ''}`; alert.classList.remove('hidden'); return; }
           btn.textContent = 'Add to schedule'; delete btn.dataset.editId; form.reset(); if (typeof window.loadSchedule === 'function') window.loadSchedule();
         });
       })();
 
-      /* ---------------- FEEDBACK submit (server → Supabase) ---------------- */
+      /* FEEDBACK submit (server → Supabase) */
       (function () {
         const form = $('#feedback-form'), alert = $('#fb-alert'); if (!form) return;
         form.addEventListener('submit', async () => {
@@ -847,7 +860,7 @@
         }, true);
       })();
 
-      /* ---------------- FEEDBACK list (fresh, deduped) ---------------- */
+      /* FEEDBACK list (fresh, deduped) */
       window.loadMyFeedback = function () {
         (async () => {
           const list = $('#myfb-list'), alert = $('#myfb-alert'); if (!list) return; list.innerHTML = '';
@@ -895,7 +908,7 @@
         })();
       };
 
-      /* ---------------- SL admin (server → Supabase) ---------------- */
+      /* SL admin (server → Supabase) */
       window.loadAdmin = function () {
         (async () => {
           const body = $('#staff-table tbody'); const empty = $('#staff-empty'); if (!body) return; body.innerHTML = '';
