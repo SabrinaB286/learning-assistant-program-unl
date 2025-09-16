@@ -272,6 +272,17 @@
       padding: 6px 10px;
       border-radius: 999px
     }
+
+    .link {
+      color: var(--unl);
+      font-weight: 700;
+      cursor: pointer
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 8px
+    }
   </style>
 
   <script>
@@ -325,7 +336,7 @@
         bindNav(); paintNav();
         const initial = hasToken() ? 'dashboard' : 'feedback';
         show((location.hash || '').replace('#', '') || initial);
-        refreshAll(); // <<< auto-paint when already logged in
+        refreshAll(); // auto-paint when already logged in
         $('#logout-btn')?.addEventListener('click', async () => {
           try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch { }
           localStorage.removeItem('lap_auth'); localStorage.removeItem('lap_auth_v1');
@@ -578,28 +589,27 @@
       const isSLorAdmin = () => ['SL', 'ADMIN'].some(r => roleStr().includes(r));
       const toHHMMSS = t => t ? (/^\d{1,2}:\d{2}$/.test(t) ? t + ':00' : t) : '';
 
-      /* Office hours listing */
-      (function () {
+      /* Office hours list */
+      (async function () {
         const list = $('#office-list'); if (!list) return; const alert = $('#office-alert');
         const map = r => ({ course: r.course ?? r.course_code ?? '', day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? '', end: r.end ?? r.end_time ?? '', location: r.location ?? r.room ?? '', staff_name: r.staff_name ?? r.name ?? '' });
         const dedupe = a => { const s = new Set(); return a.filter(x => { const k = [x.course, x.day, x.start, x.end, x.location, x.staff_name].join('|'); if (s.has(k)) return false; s.add(k); return true; }); };
-        const render = rows => { list.innerHTML = ''; if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; } alert.classList.add('hidden'); rows.forEach(r => { const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div><div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${r.staff_name || 'Staff'}</span></div>`; list.appendChild(div); }); };
-        (async () => {
-          let rows = [];
-          try {
-            const { URL, KEY } = SB(); if (URL && KEY) {
-              for (const tbl of ['office_hours_public', 'staff_schedules', 'schedule']) {
-                const r = await fetch(`${URL}/rest/v1/${tbl}?select=*`, { headers: H(KEY) });
-                if (r.ok) { const j = await r.json().catch(() => []); rows = rows.concat((Array.isArray(j) ? j : []).map(map)); }
-              }
+        let rows = [];
+        try {
+          const { URL, KEY } = SB(); if (URL && KEY) {
+            for (const tbl of ['office_hours_public', 'staff_schedules', 'schedule']) {
+              const r = await fetch(`${URL}/rest/v1/${tbl}?select=*`, { headers: H(KEY) });
+              if (r.ok) { const j = await r.json().catch(() => []); rows = rows.concat((Array.isArray(j) ? j : []).map(map)); }
             }
-          } catch { }
-          render(dedupe(rows));
-        })();
+          }
+        } catch { }
+        if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; }
+        alert.classList.add('hidden');
+        dedupe(rows).forEach(r => { const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div><div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${r.staff_name || 'Staff'}</span></div>`; list.appendChild(div); });
         $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => { $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p)); const c = p.dataset.course; Array.from(list.children).forEach(card => { const on = (c === 'ALL') || (card.textContent || '').includes(c); card.style.display = on ? '' : 'none'; }); }));
       })();
 
-      /* LOGIN via server RPC wrapper (unchanged) */
+      /* LOGIN via server */
       (function () {
         const form = $('#login-form'); if (!form) return;
         const alert = $('#login-alert'), btn = $('#login-btn');
@@ -626,7 +636,7 @@
         });
       })();
 
-      /* LOAD SCHEDULE (read) */
+      /* LOAD SCHEDULE */
       window.loadSchedule = function () {
         (async () => {
           const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return; tbody.innerHTML = '';
@@ -647,7 +657,7 @@
         })()
       };
 
-      /* SAVE SCHEDULE — write to staff_schedules first; show exact error text */
+      /* SAVE SCHEDULE */
       (function () {
         const form = $('#sched-form'); if (!form) return; const alert = $('#sched-alert'), btn = $('#sched-save');
         form.addEventListener('submit', async e => {
@@ -676,41 +686,31 @@
         });
       })();
 
-      /* FEEDBACK submit (unchanged) */
-      (function () {
-        const form = $('#feedback-form'), alert = $('#fb-alert'); if (!form) return;
-        (function () { const stars = $$('#stars .star'), hidden = $('#rating'); const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n)); stars.forEach(s => { s.addEventListener('mouseenter', () => paint(Number(s.dataset.v))); s.addEventListener('mouseleave', () => paint(Number(hidden.value || 0))); s.addEventListener('click', () => { hidden.value = s.dataset.v; paint(Number(hidden.value)); }); }); })();
-        form.addEventListener('submit', async e => {
-          e.preventDefault(); alert.classList.add('hidden');
-          const course = $('#course').value.trim(), type = $('#type').value.trim(), rating = parseInt($('#rating').value || '0', 10) || null, text = $('#text').value.trim() || '', submitter = $('#submitter').value.trim() || null, year = $('#year').value.trim() || null;
-          if (!course || !type || !text) { alert.className = 'alert alert-error'; alert.textContent = 'Course, type, and feedback text are required.'; alert.classList.remove('hidden'); return; }
-          let ok = false;
-          try {
-            const { URL, KEY } = SB(); if (URL && KEY) {
-              for (const body of [{ course, type, rating, text, submitter, year }, { course_code: course, type, rating, message: text, submitter, year }]) {
-                const r = await fetch(`${URL}/rest/v1/feedback`, { method: 'POST', headers: H(KEY), body: JSON.stringify(body) }); if (r.ok) { ok = true; break; }
-              }
-            }
-          } catch { }
-          if (ok) { alert.className = 'alert alert-success'; alert.textContent = 'Thanks! Your feedback was submitted.'; alert.classList.remove('hidden'); form.reset(); window.loadMyFeedback?.(); }
-          else { alert.className = 'alert alert-error'; alert.textContent = 'Could not submit feedback.'; alert.classList.remove('hidden'); }
-        });
-      })();
-
-      /* FEEDBACK list (deduped) */
+      /* FEEDBACK list (restored) */
       window.loadMyFeedback = function () {
         (async () => {
           const list = $('#myfb-list'), alert = $('#myfb-alert'); if (!list) return; list.innerHTML = '';
           const u = getUser() || {}; let courses = [];
           if (Array.isArray(u.courses) && u.courses.length) courses = u.courses;
-          if (!courses.length && u.email) { try { const { URL, KEY } = SB(); if (URL && KEY) { const r = await fetch(`${URL}/rest/v1/staff_public?select=courses&email=eq.${encodeURIComponent(u.email)}`, { headers: H(KEY) }); if (r.ok) { const j = await r.json().catch(() => []); if (Array.isArray(j) && j[0]?.courses) courses = j[0].courses; } } } catch { } }
+
+          if (!courses.length && u.email) {
+            try {
+              const { URL, KEY } = SB(); if (URL && KEY) {
+                const r = await fetch(`${URL}/rest/v1/staff_public?select=courses&email=eq.${encodeURIComponent(u.email)}`, { headers: H(KEY) });
+                if (r.ok) { const j = await r.json().catch(() => []); if (Array.isArray(j) && j[0]?.courses) courses = j[0].courses; }
+              }
+            } catch { }
+          }
           courses = courses.map(c => String(c || '').trim()).filter(Boolean);
 
           let all = [];
           try {
             const { URL, KEY } = SB(); if (URL && KEY) {
               let url = `${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&order=created_at.desc.nullslast`;
-              if (courses.length) { const inList = '(' + courses.map(c => '"' + String(c).replace(/"/g, '\\"') + '"').join(',') + ')'; url = `${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&or=(course.in.${encodeURIComponent(inList)},course_code.in.${encodeURIComponent(inList)})&order=created_at.desc.nullslast`; }
+              if (courses.length) {
+                const inList = '(' + courses.map(c => '"' + String(c).replace(/"/g, '\\"') + '"').join(',') + ')';
+                url = `${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&or=(course.in.${encodeURIComponent(inList)},course_code.in.${encodeURIComponent(inList)})&order=created_at.desc.nullslast`;
+              }
               const r = await fetch(url, { headers: H(KEY) }); if (r.ok) { all = await r.json().catch(() => []); }
             }
           } catch { }
@@ -723,14 +723,107 @@
         })()
       };
 
-      /* SL ADMIN (read from staff_public) */
+      /* SL ADMIN — read + edit/remove restored */
       window.loadAdmin = function () {
         (async () => {
           const body = $('#staff-table tbody'), empty = $('#staff-empty'); if (!body) return; body.innerHTML = '';
-          const paint = rows => { body.innerHTML = ''; if (!rows.length) { empty.className = 'alert alert-success'; empty.textContent = 'No staff found yet.'; empty.classList.remove('hidden'); return; } empty.classList.add('hidden'); rows.forEach(s => { const tr = document.createElement('tr'); tr.innerHTML = `<td>${s.nuid || ''}</td><td>${s.name || ''}</td><td>${s.email || ''}</td><td>${s.role || ''}</td><td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td><td></td>`; body.appendChild(tr); }); };
+          const headersSup = k => ({ apikey: k, Authorization: `Bearer ${k}`, Accept: 'application/json', 'Content-Type': 'application/json' });
+          const paint = rows => {
+            body.innerHTML = '';
+            if (!rows.length) { empty.className = 'alert alert-success'; empty.textContent = 'No staff found yet.'; empty.classList.remove('hidden'); return; }
+            empty.classList.add('hidden');
+            rows.forEach(s => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${s.nuid || ''}</td>
+                      <td>${s.name || ''}</td>
+                      <td>${s.email || ''}</td>
+                      <td>${s.role || ''}</td>
+                      <td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td>
+                      <td class="row-actions">
+                        <span class="link" data-edit="${s.nuid || s.id || ''}">Edit</span>
+                        <span class="link" data-rm="${s.nuid || s.id || ''}">Remove</span>
+                      </td>`;
+              body.appendChild(tr);
+            });
+
+            // Edit/Remove handlers
+            $$('#staff-table [data-edit]').forEach(a => a.addEventListener('click', () => {
+              const tr = a.closest('tr');
+              $('#staff-edit-id').value = a.getAttribute('data-edit');
+              $('#staff-nuid').value = tr.children[0].textContent.trim();
+              $('#staff-name').value = tr.children[1].textContent.trim();
+              $('#staff-email').value = tr.children[2].textContent.trim();
+              $('#staff-role').value = tr.children[3].textContent.trim();
+              window.scrollTo({ top: document.getElementById('staff-form').offsetTop - 60, behavior: 'smooth' });
+            }));
+
+            $$('#staff-table [data-rm]').forEach(a => a.addEventListener('click', async () => {
+              const id = a.getAttribute('data-rm'); a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
+              let ok = false;
+              for (const t of [`/api/admin/staff/${encodeURIComponent(id)}`]) {
+                try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { ok = true; break; } } catch { }
+              }
+              if (!ok) { // Supabase fallback (requires RLS insert/delete policies on staff)
+                try {
+                  const { URL, KEY } = SB(); if (URL && KEY) {
+                    const r = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: headersSup(KEY) });
+                    ok = r.ok;
+                  }
+                } catch { }
+              }
+              if (ok) loadAdmin(); else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto'; }
+            }));
+          };
+
+          // Load list
           let rows = [];
-          try { const { URL, KEY } = SB(); if (URL && KEY) { const r = await fetch(`${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`, { headers: H(KEY) }); if (r.ok) rows = await r.json().catch(() => []); } } catch { }
-          paint(Array.isArray(rows) ? rows : []);
+          try {
+            const { URL, KEY } = SB(); if (URL && KEY) {
+              const r = await fetch(`${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`, { headers: headersSup(KEY) });
+              if (r.ok) rows = await r.json().catch(() => []);
+            }
+          } catch { }
+          paint(rows);
+
+          // Save (server-first; Supabase fallback)
+          (function () {
+            const form = $('#staff-form'), alert = $('#staff-alert');
+            const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
+            const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden'); };
+            $('#staff-cancel').addEventListener('click', () => { form.reset(); $('#staff-edit-id').value = ''; });
+
+            form.addEventListener('submit', async e => {
+              e.preventDefault(); alert.classList.add('hidden');
+              const id = $('#staff-edit-id').value.trim();
+              const payload = { nuid: $('#staff-nuid').value.trim(), name: $('#staff-name').value.trim(), email: $('#staff-email').value.trim(), role: $('#staff-role').value, is_active: true };
+              if (!payload.nuid || !payload.name || !payload.role) return bad('NUID, name, and role are required.');
+
+              let good = false, err = '';
+              try {
+                const r = await fetch(id ? `/api/admin/staff/${encodeURIComponent(id)}` : '/api/admin/staff', {
+                  method: id ? 'PUT' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                good = r.ok; if (!good) { let j = null; try { j = await r.clone().json() } catch { } err = j?.message || ''; }
+              } catch (e) { err = String(e?.message || e); }
+
+              if (!good) {
+                try {
+                  const { URL, KEY } = SB(); if (URL && KEY) {
+                    if (id) {
+                      const r = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: headersSup(KEY), body: JSON.stringify(payload) });
+                      good = r.ok;
+                    } else {
+                      const r = await fetch(`${URL}/rest/v1/staff`, { method: 'POST', headers: headersSup(KEY), body: JSON.stringify(payload) });
+                      good = r.ok;
+                    }
+                  }
+                } catch { }
+              }
+
+              if (!good) return bad('Could not save staff' + (err ? `: ${err}` : ''));
+              ok('Saved.'); form.reset(); $('#staff-edit-id').value = ''; loadAdmin();
+            });
+          })();
         })()
       };
     })();
