@@ -3,12 +3,12 @@
 
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Learning Assistant Feedback • UNL</title>
   <style>
     :root {
-      --unl-red: #c8102e;
-      --unl-red-dark: #a00d25;
+      --unl: #c8102e;
+      --unl2: #a00d25;
       --ink: #111827;
       --muted: #6b7280;
       --bg: #f5f6fa;
@@ -30,12 +30,12 @@
 
     body {
       font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      color: var(--ink);
-      background: var(--bg)
+      background: var(--bg);
+      color: var(--ink)
     }
 
     .topbar {
-      background: linear-gradient(135deg, var(--unl-red), var(--unl-red-dark));
+      background: linear-gradient(135deg, var(--unl), var(--unl2));
       color: #fff;
       padding: 18px 0;
       border-bottom: 1px solid rgba(255, 255, 255, .15)
@@ -77,28 +77,14 @@
       border: 1px solid rgba(255, 255, 255, .75);
       padding: 8px 14px;
       border-radius: 999px;
-      cursor: pointer;
-      font-weight: 600
+      font-weight: 600;
+      cursor: pointer
     }
 
     .btn:hover,
     .btn.active {
       background: #fff;
-      color: var(--unl-red)
-    }
-
-    #page-actions {
-      margin-top: 8px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap
-    }
-
-    .chip {
-      background: rgba(255, 255, 255, .14);
-      padding: 6px 10px;
-      border-radius: 999px
+      color: var(--unl)
     }
 
     main {
@@ -120,8 +106,7 @@
     }
 
     .lead {
-      color: var(--muted);
-      margin-top: 0
+      color: var(--muted)
     }
 
     .hidden {
@@ -169,11 +154,6 @@
       color: var(--ink)
     }
 
-    input::placeholder,
-    textarea::placeholder {
-      color: #9ca3af
-    }
-
     textarea {
       min-height: 120px
     }
@@ -181,14 +161,13 @@
     .actions {
       display: flex;
       gap: 10px;
-      align-items: center;
       flex-wrap: wrap
     }
 
     .btn-primary {
-      background: var(--unl-red);
+      background: var(--unl);
+      border: 1px solid var(--unl);
       color: #fff;
-      border: 1px solid var(--unl-red);
       padding: 10px 16px;
       border-radius: 10px;
       font-weight: 700;
@@ -196,17 +175,16 @@
     }
 
     .btn-primary:hover {
-      background: var(--unl-red-dark)
+      background: var(--unl2)
     }
 
     .btn-muted {
       background: #fff;
-      color: #000;
       border: 1px solid var(--ring);
+      color: #000;
       padding: 10px 16px;
       border-radius: 10px;
-      font-weight: 600;
-      cursor: pointer
+      font-weight: 600
     }
 
     .pills {
@@ -218,30 +196,27 @@
     .pill {
       background: #fff;
       border: 1px solid var(--ring);
-      color: var(--ink);
-      padding: 8px 14px;
       border-radius: 999px;
-      cursor: pointer;
-      font-weight: 600
+      padding: 8px 14px;
+      font-weight: 600;
+      cursor: pointer
     }
 
     .pill.active {
-      background: var(--unl-red);
-      color: #fff;
-      border-color: var(--unl-red)
+      background: var(--unl);
+      border-color: var(--unl);
+      color: #fff
     }
 
     .stars {
       display: flex;
-      gap: 6px;
-      align-items: center
+      gap: 6px
     }
 
     .star {
       font-size: 28px;
       cursor: pointer;
-      color: #d3d6de;
-      line-height: 1
+      color: #d3d6de
     }
 
     .star.active {
@@ -267,15 +242,6 @@
       border: 1px solid #a7f3d0
     }
 
-    .tag {
-      display: inline-block;
-      background: #eef2ff;
-      color: #3730a3;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: .825rem
-    }
-
     .table {
       width: 100%;
       border-collapse: collapse
@@ -293,79 +259,67 @@
       font-weight: 700
     }
 
-    .row-actions {
-      display: flex;
-      gap: 8px
-    }
-
-    .link {
-      color: var(--unl-red);
-      cursor: pointer;
-      font-weight: 700
+    .tag {
+      background: #eef2ff;
+      color: #3730a3;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: .825rem
     }
   </style>
 
   <script>
+    /* ---------- small utils & app shell ---------- */
     (function () {
       const PAGES = ['feedback', 'office', 'login', 'dashboard'];
       const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-      const getSession = () => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw) } catch { } } return {} };
-      const getToken = () => getSession().token || null;
-      const getUser = () => getSession().user || null;
+      const readSession = () => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const v = localStorage.getItem(k); if (v) return JSON.parse(v) } catch { } } return {} };
+      const getUser = () => readSession().user || null;
+      const hasToken = () => !!readSession().token;
       const roleStr = () => String(getUser()?.role || '').toUpperCase();
-      const isAnyStaff = () => ['SL', 'CL', 'LA', 'STAFF', 'ADMIN', 'INSTRUCTOR'].some(r => roleStr().includes(r));
+      const isStaffAny = () => ['SL', 'CL', 'LA', 'ADMIN', 'STAFF', 'INSTRUCTOR'].some(r => roleStr().includes(r));
       const isSLorAdmin = () => ['SL', 'ADMIN'].some(r => roleStr().includes(r));
 
-      function runDashboardLoaders() {
-        if (!getToken()) return;
-        try { if (typeof window.loadSchedule === 'function') window.loadSchedule(); } catch { }
-        try { if (typeof window.loadMyFeedback === 'function') window.loadMyFeedback(); } catch { }
-        try { if (isSLorAdmin() && typeof window.loadAdmin === 'function') window.loadAdmin(); } catch { }
+      function paintNav() {
+        const authed = hasToken();
+        const name = (getUser()?.name || getUser()?.full_name || getUser()?.email) || '';
+        const greet = $('#lap-user-greeting'); if (greet) { greet.textContent = authed ? `Signed in as ${name}` : ''; greet.classList.toggle('hidden', !authed); }
+        $('#login-tab')?.classList.toggle('hidden', authed);
+        $('#logout-btn')?.classList.toggle('hidden', !authed);
+        $('#dashboard-tab')?.classList.toggle('hidden', !authed); // show for any signed-in user so it never “bounces”
+        $('#my-feedback')?.classList.toggle('hidden', !authed);
+        $('#admin-block')?.classList.toggle('hidden', !(authed && isSLorAdmin()));
       }
 
       function show(id) {
-        try {
-          if (!PAGES.includes(id)) id = 'feedback';
-          PAGES.forEach(k => { const el = $('#section-' + k); if (el) el.classList.toggle('hidden', k !== id); });
-          $$('[data-nav]').forEach(b => b.classList.toggle('active', b?.dataset?.nav === id));
-          if (location.hash !== '#' + id) history.replaceState(null, '', '#' + id);
-          if (id === 'dashboard') runDashboardLoaders();
-        } catch (e) { console.error('show failed', e); }
+        if (!PAGES.includes(id)) id = 'feedback';
+        PAGES.forEach(k => $('#section-' + k)?.classList.toggle('hidden', k !== id));
+        $$('[data-nav]').forEach(b => b.classList.toggle('active', b?.dataset?.nav === id));
+        if (location.hash !== '#' + id) history.replaceState(null, '', '#' + id);
+        if (id === 'dashboard' && hasToken()) {
+          try { window.loadSchedule?.() } catch { }
+          try { window.loadMyFeedback?.() } catch { }
+          if (isSLorAdmin()) try { window.loadAdmin?.() } catch { }
+        }
       }
       window.__lap_show = show;
 
-      function bind() { $$('[data-nav]').forEach(b => { if (b.__bound) return; b.__bound = true; b.addEventListener('click', () => show(b.dataset.nav), { passive: true }); }); }
+      function bindNav() { $$('[data-nav]').forEach(b => { if (b.__bound) return; b.__bound = true; b.addEventListener('click', () => show(b.dataset.nav), { passive: true }); }); }
 
       window.addEventListener('DOMContentLoaded', () => {
-        bind();
-        const initial = (location.hash || '').replace('#', '');
-        show(PAGES.includes(initial) ? initial : 'feedback');
+        bindNav(); paintNav();
+        // If already signed in, land on Dashboard for staff, otherwise Feedback.
+        const initial = hasToken() ? (isStaffAny() ? 'dashboard' : 'feedback') : 'feedback';
+        show((location.hash || '').replace('#', '') || initial);
 
-        const greet = $('#lap-user-greeting'), loginTab = $('#login-tab'), logoutBtn = $('#logout-btn'), dashTab = $('#dashboard-tab');
-        const paint = () => {
-          const authed = !!getToken(); const name = (getUser()?.name || getUser()?.email || getUser()?.full_name);
-          if (greet) { if (authed && name) { greet.textContent = `Signed in as ${name}`; greet.classList.remove('hidden'); } else { greet.textContent = ''; greet.classList.add('hidden'); } }
-          // Dashboard tab: show for any signed-in user (prevents unwanted bounces)
-          if (dashTab) dashTab.classList.toggle('hidden', !authed);
-          if (loginTab) loginTab.classList.toggle('hidden', authed);
-          if (logoutBtn) logoutBtn.classList.toggle('hidden', !authed);
-          // My Feedback visible for any signed-in user
-          $('#my-feedback')?.classList.toggle('hidden', !authed);
-          // SL admin only for SL/ADMIN roles
-          $('#admin-block')?.classList.toggle('hidden', !(authed && isSLorAdmin()));
-        };
-        paint();
-        runDashboardLoaders();
-
-        // Reliable logout (even if listener fails)
+        // reliable logout
         $('#logout-btn')?.addEventListener('click', async () => {
-          try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { }
+          try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch { }
           localStorage.removeItem('lap_auth'); localStorage.removeItem('lap_auth_v1');
           location.hash = '#feedback'; location.reload();
         });
       });
-
-      window.addEventListener('hashchange', () => { const h = (location.hash || '').replace('#', ''); show(h); });
+      window.addEventListener('hashchange', () => show((location.hash || '').replace('#', '')));
     })();
   </script>
 </head>
@@ -373,39 +327,34 @@
 <body>
   <header class="topbar">
     <div class="shell">
-      <div>
-        <div class="brand">Learning Assistant Feedback</div>
-        <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
-        <div id="page-actions"><span id="lap-user-greeting" class="chip hidden" aria-live="polite"></span></div>
-        <div class="navrow">
-          <nav class="nav">
-            <button class="btn" type="button" data-nav="feedback" onclick="__lap_show('feedback')">Feedback</button>
-            <button class="btn" type="button" data-nav="office" onclick="__lap_show('office')">Office Hours</button>
-            <button id="dashboard-tab" class="btn hidden" type="button" data-nav="dashboard"
-              onclick="__lap_show('dashboard')">Dashboard</button>
-            <button id="login-tab" class="btn" type="button" data-nav="login"
-              onclick="__lap_show('login')">Login</button>
-          </nav>
-          <button id="logout-btn" class="btn hidden" type="button"
-            onclick="try{fetch('/api/auth/logout',{method:'POST',credentials:'include'})}catch(e){};localStorage.removeItem('lap_auth');localStorage.removeItem('lap_auth_v1');location.hash='#feedback';location.reload();">
-            Log out
-          </button>
-        </div>
+      <div class="brand">Learning Assistant Feedback</div>
+      <div class="sub">Computer Science &amp; Engineering — University of Nebraska–Lincoln</div>
+      <div style="margin-top:8px"><span id="lap-user-greeting" class="chip hidden" aria-live="polite"></span></div>
+      <div class="navrow">
+        <nav class="nav">
+          <button class="btn" type="button" data-nav="feedback" onclick="__lap_show('feedback')">Feedback</button>
+          <button class="btn" type="button" data-nav="office" onclick="__lap_show('office')">Office Hours</button>
+          <button id="dashboard-tab" class="btn hidden" type="button" data-nav="dashboard"
+            onclick="__lap_show('dashboard')">Dashboard</button>
+          <button id="login-tab" class="btn" type="button" data-nav="login" onclick="__lap_show('login')">Login</button>
+        </nav>
+        <button id="logout-btn" class="btn hidden" type="button"
+          onclick="try{fetch('/api/auth/logout',{method:'POST',credentials:'include'})}catch(e){};localStorage.removeItem('lap_auth');localStorage.removeItem('lap_auth_v1');location.hash='#feedback';location.reload();">
+          Log out
+        </button>
       </div>
     </div>
   </header>
 
   <main class="shell">
-    <!-- FEEDBACK -->
+    <!-- FEEDBACK SUBMIT -->
     <section id="section-feedback" class="card">
       <h2>Submit Feedback</h2>
       <p class="lead">Share course / LA feedback. Stored in Supabase.</p>
-
       <form id="feedback-form" class="grid" novalidate>
         <div class="grid g-2">
-          <div>
-            <label for="course">Course</label>
-            <select id="course" name="course" required>
+          <div><label>Course</label>
+            <select id="course" required>
               <option value="">Select a course…</option>
               <option>CSCE 101</option>
               <option>CSCE 155A</option>
@@ -414,9 +363,8 @@
               <option>CSCE 156</option>
             </select>
           </div>
-          <div>
-            <label for="type">Type</label>
-            <select id="type" name="type" required>
+          <div><label>Type</label>
+            <select id="type" required>
               <option value="">Select type…</option>
               <option>Website</option>
               <option>Staff</option>
@@ -430,23 +378,18 @@
 
         <div>
           <label>Rating</label>
-          <div id="stars" class="stars">
-            <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span><span class="star"
-              data-v="3">★</span><span class="star" data-v="4">★</span><span class="star" data-v="5">★</span>
-          </div>
-          <input type="hidden" id="rating" name="rating" value="0" />
+          <div id="stars" class="stars"><span class="star" data-v="1">★</span><span class="star"
+              data-v="2">★</span><span class="star" data-v="3">★</span><span class="star" data-v="4">★</span><span
+              class="star" data-v="5">★</span></div>
+          <input type="hidden" id="rating" value="0" />
         </div>
 
-        <div>
-          <label for="text">Your feedback</label>
-          <textarea id="text" name="text" placeholder="Share details…"></textarea>
-        </div>
+        <div><label>Your feedback</label><textarea id="text" placeholder="Share details…"></textarea></div>
 
         <div class="grid g-2">
-          <div><label for="submitter">Your name (optional)</label><input id="submitter" name="submitter"
-              placeholder="First Last" /></div>
-          <div><label for="year">Year (optional)</label>
-            <select id="year" name="year">
+          <div><label>Your name (optional)</label><input id="submitter" placeholder="First Last" /></div>
+          <div><label>Year (optional)</label>
+            <select id="year">
               <option value="">Prefer not to say</option>
               <option>Freshman</option>
               <option>Sophomore</option>
@@ -458,15 +401,14 @@
         </div>
 
         <div id="fb-alert" class="alert hidden"></div>
-        <div class="actions"><button id="fb-submit" type="submit" class="btn-primary">Submit feedback</button></div>
+        <div class="actions"><button id="fb-submit" class="btn-primary" type="submit">Submit feedback</button></div>
       </form>
     </section>
 
-    <!-- OFFICE HOURS -->
+    <!-- OFFICE HOURS (READ) -->
     <section id="section-office" class="card hidden">
       <h2>Office Hours</h2>
       <p class="lead">Browse office hours by course.</p>
-
       <div class="pills" id="course-filter">
         <button class="pill active" type="button" data-course="ALL">All</button>
         <button class="pill" type="button" data-course="CSCE 101">CSCE 101</button>
@@ -475,7 +417,6 @@
         <button class="pill" type="button" data-course="CSCE 155H">CSCE 155H</button>
         <button class="pill" type="button" data-course="CSCE 156">CSCE 156</button>
       </div>
-
       <div id="office-alert" class="alert hidden"></div>
       <div id="office-list" class="grid"></div>
     </section>
@@ -483,21 +424,13 @@
     <!-- LOGIN -->
     <section id="section-login" class="card hidden">
       <h2>Sign in</h2>
-      <p class="lead">Staff and students sign in with NUID (or @huskers.unl.edu) and password.</p>
-
+      <p class="lead">Use NUID or @huskers.unl.edu + password.</p>
       <div id="login-alert" class="alert hidden"></div>
       <form id="login-form" class="grid g-2" novalidate>
-        <div><label for="login-input">NUID or Email</label>
-          <input id="login-input" name="login" type="text" placeholder="12345678 or user@huskers.unl.edu"
-            autocomplete="username" required>
+        <div><label>NUID or Email</label><input id="login-input" autocomplete="username" required></div>
+        <div><label>Password</label><input id="password-input" type="password" autocomplete="current-password" required>
         </div>
-        <div><label for="password-input">Password</label>
-          <input id="password-input" name="password" type="password" autocomplete="current-password" required>
-        </div>
-        <div class="actions">
-          <button id="login-btn" type="submit" class="btn-primary">Sign in</button>
-          <button id="change-pass-btn" type="button" class="btn-muted">Change password</button>
-        </div>
+        <div class="actions"><button id="login-btn" class="btn-primary" type="submit">Sign in</button></div>
       </form>
     </section>
 
@@ -509,7 +442,7 @@
         <div id="sched-alert" class="alert hidden"></div>
 
         <form id="sched-form" class="grid g-3" novalidate>
-          <div><label for="sched-course">Course</label>
+          <div><label>Course</label>
             <select id="sched-course" required>
               <option value="">Select…</option>
               <option>CSCE 101</option>
@@ -519,7 +452,7 @@
               <option>CSCE 156</option>
             </select>
           </div>
-          <div><label for="sched-day">Day</label>
+          <div><label>Day</label>
             <select id="sched-day" required>
               <option value="">Select…</option>
               <option>Mon</option>
@@ -529,11 +462,10 @@
               <option>Fri</option>
             </select>
           </div>
-          <div><label for="sched-location">Location</label><input id="sched-location" placeholder="Avery 12 / Zoom…">
-          </div>
-          <div><label for="sched-start">Start</label><input id="sched-start" type="time" required></div>
-          <div><label for="sched-end">End</label><input id="sched-end" type="time" required></div>
-          <div class="actions"><button id="sched-save" type="submit" class="btn-primary">Add to schedule</button></div>
+          <div><label>Location</label><input id="sched-location" placeholder="Avery 12 / Zoom…" /></div>
+          <div><label>Start</label><input id="sched-start" type="time" required /></div>
+          <div><label>End</label><input id="sched-end" type="time" required /></div>
+          <div class="actions"><button id="sched-save" class="btn-primary" type="submit">Add to schedule</button></div>
         </form>
 
         <table class="table" id="sched-table" style="margin-top:10px">
@@ -553,34 +485,30 @@
 
       <div id="my-feedback" class="card hidden">
         <h2>My Feedback</h2>
-        <p class="lead">Feedback items for your assigned course(s).</p>
+        <p class="lead">Feedback items for your course(s).</p>
         <div id="myfb-alert" class="alert hidden"></div>
         <ul id="myfb-list"></ul>
       </div>
 
       <div id="admin-block" class="card hidden">
         <h2>SL Admin</h2>
-        <p class="lead">Manage staff and approve students.</p>
+        <p class="lead">Manage staff and pending students.</p>
 
         <h3>Add / Edit staff</h3>
         <div id="staff-alert" class="alert hidden"></div>
         <form id="staff-form" class="grid g-3" novalidate>
           <input type="hidden" id="staff-edit-id" value="" />
-          <div><label>NUID</label><input id="staff-nuid" placeholder="12345678" required></div>
-          <div><label>Name</label><input id="staff-name" placeholder="First Last" required></div>
-          <div><label>Email (@huskers.unl.edu)</label><input id="staff-email" placeholder="user@huskers.unl.edu"></div>
-          <div><label>Role</label>
-            <select id="staff-role" required>
+          <div><label>NUID</label><input id="staff-nuid" required /></div>
+          <div><label>Name</label><input id="staff-name" required /></div>
+          <div><label>Email</label><input id="staff-email" placeholder="user@huskers.unl.edu" /></div>
+          <div><label>Role</label><select id="staff-role" required>
               <option value="">Select…</option>
               <option>SL</option>
               <option>CL</option>
               <option>LA</option>
-            </select>
-          </div>
-          <div class="actions">
-            <button id="staff-add" class="btn-primary" type="submit">Save staff</button>
-            <button id="staff-cancel" class="btn-muted" type="button">Cancel</button>
-          </div>
+            </select></div>
+          <div class="actions"><button id="staff-add" class="btn-primary" type="submit">Save staff</button><button
+              id="staff-cancel" class="btn-muted" type="button">Cancel</button></div>
         </form>
 
         <h3 style="margin-top:16px">Staff list</h3>
@@ -617,7 +545,7 @@
     </section>
   </main>
 
-  <!-- Supabase REST config -->
+  <!-- Supabase -->
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || 'https://wmeijbsvlnjvnhptudfh.supabase.co';
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtZWlqYnN2bG5qdm5ocHR1ZGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MDQ5NzksImV4cCI6MjA3MTM4MDk3OX0.YT_435s_FFsqNJs6M_yW9iIGzxeCu1BHpPVH1cwJlX8';
@@ -629,327 +557,196 @@
       const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
       const SB = () => ({ URL: (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY: window.SUPABASE_ANON_KEY || '' });
       const H = k => ({ apikey: k, Authorization: `Bearer ${k}`, Accept: 'application/json', 'Content-Type': 'application/json' });
+      const readSession = () => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const v = localStorage.getItem(k); if (v) return JSON.parse(v) } catch { } } return {} };
+      const getUser = () => readSession().user || null;
+      const hasToken = () => !!readSession().token;
+      const roleStr = () => String(getUser()?.role || '').toUpperCase();
+      const isSLorAdmin = () => ['SL', 'ADMIN'].some(r => roleStr().includes(r));
 
-      /* Stars */
-      (function () {
-        const stars = $$('#stars .star'), hidden = $('#rating'); if (!hidden) return;
-        const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n));
-        stars.forEach(s => {
-          s.addEventListener('mouseenter', () => paint(Number(s.dataset.v)));
-          s.addEventListener('mouseleave', () => paint(Number(hidden.value || 0)));
-          s.addEventListener('click', () => { hidden.value = s.dataset.v; paint(Number(hidden.value)); });
-        });
-      })();
+      /* stars */
+      (function () { const stars = $$('#stars .star'), hidden = $('#rating'); if (!hidden) return; const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n)); stars.forEach(s => { s.addEventListener('mouseenter', () => paint(Number(s.dataset.v))); s.addEventListener('mouseleave', () => paint(Number(hidden.value || 0))); s.addEventListener('click', () => { hidden.value = s.dataset.v; paint(Number(hidden.value)); }); }); })();
 
-      /* Office hours listing */
+      /* small timeout fetch */
+      const timeoutFetch = (url, opts = {}, ms = 3500) => Promise.race([
+        fetch(url, opts),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout')), ms))
+      ]);
+
+      /* ---- Office hours listing (read) ---- */
       (function () {
         const list = $('#office-list'); if (!list) return; const alert = $('#office-alert');
-        const mapRow = r => ({ course: r.course ?? r.course_code ?? r.course_id ?? '', day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? r.begin ?? '', end: r.end ?? r.end_time ?? r.finish ?? '', location: r.location ?? r.room ?? r.place ?? '', staff_name: r.staff_name ?? r.name ?? r.instructor ?? r.staff ?? '' });
-        const dedupe = arr => { const seen = new Set(); return arr.filter(x => { const k = [x.course, x.day, x.start, x.end, x.location, x.staff_name].join('|'); if (seen.has(k)) return false; seen.add(k); return true; }); };
-        const render = rows => {
-          list.innerHTML = '';
-          if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; }
-          alert.classList.add('hidden');
-          rows.forEach(r => {
-            const div = document.createElement('div'); div.className = 'card';
-            div.innerHTML = `<div class="grid g-2" style="align-items:center"><div><div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div><div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${r.staff_name || 'Staff'}</span></div></div></div>`;
-            list.appendChild(div);
-          });
-        };
+        const map = r => ({ course: r.course ?? r.course_code ?? r.course_id ?? '', day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? '', end: r.end ?? r.end_time ?? '', location: r.location ?? r.room ?? '', staff_name: r.staff_name ?? r.name ?? '' });
+        const dedupe = a => { const s = new Set(); return a.filter(x => { const k = [x.course, x.day, x.start, x.end, x.location, x.staff_name].join('|'); if (s.has(k)) return false; s.add(k); return true; }); };
+        const render = rows => { list.innerHTML = ''; if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; } alert.classList.add('hidden'); rows.forEach(r => { const div = document.createElement('div'); div.className = 'card'; div.innerHTML = `<div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div><div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${r.staff_name || 'Staff'}</span></div>`; list.appendChild(div); }); };
         (async () => {
           let rows = [];
-          for (const p of ['/api/office-hours', '/office-hours']) {
-            try { const r = await fetch(p, { credentials: 'include' }); const j = await r.clone().json().catch(() => null); if (r.ok) rows = rows.concat(Array.isArray(j?.items) ? j.items : (Array.isArray(j) ? j : [])); } catch { }
-          }
-          try {
-            const { URL, KEY } = SB(); if (URL && KEY) {
-              for (const path of ['office_hours_public', 'schedule', 'staff_schedules']) {
-                const a = await fetch(`${URL}/rest/v1/${path}?select=*`, { headers: H(KEY) });
-                if (a.ok) { const j = await a.json().catch(() => []); rows = rows.concat((Array.isArray(j) ? j : []).map(mapRow)); }
-              }
-            }
-          } catch { }
+          try { const { URL, KEY } = SB(); if (URL && KEY) { for (const tbl of ['office_hours_public', 'schedule', 'staff_schedules']) { const r = await fetch(`${URL}/rest/v1/${tbl}?select=*`, { headers: H(KEY) }); if (r.ok) { const j = await r.json().catch(() => []); rows = rows.concat((Array.isArray(j) ? j : []).map(map)); } } } } catch { }
           render(dedupe(rows));
         })();
-        $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => {
-          $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
-          const c = p.dataset.course;
-          Array.from(list.children).forEach(card => { const on = (c === 'ALL') || (card.textContent || '').includes(c); card.style.display = on ? '' : 'none'; });
-        }));
+        $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => { $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p)); const c = p.dataset.course; Array.from(list.children).forEach(card => { const on = (c === 'ALL') || (card.textContent || '').includes(c); card.style.display = on ? '' : 'none'; }); }));
       })();
 
-      /* LOGIN (server → Supabase RPC) */
+      /* ---- LOGIN (RPC first, server in parallel) ---- */
       (function () {
         const form = $('#login-form'); if (!form) return;
-        const alert = $('#login-alert'), logoutBtn = $('#logout-btn'), loginTab = $('#login-tab'), dashTab = $('#dashboard-tab']);
+        const alert = $('#login-alert'), btn = $('#login-btn');
         const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden'); };
         const ok = () => { alert.classList.add('hidden'); alert.textContent = ''; };
 
         const rpcLogin = async (login, password) => {
           const { URL, KEY } = SB(); if (!URL || !KEY) throw new Error('Supabase not configured');
-          const r = await fetch(`${URL}/rest/v1/rpc/verify_staff_login`, { method: 'POST', headers: H(KEY), body: JSON.stringify({ login, password }) });
+          const r = await timeoutFetch(`${URL}/rest/v1/rpc/verify_staff_login`, { method: 'POST', headers: H(KEY), body: JSON.stringify({ login, password }) }, 4000);
           if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-          const rows = await r.json().catch(() => []);
-          if (!Array.isArray(rows) || !rows.length) throw new Error('Invalid credentials');
+          const rows = await r.json().catch(() => []); if (!Array.isArray(rows) || !rows.length) throw new Error('Invalid credentials');
           const u = rows[0];
           return { token: 'supabase-rpc', user: { nuid: u.nuid, email: u.email, name: u.name, full_name: u.name, role: u.role, courses: u.courses || [], is_active: u.is_active !== false } };
         };
+        const serverLogin = async (login, password) => {
+          const body = JSON.stringify({ login, password }), hdr = { 'Content-Type': 'application/json' };
+          const tries = ['/api/auth/login', '/auth/login'].map(p => timeoutFetch(p, { method: 'POST', credentials: 'include', headers: hdr, body }, 2500));
+          // race both server endpoints
+          for (const p of tries) { try { const r = await p; if (r.ok) { const j = await r.json().catch(() => null); if (j?.token && (j.user || j.profile)) return { token: j.token, user: j.user || j.profile }; } } catch { } }
+          throw new Error('Server login failed');
+        };
 
         form.addEventListener('submit', async e => {
-          e.preventDefault(); ok();
+          e.preventDefault(); ok(); btn.disabled = true; btn.textContent = 'Signing in…';
           const login = $('#login-input').value.trim(), password = $('#password-input').value;
-          if (!login || !password) return bad('Missing login or password');
+          if (!login || !password) { bad('Missing login or password'); btn.disabled = false; btn.textContent = 'Sign in'; return; }
 
           let session = null, lastErr = '';
-          for (const path of ['/api/auth/login', '/auth/login']) {
-            try {
-              const res = await fetch(path, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) });
-              if (res.ok) {
-                const j = await res.json().catch(() => null);
-                if (j?.token && (j?.user || j?.profile)) { session = { token: j.token, user: j.user || j.profile }; break; }
-              } else {
-                const j = await res.json().catch(() => null); lastErr = j?.message || j?.error || `${res.status} ${res.statusText}`;
-              }
-            } catch (e) { lastErr = String(e); }
-          }
-          if (!session) {
-            try { session = await rpcLogin(login, password); }
-            catch (e) { return bad(lastErr || e.message || 'Login failed'); }
-          }
+          // start RPC immediately; start server in parallel after 300ms head-start to RPC
+          const wait = (ms) => new Promise(r => setTimeout(r, ms));
+          try {
+            session = await Promise.race([
+              rpcLogin(login, password),
+              (async () => { await wait(300); return serverLogin(login, password) })()
+            ]);
+          } catch (e) { lastErr = String(e?.message || e) }
+          if (!session) { bad(lastErr || 'Login failed'); btn.disabled = false; btn.textContent = 'Sign in'; return; }
 
-          try { localStorage.setItem('lap_auth_v1', JSON.stringify(session)); } catch { }; try { localStorage.setItem('lap_auth', JSON.stringify(session)); } catch { };
-          logoutBtn?.classList.remove('hidden'); loginTab?.classList.add('hidden');
-          // Let the user pick tabs freely; just land on dashboard once
-          if (dashTab) dashTab.classList.toggle('hidden', false);
-          if (typeof window.__lap_show === 'function') window.__lap_show('dashboard'); else location.hash = '#dashboard';
+          try { localStorage.setItem('lap_auth_v1', JSON.stringify(session)); localStorage.setItem('lap_auth', JSON.stringify(session)); } catch { }
+          // route & hydrate
+          document.getElementById('dashboard-tab')?.classList.remove('hidden');
+          window.__lap_show?.('dashboard');
+          try { window.loadSchedule?.(); window.loadMyFeedback?.(); if (isSLorAdmin()) window.loadAdmin?.(); } catch { }
+          btn.disabled = false; btn.textContent = 'Sign in';
         });
       })();
 
-      /* LOAD SCHEDULE */
+      /* ---- LOAD SCHEDULE (read) ---- */
       window.loadSchedule = function () {
         (async () => {
           const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return; tbody.innerHTML = '';
-          const mapRow = r => ({ id: r.id || r.row_id || r.uuid || '', course: r.course || r.course_code || '', day: r.day || r.day_of_week || '', start: r.start || r.start_time || '', end: r.end || r.end_time || '', location: r.location || r.room || '', staff_email: r.staff_email || r.email || '', staff_name: r.staff_name || r.name || '' });
-
-          let data = null;
-          for (const url of ['/api/staff/schedule', '/api/schedule/mine', '/api/schedule']) {
-            try {
-              const res = await fetch(url, { credentials: 'include' }); const j = await res.clone().json().catch(() => null);
-              if (res.ok && Array.isArray(j)) { data = j; break; }
-              if (res.ok && j?.items && Array.isArray(j.items)) { data = j.items; break; }
-            } catch { }
-          }
-          if (!data) {
-            try {
-              const { URL, KEY } = SB(); if (URL && KEY) {
-                const me = (function () { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw).user } catch { } } return {}; })();
-                const f = me?.email ? `&staff_email=eq.${encodeURIComponent(me.email)}` : '';
-                const r1 = await fetch(`${URL}/rest/v1/schedule?select=*&order=start.asc${f}`, { headers: H(KEY) }); const j1 = r1.ok ? await r1.json().catch(() => []) : [];
-                const r2 = await fetch(`${URL}/rest/v1/staff_schedules?select=*&order=start.asc${f ? `&staff_email=eq.${encodeURIComponent(me.email)}` : ''}`, { headers: H(KEY) }); const j2 = r2.ok ? await r2.json().catch(() => []) : [];
-                data = [...(Array.isArray(j1) ? j1 : []), ...(Array.isArray(j2) ? j2 : [])];
-              }
-            } catch { }
-          }
-          data = Array.isArray(data) ? data.map(mapRow) : [];
+          const map = r => ({ id: r.id || r.uuid || r.row_id || '', course: r.course || r.course_code || '', day: r.day || r.day_of_week || '', start: r.start || r.start_time || '', end: r.end || r.end_time || '', location: r.location || r.room || '' });
+          let data = [];
+          try {
+            const { URL, KEY } = SB(); if (URL && KEY) {
+              const me = getUser() || {}; const f = me.email ? `&staff_email=eq.${encodeURIComponent(me.email)}` : '';
+              const r1 = await fetch(`${URL}/rest/v1/schedule?select=*&order=start.asc${f}`, { headers: H(KEY) }); if (r1.ok) data = data.concat(await r1.json().catch(() => []));
+              const r2 = await fetch(`${URL}/rest/v1/staff_schedules?select=*&order=start.asc${me.email ? `&staff_email=eq.${encodeURIComponent(me.email)}` : ''}`, { headers: H(KEY) }); if (r2.ok) data = data.concat(await r2.json().catch(() => []));
+            }
+          } catch { }
+          data = data.map(map);
           if (!data.length) { alert.className = 'alert alert-success'; alert.textContent = 'You have no office hours yet. Use the form above to add your first block.'; alert.classList.remove('hidden'); return; }
           alert.classList.add('hidden');
-          data.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${row.course}</td><td>${row.day}</td><td>${row.start}</td><td>${row.end}</td><td>${row.location}</td>
-              <td class="row-actions"><span class="link" data-edit="${row.id}">Edit</span><span class="link" data-del="${row.id}">Delete</span></td>`;
-            tbody.appendChild(tr);
-          });
-          $$('#sched-table [data-del]').forEach(a => a.addEventListener('click', async () => {
-            const id = a.getAttribute('data-del'); a.textContent = 'Deleting…'; a.style.pointerEvents = 'none';
-            let ok = false;
-            for (const t of [`/api/staff/schedule/${id}`, `/api/schedule/${id}`]) { try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { ok = true; break; } } catch { } }
-            if (!ok) {
-              try {
-                const { URL, KEY } = SB(); if (URL && KEY) {
-                  for (const tbl of ['schedule', 'staff_schedules']) { const r = await fetch(`${URL}/rest/v1/${tbl}?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: H(KEY) }); if (r.ok) { ok = true; break; } }
-                }
-              } catch { }
-            }
-            if (ok) loadSchedule(); else { a.textContent = 'Delete'; a.style.pointerEvents = 'auto'; }
-          }));
-          $$('#sched-table [data-edit]').forEach(a => a.addEventListener('click', () => {
-            const tr = a.closest('tr');
-            $('#sched-course').value = tr.children[0].textContent; $('#sched-day').value = tr.children[1].textContent;
-            $('#sched-start').value = tr.children[2].textContent; $('#sched-end').value = tr.children[3].textContent; $('#sched-location').value = tr.children[4].textContent;
-            const btn = $('#sched-save'); btn.dataset.editId = a.getAttribute('data-edit'); btn.textContent = 'Save changes';
-            window.scrollTo({ top: $('#section-dashboard').offsetTop - 10, behavior: 'smooth' });
-          }));
-        })();
+          data.forEach(r => { const tr = document.createElement('tr'); tr.innerHTML = `<td>${r.course}</td><td>${r.day}</td><td>${r.start}</td><td>${r.end}</td><td>${r.location}</td><td></td>`; tbody.appendChild(tr); });
+        })()
       };
 
-      /* SAVE SCHEDULE (server → Supabase; try multiple shapes) */
+      /* ---- SAVE SCHEDULE (Supabase-first, multi-shape) ---- */
       (function () {
-        const fmt = t => (!t ? '' : (/^\d{1,2}:\d{2}$/.test(t) ? t + ':00' : t));
-        const form = $('#sched-form'); if (!form) return; const alert = $('#sched-alert'); const btn = $('#sched-save');
+        const fmt = t => !t ? '' : (/^\d{1,2}:\d{2}$/.test(t) ? t + ':00' : t);
+        const form = $('#sched-form'); if (!form) return; const alert = $('#sched-alert'), btn = $('#sched-save');
         form.addEventListener('submit', async e => {
-          e.preventDefault(); alert.classList.add('hidden');
-          const payload = { course: $('#sched-course').value.trim(), day: $('#sched-day').value.trim(), start: fmt($('#sched-start').value.trim()), end: fmt($('#sched-end').value.trim()), location: $('#sched-location').value.trim() };
-          if (!payload.course || !payload.day || !payload.start || !payload.end) { alert.className = 'alert alert-error'; alert.textContent = 'Course, day, start and end are required.'; alert.classList.remove('hidden'); return; }
-          const sess = (function () { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw) } catch { } } return {}; })();
-          const user = sess?.user || {};
-          const id = btn.dataset.editId || '';
-
-          let ok = false; let errs = [];
-          // Try server first
+          e.preventDefault(); alert.classList.add('hidden'); btn.disabled = true;
+          const p = { course: $('#sched-course').value.trim(), day: $('#sched-day').value.trim(), start: fmt($('#sched-start').value.trim()), end: fmt($('#sched-end').value.trim()), location: $('#sched-location').value.trim() };
+          if (!p.course || !p.day || !p.start || !p.end) { alert.className = 'alert alert-error'; alert.textContent = 'Course, day, start and end are required.'; alert.classList.remove('hidden'); btn.disabled = false; return; }
+          const u = getUser() || {}; const base = { ...p, staff_email: u.email || null, staff_name: u.name || u.full_name || u.email || null, staff_nuid: u.nuid || null };
+          let ok = false, err = '';
           try {
-            const r = await fetch(id ? `/api/staff/schedule/${id}` : '/api/staff/schedule', { method: id ? 'PUT' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (r.ok) ok = true; else { const j = await r.json().catch(() => null); errs.push(j?.message || j?.hint || `${r.status}`); }
-          } catch (e) { errs.push(String(e || '')); }
-
-          // Supabase fallback with multiple shapes/targets
-          if (!ok) {
-            const { URL, KEY } = SB(); if (URL && KEY) {
-              const base = { course: payload.course, day: payload.day, start: payload.start, end: payload.end, location: payload.location, staff_email: user?.email || null, staff_name: user?.name || user?.full_name || user?.email || null, staff_nuid: user?.nuid || null };
-              const method = id ? 'PATCH' : 'POST', qs = id ? `?id=eq.${encodeURIComponent(id)}` : '';
-              const tables = ['schedule', 'staff_schedules'];
-              const shapes = [
-                // common
-                b => ({ body: { course: b.course, day: b.day, start: b.start, end: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid } }),
-                // course_code variant
-                b => ({ body: { course_code: b.course, day: b.day, start: b.start, end: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid } }),
-                // legacy time/day names
-                b => ({ body: { course: b.course, day_of_week: b.day, start_time: b.start, end_time: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid } }),
-                b => ({ body: { course_code: b.course, day_of_week: b.day, start_time: b.start, end_time: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid } })
-              ];
-              outer: for (const t of tables) {
-                for (const mk of shapes) {
-                  try {
-                    const body = mk(base).body;
-                    const r = await fetch(`${URL}/rest/v1/${t}${qs}`, { method, headers: H(KEY), body: JSON.stringify(body) });
-                    if (r.ok) { ok = true; break outer; }
-                    const j = await r.json().catch(() => null); errs.push(j?.message || j?.hint || `${r.status}`);
-                  } catch (e) { errs.push(String(e)); }
-                }
+            const { URL, KEY } = SB(); if (!URL || !KEY) throw new Error('Supabase not configured');
+            const tables = ['schedule', 'staff_schedules'];
+            const shapes = [
+              b => ({ course: b.course, day: b.day, start: b.start, end: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid }),
+              b => ({ course_code: b.course, day: b.day, start: b.start, end: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid }),
+              b => ({ course: b.course, day_of_week: b.day, start_time: b.start, end_time: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid }),
+              b => ({ course_code: b.course, day_of_week: b.day, start_time: b.start, end_time: b.end, location: b.location, staff_email: b.staff_email, staff_name: b.staff_name, staff_nuid: b.staff_nuid })
+            ];
+            outer: for (const t of tables) {
+              for (const mk of shapes) {
+                const body = mk(base);
+                const r = await timeoutFetch(`${URL}/rest/v1/${t}`, { method: 'POST', headers: H(KEY), body: JSON.stringify(body) }, 3500);
+                if (r.ok) { ok = true; break outer; }
+                const j = await r.json().catch(() => null); err = j?.message || j?.hint || `${r.status}`;
               }
-            } else { errs.push('Supabase not configured'); }
-          }
-
-          if (!ok) { alert.className = 'alert alert-error'; alert.textContent = `Could not save office hour. ${errs.filter(Boolean)[0] || ''}`; alert.classList.remove('hidden'); return; }
-          btn.textContent = 'Add to schedule'; delete btn.dataset.editId; form.reset(); if (typeof window.loadSchedule === 'function') window.loadSchedule();
+            }
+          } catch (e) { err = String(e?.message || e); }
+          if (!ok) { alert.className = 'alert alert-error'; alert.textContent = `Could not save office hour. ${err}`; alert.classList.remove('hidden'); btn.disabled = false; return; }
+          form.reset(); btn.disabled = false; window.loadSchedule?.();
         });
       })();
 
-      /* FEEDBACK submit (server → Supabase) */
+      /* ---- FEEDBACK submit ---- */
       (function () {
         const form = $('#feedback-form'), alert = $('#fb-alert'); if (!form) return;
-        form.addEventListener('submit', async () => {
-          await new Promise(r => setTimeout(r, 250));
-          if (alert && alert.classList.contains('alert-success')) return;
-          const course = $('#course')?.value?.trim(), type = $('#type')?.value?.trim(), rating = parseInt($('#rating')?.value || '0', 10) || null, text = $('#text')?.value?.trim() || '', submitter = $('#submitter')?.value?.trim() || null, year = $('#year')?.value?.trim() || null;
+        // stars
+        (function () { const stars = $$('#stars .star'), hidden = $('#rating'); const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n)); stars.forEach(s => { s.addEventListener('mouseenter', () => paint(Number(s.dataset.v))); s.addEventListener('mouseleave', () => paint(Number(hidden.value || 0))); s.addEventListener('click', () => { hidden.value = s.dataset.v; paint(Number(hidden.value)); }); }); })();
+        form.addEventListener('submit', async e => {
+          e.preventDefault(); alert.classList.add('hidden');
+          const course = $('#course').value.trim(), type = $('#type').value.trim(), rating = parseInt($('#rating').value || '0', 10) || null, text = $('#text').value.trim() || '', submitter = $('#submitter').value.trim() || null, year = $('#year').value.trim() || null;
           if (!course || !type || !text) { alert.className = 'alert alert-error'; alert.textContent = 'Course, type, and feedback text are required.'; alert.classList.remove('hidden'); return; }
           let ok = false;
-          for (const path of ['/api/feedback', '/feedback']) {
-            try { const r = await fetch(path, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ course, type, rating, text, submitter, year }) }); if (r.ok) { ok = true; break; } } catch { }
-          }
-          if (!ok) {
-            try {
-              const { URL, KEY } = SB(); if (URL && KEY) {
-                for (const body of [{ course, type, rating, text, submitter, year }, { course_code: course, type, rating, message: text, submitter, year }]) {
-                  const r = await fetch(`${URL}/rest/v1/feedback`, { method: 'POST', headers: H(KEY), body: JSON.stringify(body) }); if (r.ok) { ok = true; break; }
-                }
+          try {
+            const { URL, KEY } = SB(); if (URL && KEY) {
+              for (const body of [{ course, type, rating, text, submitter, year }, { course_code: course, type, rating, message: text, submitter, year }]) {
+                const r = await timeoutFetch(`${URL}/rest/v1/feedback`, { method: 'POST', headers: H(KEY), body: JSON.stringify(body) }, 3500);
+                if (r.ok) { ok = true; break; }
               }
-            } catch { }
-          }
-          if (ok) { alert.className = 'alert alert-success'; alert.textContent = 'Thanks! Your feedback was submitted.'; alert.classList.remove('hidden'); form.reset?.(); if (typeof window.loadMyFeedback === 'function') window.loadMyFeedback(); }
+            }
+          } catch { }
+          if (ok) { alert.className = 'alert alert-success'; alert.textContent = 'Thanks! Your feedback was submitted.'; alert.classList.remove('hidden'); form.reset(); window.loadMyFeedback?.(); }
           else { alert.className = 'alert alert-error'; alert.textContent = 'Could not submit feedback.'; alert.classList.remove('hidden'); }
-        }, true);
+        });
       })();
 
-      /* FEEDBACK list (fresh, deduped) */
+      /* ---- FEEDBACK list (auto on load) ---- */
       window.loadMyFeedback = function () {
         (async () => {
           const list = $('#myfb-list'), alert = $('#myfb-alert'); if (!list) return; list.innerHTML = '';
-          function getUser() { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw).user } catch { } } return null }
           const u = getUser() || {};
-
           let courses = [];
-          try { const me = await (async () => { for (const p of ['/api/admin/staff/me', '/api/staff/me']) { try { const r = await fetch(p, { credentials: 'include' }); if (r.ok) return await r.json(); } catch { } } return null; })(); if (me?.courses?.length) courses = me.courses; } catch { }
-          if (!courses.length) { if (Array.isArray(u.courses) && u.courses.length) courses = u.courses; else if (u.course) courses = [u.course]; }
-          if (!courses.length && u?.email) {
-            try {
-              const { URL, KEY } = SB(); if (URL && KEY) {
-                const r = await fetch(`${URL}/rest/v1/staff_public?select=courses&email=eq.${encodeURIComponent(u.email)}`, { headers: H(KEY) });
-                if (r.ok) { const j = await r.json().catch(() => []); const arr = (Array.isArray(j) && j[0]?.courses) ? j[0].courses : []; if (Array.isArray(arr) && arr.length) courses = arr; }
-              }
-            } catch { }
-          }
+          if (Array.isArray(u.courses) && u.courses.length) courses = u.courses;
+          if (!courses.length && u.email) { try { const { URL, KEY } = SB(); if (URL && KEY) { const r = await fetch(`${URL}/rest/v1/staff_public?select=courses&email=eq.${encodeURIComponent(u.email)}`, { headers: H(KEY) }); if (r.ok) { const j = await r.json().catch(() => []); if (Array.isArray(j) && j[0]?.courses) courses = j[0].courses; } } } catch { } }
           courses = courses.map(c => String(c || '').trim()).filter(Boolean);
 
           let all = [];
-          if (courses.length) {
-            const q = courses.map(c => `course=${encodeURIComponent(c)}`).join('&');
-            for (const path of [`/api/feedback?${q}&scope=course`, `/feedback?${q}`]) {
-              try { const r = await fetch(path, { credentials: 'include' }); if (r.ok) { const j = await r.json().catch(() => []); all = all.concat(Array.isArray(j?.items) ? j.items : (Array.isArray(j) ? j : [])); } } catch { }
-            }
-          }
           try {
             const { URL, KEY } = SB(); if (URL && KEY) {
               let url = `${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&order=created_at.desc.nullslast`;
-              if (courses.length) {
-                const inList = '(' + courses.map(c => '"' + String(c).replace(/"/g, '\\"') + '"').join(',') + ')';
-                url = `${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&or=(course.in.${encodeURIComponent(inList)},course_code.in.${encodeURIComponent(inList)})&order=created_at.desc.nullslast`;
-              }
-              const r = await fetch(url, { headers: H(KEY) }); if (r.ok) { const j = await r.json().catch(() => []); all = all.concat(Array.isArray(j) ? j : []); }
+              if (courses.length) { const inList = '(' + courses.map(c => '"' + String(c).replace(/"/g, '\\"') + '"').join(',') + ')'; url = `${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&or=(course.in.${encodeURIComponent(inList)},course_code.in.${encodeURIComponent(inList)})&order=created_at.desc.nullslast`; }
+              const r = await fetch(url, { headers: H(KEY) }); if (r.ok) { all = await r.json().catch(() => []); }
             }
           } catch { }
-
+          // dedupe
           const uniq = new Map();
           all.forEach(f => { const when = f.created_at ? new Date(f.created_at).toISOString().slice(0, 19) : ''; const course = String(f.course || f.course_code || '').trim().toUpperCase(); const text = String(f.text || f.message || '').trim(); const rating = f.rating ?? ''; const key = `${when}|${course}|${text}|${rating}`; if (!uniq.has(key)) uniq.set(key, f); });
           const items = Array.from(uniq.values()).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-
           if (!items.length) { alert.className = 'alert alert-success'; alert.textContent = 'No feedback yet for your course(s).'; alert.classList.remove('hidden'); return; }
           alert.classList.add('hidden');
           items.slice(0, 100).forEach(f => { const li = document.createElement('li'); const when = f.created_at ? new Date(f.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''; const rating = f.rating ? ` • ★${f.rating}` : ''; const course = (f.course || f.course_code) ? ` • ${(f.course || f.course_code)}` : ''; li.textContent = `${when}${course}${rating} — ${(f.text || f.message || '').trim()}`; list.appendChild(li); });
-        })();
+        })()
       };
 
-      /* SL admin (server → Supabase) */
+      /* ---- SL ADMIN ---- */
       window.loadAdmin = function () {
         (async () => {
-          const body = $('#staff-table tbody'); const empty = $('#staff-empty'); if (!body) return; body.innerHTML = '';
-          const paint = (rows) => {
-            body.innerHTML = ''; if (!rows.length) { empty.className = 'alert alert-success'; empty.textContent = 'No staff found yet. Use “Add staff” to create the first entry.'; empty.classList.remove('hidden'); return; }
-            empty.classList.add('hidden');
-            rows.forEach(s => { const tr = document.createElement('tr'); tr.innerHTML = `<td>${s.nuid || ''}</td><td>${s.name || ''}</td><td>${s.email || ''}</td><td>${s.role || ''}</td><td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td><td><span class="link" data-edit="${s.nuid || s.id || ''}">Edit</span> <span class="link" data-rm="${s.nuid || s.id || ''}">Remove</span></td>`; body.appendChild(tr); });
-            bind();
-          };
-          const bind = () => {
-            $$('#staff-table [data-edit]').forEach(a => a.addEventListener('click', () => { const tr = a.closest('tr'); $('#staff-edit-id').value = a.getAttribute('data-edit'); $('#staff-nuid').value = tr.children[0].textContent.trim(); $('#staff-name').value = tr.children[1].textContent.trim(); $('#staff-email').value = tr.children[2].textContent.trim(); $('#staff-role').value = tr.children[3].textContent.trim(); }));
-            $$('#staff-table [data-rm]').forEach(a => a.addEventListener('click', async () => { const id = a.getAttribute('data-rm'); a.textContent = 'Removing…'; a.style.pointerEvents = 'none'; let ok = false; for (const t of [`/api/admin/staff/${id}`, `/admin/staff/${id}`]) { try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { ok = true; break; } } catch { } } if (!ok) { try { const { URL, KEY } = SB(); if (URL && KEY) { const r = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: H(KEY) }); ok = r.ok; } } catch { } } if (ok) loadAdmin(); else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto'; } }));
-          };
-
-          let rows = [], ok = false;
-          for (const path of ['/api/admin/staff', '/admin/staff', '/api/staff', '/api/staff/list']) {
-            try { const res = await fetch(path, { credentials: 'include' }); const j = await res.clone().json().catch(() => null); if (res.ok) { rows = Array.isArray(j) ? j : (Array.isArray(j?.items) ? j.items : []); ok = true; break; } } catch { }
-          }
-          paint(rows);
-          if (!ok || !rows.length) {
-            try { const { URL, KEY } = SB(); if (URL && KEY) { const res = await fetch(`${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`, { headers: H(KEY) }); if (res.ok) { const data = await res.json(); if (Array.isArray(data) && data.length) paint(data); } } } catch { }
-          }
-
-          (function () {
-            const form = $('#staff-form'), alert = $('#staff-alert');
-            const good = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
-            const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden'); };
-            $('#staff-cancel').addEventListener('click', () => { form.reset(); $('#staff-edit-id').value = ''; });
-            form.addEventListener('submit', async e => {
-              e.preventDefault(); alert.classList.add('hidden');
-              const id = $('#staff-edit-id').value.trim();
-              const payload = { nuid: $('#staff-nuid').value.trim(), name: $('#staff-name').value.trim(), email: $('#staff-email').value.trim(), role: $('#staff-role').value, is_active: true };
-              if (!payload.nuid || !payload.name || !payload.role) return bad('NUID, name, and role are required.');
-              let ok = false;
-              try { const r = await fetch(id ? `/api/admin/staff/${encodeURIComponent(id)}` : '/api/admin/staff', { method: id ? 'PUT' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); ok = r.ok; } catch { }
-              if (!ok) { try { const { URL, KEY } = SB(); if (URL && KEY) { if (id) { const r = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: H(KEY), body: JSON.stringify(payload) }); ok = r.ok; } else { const r = await fetch(`${URL}/rest/v1/staff`, { method: 'POST', headers: H(KEY), body: JSON.stringify(payload) }); ok = r.ok; } } } catch { } }
-              if (!ok) return bad('Could not save staff.');
-              good('Saved.'); form.reset(); $('#staff-edit-id').value = ''; loadAdmin();
-            });
-          })();
-        })();
+          const body = $('#staff-table tbody'), empty = $('#staff-empty'); if (!body) return; body.innerHTML = '';
+          const paint = rows => { body.innerHTML = ''; if (!rows.length) { empty.className = 'alert alert-success'; empty.textContent = 'No staff found yet.'; empty.classList.remove('hidden'); return; } empty.classList.add('hidden'); rows.forEach(s => { const tr = document.createElement('tr'); tr.innerHTML = `<td>${s.nuid || ''}</td><td>${s.name || ''}</td><td>${s.email || ''}</td><td>${s.role || ''}</td><td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td><td></td>`; body.appendChild(tr); }); };
+          let rows = [];
+          try { const { URL, KEY } = SB(); if (URL && KEY) { const r = await fetch(`${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`, { headers: H(KEY) }); if (r.ok) rows = await r.json().catch(() => []); } } catch { }
+          paint(Array.isArray(rows) ? rows : []);
+        })()
       };
     })();
   </script>
