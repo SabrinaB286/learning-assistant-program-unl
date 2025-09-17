@@ -326,7 +326,7 @@
         $('#logout-btn')?.classList.toggle('hidden', !authed);
         $('#dashboard-tab')?.classList.toggle('hidden', !authed);
         // FIX: Don't hide #my-feedback automatically; let loader decide
-        // $('#my-feedback')?.classList.toggle('hidden',!authed);
+        $('#my-feedback')?.classList.toggle('hidden',!authed);
         $('#admin-block')?.classList.toggle('hidden', !(authed && isSLorAdmin()));
       }
       window.__lap_paintNav = paintNav;
