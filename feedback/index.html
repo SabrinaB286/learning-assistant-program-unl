@@ -281,7 +281,20 @@
 
     .row-actions {
       display: flex;
-      gap: 8px
+      gap: 10px
+    }
+
+    .row-actions .link {
+      user-select: none
+    }
+
+    .badge {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: .78rem;
+      color: #374151
     }
   </style>
 
@@ -494,7 +507,8 @@
               <option value="lab_time">Lab Time</option>
             </select>
           </div>
-          <div class="actions"><button id="sched-save" class="btn-primary" type="submit">Add to schedule</button></div>
+          <div class="actions"><button id="sched-save" class="btn-primary" type="submit">Add to schedule</button><button
+              id="sched-cancel" class="btn-muted" type="button" style="display:none">Cancel edit</button></div>
         </form>
 
         <table class="table" id="sched-table" style="margin-top:10px">
@@ -603,7 +617,7 @@
       const isSLorAdmin = () => ['SL', 'ADMIN'].some(r => roleStr().includes(r));
       const toHHMMSS = t => t ? (/^\d{1,2}:\d{2}$/.test(t) ? t + ':00' : t) : '';
 
-      /* Feedback submit (unchanged) */
+      /* Feedback submit */
       (function () {
         const wrap = $('#stars'); if (!wrap) return; const rating = $('#rating');
         wrap.querySelectorAll('.star').forEach(s => s.addEventListener('click', () => { rating.value = s.dataset.v; wrap.querySelectorAll('.star').forEach(x => x.classList.toggle('active', Number(x.dataset.v) <= Number(rating.value))); }));
@@ -639,7 +653,7 @@
         $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => { $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p)); const c = p.dataset.course; Array.from(list.children).forEach(card => { const on = (c === 'ALL') || (card.textContent || '').includes(c); card.style.display = on ? '' : 'none'; }); }));
       })();
 
-      /* LOGIN via server (unchanged) */
+      /* LOGIN via server */
       (function () {
         const form = $('#login-form'); if (!form) return;
         const alert = $('#login-alert'), btn = $('#login-btn');
@@ -666,15 +680,41 @@
         });
       })();
 
-      /* LOAD SCHEDULE (display only current user's office_hour rows; correct column names) */
+      /* ====== SCHEDULE (CRUD) ====== */
+
+      // table row key used for edit/delete when there is no id
+      function keyFromRow(r) {
+        return {
+          nuid: r.nuid || null,
+          type: r.type || 'office_hour',
+          course_code: String(r.course_code || r.course || ''),
+          day: r.day || r.day_of_week || '',
+          start_time: r.start_time || r.start || '',
+          end_time: r.end_time || r.end || '',
+          location: r.location || r.room || ''
+        };
+      }
+      function keyToQuery(k) {
+        const enc = v => encodeURIComponent(v ?? '');
+        const parts = [];
+        if (k.nuid) parts.push(`nuid=eq.${enc(k.nuid)}`);
+        parts.push(`type=eq.${enc(k.type)}`);
+        parts.push(`course_code=eq.${enc(k.course_code)}`);
+        parts.push(`day=eq.${enc(k.day)}`);
+        parts.push(`start_time=eq.${enc(k.start_time)}`);
+        parts.push(`end_time=eq.${enc(k.end_time)}`);
+        parts.push(`location=eq.${enc(k.location)}`);
+        return parts.join('&');
+      }
+
+      // READ
       window.loadSchedule = function () {
         (async () => {
           const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return; tbody.innerHTML = '';
-          const map = r => ({ id: r.id || r.uuid || r.row_id || '', course: (r.course_code || r.course || '').toString(), day: r.day || r.day_of_week || '', start: r.start_time || r.start || '', end: r.end_time || r.end || '', location: r.location || r.room || '' });
+          const map = r => ({ id: r.id || r.uuid || r.row_id || '', nuid: r.nuid || null, course_code: (r.course_code || r.course || '').toString(), day: r.day || r.day_of_week || '', start_time: r.start_time || r.start || '', end_time: r.end_time || r.end || '', location: r.location || r.room || '', type: r.type || 'office_hour' });
           let data = [];
           try {
             const { URL, KEY } = SB(); if (URL && KEY) {
-              const me = getUser() || {}; const f = me.email ? `&staff_email=eq.${encodeURIComponent(me.email)}` : ''; // ok if column absent; PostgREST ignores unknown filter? (we won't rely on it)
               const r = await fetch(`${URL}/rest/v1/staff_schedules?select=*&type=eq.office_hour&order=start_time.asc`, { headers: H(KEY) });
               if (r.ok) data = await r.json().catch(() => []);
             }
@@ -682,14 +722,58 @@
           data = data.map(map);
           if (!data.length) { alert.className = 'alert alert-success'; alert.textContent = 'You have no office hours yet. Use the form above to add your first block.'; alert.classList.remove('hidden'); return; }
           alert.classList.add('hidden');
-          data.forEach(r => { const tr = document.createElement('tr'); tr.innerHTML = `<td>${r.course}</td><td>${r.day}</td><td>${r.start}</td><td>${r.end}</td><td>${r.location}</td><td></td>`; tbody.appendChild(tr); });
+
+          data.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${r.course_code}</td><td>${r.day}</td><td>${r.start_time}</td><td>${r.end_time}</td><td>${r.location}</td>
+      <td class="row-actions">
+        <span class="badge">office_hour</span>
+        <span class="link" data-edit>Edit</span>
+        <span class="link" data-del>Delete</span>
+      </td>`;
+            // attach row data
+            tr.__row = r;
+            tbody.appendChild(tr);
+          });
+
+          // edit
+          $$('#sched-table [data-edit]').forEach(a => a.addEventListener('click', () => {
+            const r = a.closest('tr').__row;
+            $('#sched-course').value = r.course_code;
+            $('#sched-day').value = r.day;
+            $('#sched-location').value = r.location;
+            $('#sched-start').value = (r.start_time || '').slice(0, 5);
+            $('#sched-end').value = (r.end_time || '').slice(0, 5);
+            $('#sched-type').value = r.type || 'office_hour';
+            const k = keyFromRow(r);
+            $('#sched-form').dataset.editing = JSON.stringify(k);
+            $('#sched-save').textContent = 'Save changes';
+            $('#sched-cancel').style.display = '';
+            window.scrollTo({ top: document.getElementById('sched-form').offsetTop - 60, behavior: 'smooth' });
+          }));
+
+          // delete
+          $$('#sched-table [data-del]').forEach(a => a.addEventListener('click', async () => {
+            const row = a.closest('tr').__row;
+            a.textContent = 'Deleting…'; a.style.pointerEvents = 'none';
+            let ok = false, err = '';
+            try {
+              const { URL, KEY } = SB(); const q = keyToQuery(keyFromRow(row));
+              const r = await fetch(`${URL}/rest/v1/staff_schedules?${q}`, { method: 'DELETE', headers: H(KEY) });
+              ok = r.ok; if (!ok) { let j = null; try { j = await r.clone().json() } catch { } err = j?.message || j?.hint || j?.details || `${r.status}`; }
+            } catch (e) { err = String(e?.message || e); }
+            if (!ok) { a.textContent = 'Delete'; a.style.pointerEvents = 'auto'; alert.className = 'alert alert-error'; alert.textContent = `Could not delete. ${err}`; alert.classList.remove('hidden'); return; }
+            loadSchedule();
+          }));
         })()
       };
 
-      /* SAVE SCHEDULE — exact columns of staff_schedules */
+      // CREATE/UPDATE
       (function () {
         const form = $('#sched-form'); if (!form) return;
-        const alert = $('#sched-alert'), btn = $('#sched-save');
+        const alert = $('#sched-alert'), btn = $('#sched-save'), cancel = $('#sched-cancel');
+
+        cancel.addEventListener('click', () => { form.reset(); $('#sched-type').value = 'office_hour'; delete form.dataset.editing; btn.textContent = 'Add to schedule'; cancel.style.display = 'none'; });
 
         form.addEventListener('submit', async e => {
           e.preventDefault(); alert.classList.add('hidden'); btn.disabled = true;
@@ -706,72 +790,110 @@
             alert.className = 'alert alert-error'; alert.textContent = 'Course, day, start and end are required.';
             alert.classList.remove('hidden'); btn.disabled = false; return;
           }
-          const u = getUser() || {}; if (u?.nuid) payload.nuid = String(u.nuid); // table has nuid text
+          const u = getUser() || {}; if (u?.nuid) payload.nuid = String(u.nuid);
 
+          const { URL, KEY } = SB(); if (!URL || !KEY) { alert.className = 'alert alert-error'; alert.textContent = 'Supabase not configured'; alert.classList.remove('hidden'); btn.disabled = false; return; }
+
+          const editingKey = form.dataset.editing ? JSON.parse(form.dataset.editing) : null;
           let ok = false, err = '';
           try {
-            const { URL, KEY } = SB(); if (!URL || !KEY) throw new Error('Supabase not configured');
-            const r = await fetch(`${URL}/rest/v1/staff_schedules`, { method: 'POST', headers: H(KEY), body: JSON.stringify(payload) });
-            if (r.ok) ok = true; else { let j = null; try { j = await r.clone().json() } catch { } err = j?.message || j?.hint || j?.details || `${r.status} ${r.statusText}`; }
+            if (editingKey) {
+              // Try PATCH original row to new values
+              const q = keyToQuery(editingKey);
+              const r = await fetch(`${URL}/rest/v1/staff_schedules?${q}`, { method: 'PATCH', headers: H(KEY), body: JSON.stringify(payload) });
+              if (r.ok) { ok = true; }
+              else {
+                // Fallback: insert new, then delete old
+                const i = await fetch(`${URL}/rest/v1/staff_schedules`, { method: 'POST', headers: H(KEY), body: JSON.stringify(payload) });
+                if (i.ok) {
+                  const d = await fetch(`${URL}/rest/v1/staff_schedules?${q}`, { method: 'DELETE', headers: H(KEY) });
+                  ok = d.ok;
+                } else {
+                  let j = null; try { j = await i.clone().json() } catch { } err = j?.message || j?.hint || j?.details || `${i.status}`;
+                }
+              }
+            } else {
+              const r = await fetch(`${URL}/rest/v1/staff_schedules`, { method: 'POST', headers: H(KEY), body: JSON.stringify(payload) });
+              ok = r.ok; if (!ok) { let j = null; try { j = await r.clone().json() } catch { } err = j?.message || j?.hint || j?.details || `${r.status} ${r.statusText}`; }
+            }
           } catch (e) { err = String(e?.message || e); }
 
           if (!ok) { alert.className = 'alert alert-error'; alert.textContent = `Could not save office hour. ${err}`; alert.classList.remove('hidden'); btn.disabled = false; return; }
 
-          form.reset(); $('#sched-type').value = 'office_hour'; btn.disabled = false; try { window.loadSchedule?.(); } catch { }
+          form.reset(); $('#sched-type').value = 'office_hour'; btn.disabled = false; delete form.dataset.editing; btn.textContent = 'Add to schedule'; cancel.style.display = 'none';
+          try { window.loadSchedule?.(); } catch { }
         });
       })();
 
-      /* FEEDBACK list (unchanged logic) */
+      /* ====== FEEDBACK LIST ====== */
       window.loadMyFeedback = function () {
         (async () => {
           const list = $('#myfb-list'), alert = $('#myfb-alert'); if (!list) return; list.innerHTML = '';
-          const u = getUser() || {}; let courses = [];
-          const wantAll = isSLorAdmin();
+          const u = getUser() || {}; const { URL, KEY } = SB(); if (!URL || !KEY) { return; }
+          let items = [];
 
-          if (!wantAll) {
+          async function coursesForUser() {
+            // 1) staff_public array
             try {
-              const { URL, KEY } = SB(); if (URL && KEY && u.email) {
+              if (u.email) {
                 const r = await fetch(`${URL}/rest/v1/staff_public?select=courses&email=eq.${encodeURIComponent(u.email)}`, { headers: H(KEY) });
-                if (r.ok) { const j = await r.json().catch(() => []); if (Array.isArray(j) && Array.isArray(j[0]?.courses)) courses = j[0].courses; }
+                if (r.ok) { const j = await r.json().catch(() => []); if (Array.isArray(j) && Array.isArray(j[0]?.courses)) return j[0].courses; }
               }
             } catch { }
-            if (!courses.length) {
-              try {
-                const { URL, KEY } = SB(); if (URL && KEY) {
-                  let by = ''; if (u.nuid) by = `staff_nuid=eq.${encodeURIComponent(u.nuid)}`; else if (u.email) by = `staff_email=eq.${encodeURIComponent(u.email)}`;
-                  if (by) {
-                    const r = await fetch(`${URL}/rest/v1/staff_courses?select=*&${by}`, { headers: H(KEY) });
-                    if (r.ok) { const j = await r.json().catch(() => []); courses = j.map(x => x.course ?? x.course_code ?? x.course_id ?? x.course_name).filter(Boolean); }
-                  }
-                }
-              } catch { }
-            }
+            // 2) staff_courses table
+            try {
+              let col = 'course'; // detect column name
+              const probe = await fetch(`${URL}/rest/v1/staff_courses?select=course_code&limit=0`, { headers: H(KEY) });
+              if (probe.ok) col = 'course_code';
+              const by = u.nuid ? `staff_nuid=eq.${encodeURIComponent(u.nuid)}` : (u.email ? `staff_email=eq.${encodeURIComponent(u.email)}` : '');
+              if (by) {
+                const r = await fetch(`${URL}/rest/v1/staff_courses?select=${col}&${by}`, { headers: H(KEY) });
+                if (r.ok) { const j = await r.json().catch(() => []); return j.map(x => x[col]).filter(Boolean); }
+              }
+            } catch { }
+            return [];
           }
 
-          let all = [];
           try {
-            const { URL, KEY } = SB(); if (URL && KEY) {
-              let url = `${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&order=created_at.desc.nullslast`;
-              if (!wantAll) {
-                const norm = (courses || []).map(c => String(c || '').trim()).filter(Boolean);
-                if (norm.length) {
-                  const inList = '(' + norm.map(c => '"' + String(c).replace(/"/g, '\\"') + '"').join(',') + ')';
-                  url = `${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&or=(course.in.${encodeURIComponent(inList)},course_code.in.${encodeURIComponent(inList)})&order=created_at.desc.nullslast`;
-                }
+            if (isSLorAdmin()) {
+              const r = await fetch(`${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&order=created_at.desc.nullslast&limit=200`, { headers: H(KEY) });
+              if (r.ok) items = await r.json().catch(() => []);
+            } else {
+              const courses = (await coursesForUser()).map(c => String(c).trim()).filter(Boolean);
+              if (!courses.length) {
+                // show nothing (or everything). Choose small sample of all to prove UI works.
+                const r = await fetch(`${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&order=created_at.desc.nullslast&limit=100`, { headers: H(KEY) });
+                if (r.ok) items = await r.json().catch(() => []);
+              } else {
+                // robust OR: course.eq.X or course_code.eq.X for each course
+                const ors = [];
+                courses.forEach(c => {
+                  const ec = encodeURIComponent(c);
+                  ors.push(`course.eq.${ec}`); ors.push(`course_code.eq.${ec}`);
+                });
+                const r = await fetch(`${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&or=(${ors.join(',')})&order=created_at.desc.nullslast&limit=200`, { headers: H(KEY) });
+                if (r.ok) items = await r.json().catch(() => []);
               }
-              const r = await fetch(url, { headers: H(KEY) }); if (r.ok) { all = await r.json().catch(() => []); }
             }
           } catch { }
+
           const uniq = new Map();
-          all.forEach(f => { const when = f.created_at ? new Date(f.created_at).toISOString().slice(0, 19) : ''; const course = String(f.course || f.course_code || '').trim().toUpperCase(); const text = String(f.text || f.message || '').trim(); const rating = f.rating ?? ''; const key = `${when}|${course}|${text}|${rating}`; if (!uniq.has(key)) uniq.set(key, f); });
-          const items = Array.from(uniq.values()).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-          if (!items.length) { alert.className = 'alert alert-success'; alert.textContent = 'No feedback yet.'; alert.classList.remove('hidden'); return; }
+          items.forEach(f => { const when = f.created_at ? new Date(f.created_at).toISOString().slice(0, 19) : ''; const course = String(f.course || f.course_code || '').trim().toUpperCase(); const text = String(f.text || f.message || '').trim(); const rating = f.rating ?? ''; const key = `${when}|${course}|${text}|${rating}`; if (!uniq.has(key)) uniq.set(key, f); });
+          const rows = Array.from(uniq.values()).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+          if (!rows.length) { alert.className = 'alert alert-success'; alert.textContent = 'No feedback yet.'; alert.classList.remove('hidden'); return; }
           alert.classList.add('hidden');
-          items.slice(0, 150).forEach(f => { const li = document.createElement('li'); const when = f.created_at ? new Date(f.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : ''; const rating = f.rating ? ` • ★${f.rating}` : ''; const course = (f.course || f.course_code) ? ` • ${(f.course || f.course_code)}` : ''; li.textContent = `${when}${course}${rating} — ${(f.text || f.message || '').trim()}`; list.appendChild(li); });
+          rows.slice(0, 200).forEach(f => {
+            const li = document.createElement('li');
+            const when = f.created_at ? new Date(f.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '';
+            const rating = f.rating ? ` • ★${f.rating}` : ''; const course = (f.course || f.course_code) ? ` • ${(f.course || f.course_code)}` : '';
+            li.textContent = `${when}${course}${rating} — ${(f.text || f.message || '').trim()}`;
+            list.appendChild(li);
+          });
         })()
       };
 
-      /* SL ADMIN — list + edit/remove + courses (now merges staff_courses) */
+      /* ====== SL ADMIN (staff + courses) ====== */
       window.loadAdmin = function () {
         (async () => {
           const body = $('#staff-table tbody'), empty = $('#staff-empty'); if (!body) return; body.innerHTML = '';
@@ -779,28 +901,25 @@
           const getCoursesFromUI = () => Array.from($('#staff-courses').selectedOptions || []).map(o => o.value);
           const setCoursesUI = (arr = []) => { const sel = $('#staff-courses'); if (!sel) return; Array.from(sel.options).forEach(o => o.selected = (arr || []).includes(o.value)); };
 
-          async function writeStaffCourses(nuid, courses) {
+          async function detectCourseCol() {
             const { URL, KEY } = SB(); const headers = headersSup(KEY);
-            let courseCol = 'course';
-            try {
-              const probe = await fetch(`${URL}/rest/v1/staff_courses?select=*&limit=1`, { headers });
-              if (probe.ok) {
-                const rows = await probe.json().catch(() => []); const keys = Object.keys(rows?.[0] || {});
-                courseCol = ['course', 'course_code', 'course_id', 'course_name'].find(k => keys.includes(k)) || 'course';
-              }
-            } catch { }
-            // INSERT chosen courses
+            const tryCol = async c => { const r = await fetch(`${URL}/rest/v1/staff_courses?select=${c}&limit=0`, { headers }); return r.ok; };
+            if (await tryCol('course_code')) return 'course_code';
+            if (await tryCol('course')) return 'course';
+            if (await tryCol('course_name')) return 'course_name';
+            if (await tryCol('course_id')) return 'course_id';
+            return 'course'; // default best guess
+          }
+
+          async function replaceStaffCourses(nuid, courses) {
+            const { URL, KEY } = SB(); const headers = headersSup(KEY);
+            const col = await detectCourseCol();
+            // DELETE all first
+            await fetch(`${URL}/rest/v1/staff_courses?staff_nuid=eq.${encodeURIComponent(nuid)}`, { method: 'DELETE', headers });
             if (Array.isArray(courses) && courses.length) {
-              const rows = courses.map(c => ({ staff_nuid: nuid, [courseCol]: String(c) }));
+              const rows = courses.map(c => ({ staff_nuid: nuid, [col]: String(c) }));
               const ins = await fetch(`${URL}/rest/v1/staff_courses`, { method: 'POST', headers, body: JSON.stringify(rows) });
-              if (!ins.ok) { let j = null; try { j = await ins.clone().json() } catch { } throw new Error(j?.message || j?.hint || j?.details || `${ins.status} ${ins.statusText}`); }
-            }
-            // DELETE extras
-            const keep = (courses || []).map(c => `"${String(c).replace(/"/g, '\\"')}"`).join(',');
-            if (keep.length) {
-              await fetch(`${URL}/rest/v1/staff_courses?staff_nuid=eq.${encodeURIComponent(nuid)}&${courseCol}=not.in.(${encodeURIComponent('(' + keep + ')')})`, { method: 'DELETE', headers });
-            } else {
-              await fetch(`${URL}/rest/v1/staff_courses?staff_nuid=eq.${encodeURIComponent(nuid)}`, { method: 'DELETE', headers });
+              if (!ins.ok) { let j = null; try { j = await ins.clone().json() } catch { } throw new Error(j?.message || j?.hint || j?.details || `${ins.status}`); }
             }
           }
 
@@ -834,47 +953,45 @@
               window.scrollTo({ top: document.getElementById('staff-form').offsetTop - 60, behavior: 'smooth' });
             }));
 
-            // Remove
+            // Remove staff (best-effort server -> supabase)
             $$('#staff-table [data-rm]').forEach(a => a.addEventListener('click', async () => {
               const id = a.getAttribute('data-rm'); a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
               let ok = false;
               try { const r = await fetch(`/api/admin/staff/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'include' }); ok = r.ok; } catch { }
               if (!ok) {
                 try {
-                  const { URL, KEY } = SB(); if (URL && KEY) {
-                    await fetch(`${URL}/rest/v1/staff_courses?staff_nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: headersSup(KEY) });
-                    const rr = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: headersSup(KEY) });
-                    ok = rr.ok;
-                  }
+                  const { URL, KEY } = SB(); const headers = headersSup(KEY);
+                  await fetch(`${URL}/rest/v1/staff_courses?staff_nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers });
+                  const rr = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers });
+                  ok = rr.ok;
                 } catch { }
               }
               if (ok) loadAdmin(); else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto'; }
             }));
           }
 
-          // Load staff list + merge courses from staff_courses (so it never stays [])
+          // Load staff list + merge in staff_courses so Courses is never []
           let rows = [];
           try {
-            const { URL, KEY } = SB(); if (URL && KEY) {
-              const [sp, sc] = await Promise.all([
-                fetch(`${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`, { headers: headersSup(KEY) }),
-                fetch(`${URL}/rest/v1/staff_courses?select=staff_nuid,course,course_code,course_name`, { headers: headersSup(KEY) })
-              ]);
-              const staff = sp.ok ? await sp.json().catch(() => []) : [];
-              const courses = sc.ok ? await sc.json().catch(() => []) : [];
-              const map = {};
-              courses.forEach(r => {
-                const code = r.course_code ?? r.course ?? r.course_name ?? '';
-                if (!code) return;
-                if (!map[r.staff_nuid]) map[r.staff_nuid] = [];
-                if (!map[r.staff_nuid].includes(code)) map[r.staff_nuid].push(String(code));
-              });
-              rows = staff.map(s => ({ ...s, courses: map[s.nuid]?.slice().sort() || s.courses || [] }));
-            }
+            const { URL, KEY } = SB(); const headers = headersSup(KEY);
+            const [sp, sc] = await Promise.all([
+              fetch(`${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`, { headers }),
+              fetch(`${URL}/rest/v1/staff_courses?select=staff_nuid,course,course_code,course_name`, { headers })
+            ]);
+            const staff = sp.ok ? await sp.json().catch(() => []) : [];
+            const courses = sc.ok ? await sc.json().catch(() => []) : [];
+            const map = {};
+            courses.forEach(r => {
+              const code = r.course_code ?? r.course ?? r.course_name ?? '';
+              if (!code) return;
+              if (!map[r.staff_nuid]) map[r.staff_nuid] = [];
+              if (!map[r.staff_nuid].includes(code)) map[r.staff_nuid].push(String(code));
+            });
+            rows = staff.map(s => ({ ...s, courses: (map[s.nuid]?.slice().sort()) || s.courses || [] }));
           } catch { }
           paint(rows);
 
-          // Save staff
+          // Save staff (updates staff + replaces staff_courses)
           (function () {
             const form = $('#staff-form'), alert = $('#staff-alert');
             const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
@@ -897,16 +1014,15 @@
 
               if (!good) {
                 try {
-                  const { URL, KEY } = SB(); if (URL && KEY) {
-                    if (id) {
-                      const r = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: headersSup(KEY), body: JSON.stringify(payload) });
-                      good = r.ok;
-                    } else {
-                      const r = await fetch(`${URL}/rest/v1/staff`, { method: 'POST', headers: headersSup(KEY), body: JSON.stringify(payload) });
-                      good = r.ok;
-                    }
-                    if (good) await writeStaffCourses(payload.nuid, payload.courses);
+                  const { URL, KEY } = SB(); const headers = headersSup(KEY);
+                  if (id) {
+                    const r = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers, body: JSON.stringify(payload) });
+                    good = r.ok;
+                  } else {
+                    const r = await fetch(`${URL}/rest/v1/staff`, { method: 'POST', headers, body: JSON.stringify(payload) });
+                    good = r.ok;
                   }
+                  if (good) await replaceStaffCourses(payload.nuid, payload.courses);
                 } catch (e) { err = String(e?.message || e); }
               }
 
