@@ -622,7 +622,7 @@
       /* Office hours list (READ): office_hours_public + staff_schedules(type=office_hour) */
       (async function () {
         const list = $('#office-list'); if (!list) return; const alert = $('#office-alert');
-        const map = r => ({ course: (r.course ?? r.course_code ?? '').toString(), day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? '', end: r.end ?? r.end_time ?? '', location: r.location ?? r.room ?? '', staff_name: r.staff_name ?? r.name ?? '' });
+        const map = r => ({ course: (r.course ?? r.course_code ?? '').toString(), day: r.day ?? '', start: r.start_time ?? '', end: r.end_time ?? '', location: r.location ?? '', staff_name: r.staff_name ?? r.name ?? '' });
         const dedupe = a => { const s = new Set(); return a.filter(x => { const k = [x.course, x.day, x.start, x.end, x.location, x.staff_name].join('|'); if (s.has(k)) return false; s.add(k); return true; }); };
         let rows = [];
         try {
