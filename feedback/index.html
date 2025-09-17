@@ -337,7 +337,7 @@
         bindNav(); paintNav();
         const initial = hasToken() ? 'dashboard' : 'feedback';
         show((location.hash || '').replace('#', '') || initial);
-        refreshAll(); // paint immediately if already logged in
+        refreshAll();
         $('#logout-btn')?.addEventListener('click', async () => {
           try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch { }
           localStorage.removeItem('lap_auth'); localStorage.removeItem('lap_auth_v1');
@@ -585,7 +585,7 @@
     </section>
   </main>
 
-  <!-- Supabase config (override if needed) -->
+  <!-- Supabase config -->
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || 'https://wmeijbsvlnjvnhptudfh.supabase.co';
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtZWlqYnN2bG5qdm5ocHR1ZGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MDQ5NzksImV4cCI6MjA3MTM4MDk3OX0.YT_435s_FFsqNJs6M_yW9iIGzxeCu1BHpPVH1cwJlX8';
@@ -603,7 +603,7 @@
       const isSLorAdmin = () => ['SL', 'ADMIN'].some(r => roleStr().includes(r));
       const toHHMMSS = t => t ? (/^\d{1,2}:\d{2}$/.test(t) ? t + ':00' : t) : '';
 
-      /* Feedback submit */
+      /* Feedback submit (unchanged) */
       (function () {
         const wrap = $('#stars'); if (!wrap) return; const rating = $('#rating');
         wrap.querySelectorAll('.star').forEach(s => s.addEventListener('click', () => { rating.value = s.dataset.v; wrap.querySelectorAll('.star').forEach(x => x.classList.toggle('active', Number(x.dataset.v) <= Number(rating.value))); }));
@@ -619,18 +619,18 @@
         });
       })();
 
-      /* Office hours list (READ): office_hours_public + staff_schedules(type=office_hour) */
+      /* Office hours list (READ) */
       (async function () {
         const list = $('#office-list'); if (!list) return; const alert = $('#office-alert');
-        const map = r => ({ course: (r.course ?? r.course_code ?? '').toString(), day: r.day ?? '', start: r.start_time ?? '', end: r.end_time ?? '', location: r.location ?? '', staff_name: r.staff_name ?? r.name ?? '' });
+        const map = r => ({ course: (r.course ?? r.course_code ?? '').toString(), day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? '', end: r.end ?? r.end_time ?? '', location: r.location ?? r.room ?? '', staff_name: r.staff_name ?? r.name ?? '' });
         const dedupe = a => { const s = new Set(); return a.filter(x => { const k = [x.course, x.day, x.start, x.end, x.location, x.staff_name].join('|'); if (s.has(k)) return false; s.add(k); return true; }); };
         let rows = [];
         try {
           const { URL, KEY } = SB(); if (URL && KEY) {
-            // public view if present
-            for (const tbl of ['office_hours_public']) { const r = await fetch(`${URL}/rest/v1/${tbl}?select=*`, { headers: H(KEY) }); if (r.ok) { rows = rows.concat((await r.json().catch(() => [])).map(map)); } }
-            // fallback / combined: staff_schedules (only office_hour)
-            const r2 = await fetch(`${URL}/rest/v1/staff_schedules?select=*&type=eq.office_hour`, { headers: H(KEY) }); if (r2.ok) { rows = rows.concat((await r2.json().catch(() => [])).map(map)); }
+            const r1 = await fetch(`${URL}/rest/v1/office_hours_public?select=*`, { headers: H(KEY) });
+            if (r1.ok) { rows = rows.concat((await r1.json().catch(() => [])).map(map)); }
+            const r2 = await fetch(`${URL}/rest/v1/staff_schedules?select=*&type=eq.office_hour`, { headers: H(KEY) });
+            if (r2.ok) { rows = rows.concat((await r2.json().catch(() => [])).map(map)); }
           }
         } catch { }
         if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; }
@@ -639,7 +639,7 @@
         $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => { $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p)); const c = p.dataset.course; Array.from(list.children).forEach(card => { const on = (c === 'ALL') || (card.textContent || '').includes(c); card.style.display = on ? '' : 'none'; }); }));
       })();
 
-      /* LOGIN via server */
+      /* LOGIN via server (unchanged) */
       (function () {
         const form = $('#login-form'); if (!form) return;
         const alert = $('#login-alert'), btn = $('#login-btn');
@@ -666,16 +666,16 @@
         });
       })();
 
-      /* LOAD SCHEDULE (display only current user's office_hour rows) */
+      /* LOAD SCHEDULE (display only current user's office_hour rows; correct column names) */
       window.loadSchedule = function () {
         (async () => {
           const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return; tbody.innerHTML = '';
-          const map = r => ({ id: r.id || r.uuid || r.row_id || '', course: (r.course_code || r.course || '').toString(), day: r.day || r.day_of_week || '', start: r.start || r.start_time || '', end: r.end || r.end_time || '', location: r.location || r.room || '' });
+          const map = r => ({ id: r.id || r.uuid || r.row_id || '', course: (r.course_code || r.course || '').toString(), day: r.day || r.day_of_week || '', start: r.start_time || r.start || '', end: r.end_time || r.end || '', location: r.location || r.room || '' });
           let data = [];
           try {
             const { URL, KEY } = SB(); if (URL && KEY) {
-              const me = getUser() || {}; const f = me.email ? `&staff_email=eq.${encodeURIComponent(me.email)}` : '';
-              const r = await fetch(`${URL}/rest/v1/staff_schedules?select=*&type=eq.office_hour${f}&order=start.asc`, { headers: H(KEY) });
+              const me = getUser() || {}; const f = me.email ? `&staff_email=eq.${encodeURIComponent(me.email)}` : ''; // ok if column absent; PostgREST ignores unknown filter? (we won't rely on it)
+              const r = await fetch(`${URL}/rest/v1/staff_schedules?select=*&type=eq.office_hour&order=start_time.asc`, { headers: H(KEY) });
               if (r.ok) data = await r.json().catch(() => []);
             }
           } catch { }
@@ -686,7 +686,7 @@
         })()
       };
 
-      /* SAVE SCHEDULE — writes ONLY to public.staff_schedules with course_code + type */
+      /* SAVE SCHEDULE — exact columns of staff_schedules */
       (function () {
         const form = $('#sched-form'); if (!form) return;
         const alert = $('#sched-alert'), btn = $('#sched-save');
@@ -695,23 +695,23 @@
           e.preventDefault(); alert.classList.add('hidden'); btn.disabled = true;
 
           const payload = {
-            course_code: $('#sched-course').value.trim(),  // <-- exact column name
+            course_code: $('#sched-course').value.trim(),
             day: $('#sched-day').value.trim(),
-            start: toHHMMSS($('#sched-start').value.trim()),
-            end: toHHMMSS($('#sched-end').value.trim()),
+            start_time: toHHMMSS($('#sched-start').value.trim()),
+            end_time: toHHMMSS($('#sched-end').value.trim()),
             location: $('#sched-location').value.trim(),
-            type: $('#sched-type').value || 'office_hour' // <-- exact column name
+            type: $('#sched-type').value || 'office_hour'
           };
-          if (!payload.course_code || !payload.day || !payload.start || !payload.end) {
+          if (!payload.course_code || !payload.day || !payload.start_time || !payload.end_time) {
             alert.className = 'alert alert-error'; alert.textContent = 'Course, day, start and end are required.';
             alert.classList.remove('hidden'); btn.disabled = false; return;
           }
-          const u = getUser() || {}; const row = { ...payload, staff_email: u.email || null, staff_name: u.name || u.full_name || u.email || null };
+          const u = getUser() || {}; if (u?.nuid) payload.nuid = String(u.nuid); // table has nuid text
 
           let ok = false, err = '';
           try {
             const { URL, KEY } = SB(); if (!URL || !KEY) throw new Error('Supabase not configured');
-            const r = await fetch(`${URL}/rest/v1/staff_schedules`, { method: 'POST', headers: H(KEY), body: JSON.stringify(row) });
+            const r = await fetch(`${URL}/rest/v1/staff_schedules`, { method: 'POST', headers: H(KEY), body: JSON.stringify(payload) });
             if (r.ok) ok = true; else { let j = null; try { j = await r.clone().json() } catch { } err = j?.message || j?.hint || j?.details || `${r.status} ${r.statusText}`; }
           } catch (e) { err = String(e?.message || e); }
 
@@ -721,7 +721,7 @@
         });
       })();
 
-      /* FEEDBACK list — SL/Admin: ALL; others: courses via staff_public, fallback to staff_courses (any column name) */
+      /* FEEDBACK list (unchanged logic) */
       window.loadMyFeedback = function () {
         (async () => {
           const list = $('#myfb-list'), alert = $('#myfb-alert'); if (!list) return; list.innerHTML = '';
@@ -771,7 +771,7 @@
         })()
       };
 
-      /* SL ADMIN — list + edit/remove + courses assign (insert first, then delete extras) */
+      /* SL ADMIN — list + edit/remove + courses (now merges staff_courses) */
       window.loadAdmin = function () {
         (async () => {
           const body = $('#staff-table tbody'), empty = $('#staff-empty'); if (!body) return; body.innerHTML = '';
@@ -789,7 +789,7 @@
                 courseCol = ['course', 'course_code', 'course_id', 'course_name'].find(k => keys.includes(k)) || 'course';
               }
             } catch { }
-            // INSERT first
+            // INSERT chosen courses
             if (Array.isArray(courses) && courses.length) {
               const rows = courses.map(c => ({ staff_nuid: nuid, [courseCol]: String(c) }));
               const ins = await fetch(`${URL}/rest/v1/staff_courses`, { method: 'POST', headers, body: JSON.stringify(rows) });
@@ -804,7 +804,7 @@
             }
           }
 
-          const paint = rows => {
+          function paint(rows) {
             body.innerHTML = '';
             if (!rows.length) { empty.className = 'alert alert-success'; empty.textContent = 'No staff found yet.'; empty.classList.remove('hidden'); return; }
             empty.classList.add('hidden');
@@ -850,19 +850,31 @@
               }
               if (ok) loadAdmin(); else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto'; }
             }));
-          };
+          }
 
-          // Load staff list
+          // Load staff list + merge courses from staff_courses (so it never stays [])
           let rows = [];
           try {
             const { URL, KEY } = SB(); if (URL && KEY) {
-              const r = await fetch(`${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`, { headers: headersSup(KEY) });
-              if (r.ok) rows = await r.json().catch(() => []);
+              const [sp, sc] = await Promise.all([
+                fetch(`${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`, { headers: headersSup(KEY) }),
+                fetch(`${URL}/rest/v1/staff_courses?select=staff_nuid,course,course_code,course_name`, { headers: headersSup(KEY) })
+              ]);
+              const staff = sp.ok ? await sp.json().catch(() => []) : [];
+              const courses = sc.ok ? await sc.json().catch(() => []) : [];
+              const map = {};
+              courses.forEach(r => {
+                const code = r.course_code ?? r.course ?? r.course_name ?? '';
+                if (!code) return;
+                if (!map[r.staff_nuid]) map[r.staff_nuid] = [];
+                if (!map[r.staff_nuid].includes(code)) map[r.staff_nuid].push(String(code));
+              });
+              rows = staff.map(s => ({ ...s, courses: map[s.nuid]?.slice().sort() || s.courses || [] }));
             }
           } catch { }
           paint(rows);
 
-          // Save staff (server-first; fallback to Supabase + staff_courses writer)
+          // Save staff
           (function () {
             const form = $('#staff-form'), alert = $('#staff-alert');
             const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
