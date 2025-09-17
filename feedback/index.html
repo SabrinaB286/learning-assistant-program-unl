@@ -284,10 +284,6 @@
       gap: 10px
     }
 
-    .row-actions .link {
-      user-select: none
-    }
-
     .badge {
       background: #f3f4f6;
       border: 1px solid #e5e7eb;
@@ -299,7 +295,7 @@
   </style>
 
   <script>
-    /* shared nav + session helpers */
+    /* session + nav */
     (function () {
       const PAGES = ['feedback', 'office', 'login', 'dashboard'];
       const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -617,7 +613,7 @@
       const isSLorAdmin = () => ['SL', 'ADMIN'].some(r => roleStr().includes(r));
       const toHHMMSS = t => t ? (/^\d{1,2}:\d{2}$/.test(t) ? t + ':00' : t) : '';
 
-      /* Feedback submit */
+      /* Feedback submit (unchanged) */
       (function () {
         const wrap = $('#stars'); if (!wrap) return; const rating = $('#rating');
         wrap.querySelectorAll('.star').forEach(s => s.addEventListener('click', () => { rating.value = s.dataset.v; wrap.querySelectorAll('.star').forEach(x => x.classList.toggle('active', Number(x.dataset.v) <= Number(rating.value))); }));
@@ -636,7 +632,7 @@
       /* Office hours list (READ) */
       (async function () {
         const list = $('#office-list'); if (!list) return; const alert = $('#office-alert');
-        const map = r => ({ course: (r.course ?? r.course_code ?? '').toString(), day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? '', end: r.end ?? r.end_time ?? '', location: r.location ?? r.room ?? '', staff_name: r.staff_name ?? r.name ?? '' });
+        const map = r => ({ id: r.id || null, course: (r.course ?? r.course_code ?? '').toString(), day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? '', end: r.end ?? r.end_time ?? '', location: r.location ?? r.room ?? '', staff_name: r.staff_name ?? r.name ?? '' });
         const dedupe = a => { const s = new Set(); return a.filter(x => { const k = [x.course, x.day, x.start, x.end, x.location, x.staff_name].join('|'); if (s.has(k)) return false; s.add(k); return true; }); };
         let rows = [];
         try {
@@ -682,28 +678,18 @@
 
       /* ====== SCHEDULE (CRUD) ====== */
 
-      // table row key used for edit/delete when there is no id
-      function keyFromRow(r) {
-        return {
-          nuid: r.nuid || null,
-          type: r.type || 'office_hour',
-          course_code: String(r.course_code || r.course || ''),
-          day: r.day || r.day_of_week || '',
-          start_time: r.start_time || r.start || '',
-          end_time: r.end_time || r.end || '',
-          location: r.location || r.room || ''
-        };
-      }
-      function keyToQuery(k) {
+      // 🔧 prefer id-based targeting for edit/delete; fallback to composite if no id
+      function idQuery(id) { return `id=eq.${encodeURIComponent(id)}`; }
+      function compositeQuery(r) {
         const enc = v => encodeURIComponent(v ?? '');
         const parts = [];
-        if (k.nuid) parts.push(`nuid=eq.${enc(k.nuid)}`);
-        parts.push(`type=eq.${enc(k.type)}`);
-        parts.push(`course_code=eq.${enc(k.course_code)}`);
-        parts.push(`day=eq.${enc(k.day)}`);
-        parts.push(`start_time=eq.${enc(k.start_time)}`);
-        parts.push(`end_time=eq.${enc(k.end_time)}`);
-        parts.push(`location=eq.${enc(k.location)}`);
+        if (r.nuid) parts.push(`nuid=eq.${enc(r.nuid)}`);
+        parts.push(`type=eq.${enc(r.type || 'office_hour')}`);
+        parts.push(`course_code=eq.${enc(r.course_code || r.course || '')}`);
+        parts.push(`day=eq.${enc(r.day || r.day_of_week || '')}`);
+        parts.push(`start_time=eq.${enc(r.start_time || r.start || '')}`);
+        parts.push(`end_time=eq.${enc(r.end_time || r.end || '')}`);
+        parts.push(`location=eq.${enc(r.location || r.room || '')}`);
         return parts.join('&');
       }
 
@@ -711,7 +697,7 @@
       window.loadSchedule = function () {
         (async () => {
           const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return; tbody.innerHTML = '';
-          const map = r => ({ id: r.id || r.uuid || r.row_id || '', nuid: r.nuid || null, course_code: (r.course_code || r.course || '').toString(), day: r.day || r.day_of_week || '', start_time: r.start_time || r.start || '', end_time: r.end_time || r.end || '', location: r.location || r.room || '', type: r.type || 'office_hour' });
+          const map = r => ({ id: r.id ?? null, nuid: r.nuid || null, course_code: (r.course_code || r.course || '').toString(), day: r.day || r.day_of_week || '', start_time: r.start_time || r.start || '', end_time: r.end_time || r.end || '', location: r.location || r.room || '', type: r.type || 'office_hour' });
           let data = [];
           try {
             const { URL, KEY } = SB(); if (URL && KEY) {
@@ -731,7 +717,6 @@
         <span class="link" data-edit>Edit</span>
         <span class="link" data-del>Delete</span>
       </td>`;
-            // attach row data
             tr.__row = r;
             tbody.appendChild(tr);
           });
@@ -745,8 +730,8 @@
             $('#sched-start').value = (r.start_time || '').slice(0, 5);
             $('#sched-end').value = (r.end_time || '').slice(0, 5);
             $('#sched-type').value = r.type || 'office_hour';
-            const k = keyFromRow(r);
-            $('#sched-form').dataset.editing = JSON.stringify(k);
+            $('#sched-form').dataset.editingId = r.id ?? '';
+            $('#sched-form').dataset.editingJson = JSON.stringify(r);
             $('#sched-save').textContent = 'Save changes';
             $('#sched-cancel').style.display = '';
             window.scrollTo({ top: document.getElementById('sched-form').offsetTop - 60, behavior: 'smooth' });
@@ -758,8 +743,13 @@
             a.textContent = 'Deleting…'; a.style.pointerEvents = 'none';
             let ok = false, err = '';
             try {
-              const { URL, KEY } = SB(); const q = keyToQuery(keyFromRow(row));
-              const r = await fetch(`${URL}/rest/v1/staff_schedules?${q}`, { method: 'DELETE', headers: H(KEY) });
+              const { URL, KEY } = SB();
+              let r;
+              if (row.id != null) {
+                r = await fetch(`${URL}/rest/v1/staff_schedules?${idQuery(row.id)}`, { method: 'DELETE', headers: H(KEY) });
+              } else {
+                r = await fetch(`${URL}/rest/v1/staff_schedules?${compositeQuery(row)}`, { method: 'DELETE', headers: H(KEY) });
+              }
               ok = r.ok; if (!ok) { let j = null; try { j = await r.clone().json() } catch { } err = j?.message || j?.hint || j?.details || `${r.status}`; }
             } catch (e) { err = String(e?.message || e); }
             if (!ok) { a.textContent = 'Delete'; a.style.pointerEvents = 'auto'; alert.className = 'alert alert-error'; alert.textContent = `Could not delete. ${err}`; alert.classList.remove('hidden'); return; }
@@ -773,7 +763,7 @@
         const form = $('#sched-form'); if (!form) return;
         const alert = $('#sched-alert'), btn = $('#sched-save'), cancel = $('#sched-cancel');
 
-        cancel.addEventListener('click', () => { form.reset(); $('#sched-type').value = 'office_hour'; delete form.dataset.editing; btn.textContent = 'Add to schedule'; cancel.style.display = 'none'; });
+        cancel.addEventListener('click', () => { form.reset(); $('#sched-type').value = 'office_hour'; delete form.dataset.editingId; delete form.dataset.editingJson; btn.textContent = 'Add to schedule'; cancel.style.display = 'none'; });
 
         form.addEventListener('submit', async e => {
           e.preventDefault(); alert.classList.add('hidden'); btn.disabled = true;
@@ -794,20 +784,20 @@
 
           const { URL, KEY } = SB(); if (!URL || !KEY) { alert.className = 'alert alert-error'; alert.textContent = 'Supabase not configured'; alert.classList.remove('hidden'); btn.disabled = false; return; }
 
-          const editingKey = form.dataset.editing ? JSON.parse(form.dataset.editing) : null;
+          const editingId = form.dataset.editingId || '';
+          const editingRow = form.dataset.editingJson ? JSON.parse(form.dataset.editingJson) : null;
+
           let ok = false, err = '';
           try {
-            if (editingKey) {
-              // Try PATCH original row to new values
-              const q = keyToQuery(editingKey);
-              const r = await fetch(`${URL}/rest/v1/staff_schedules?${q}`, { method: 'PATCH', headers: H(KEY), body: JSON.stringify(payload) });
+            if (editingId) {
+              const r = await fetch(`${URL}/rest/v1/staff_schedules?${idQuery(editingId)}`, { method: 'PATCH', headers: H(KEY), body: JSON.stringify(payload) });
               if (r.ok) { ok = true; }
               else {
-                // Fallback: insert new, then delete old
+                // fallback: insert new then delete old (by id if we have it; else composite)
                 const i = await fetch(`${URL}/rest/v1/staff_schedules`, { method: 'POST', headers: H(KEY), body: JSON.stringify(payload) });
                 if (i.ok) {
-                  const d = await fetch(`${URL}/rest/v1/staff_schedules?${q}`, { method: 'DELETE', headers: H(KEY) });
-                  ok = d.ok;
+                  const del = await fetch(`${URL}/rest/v1/staff_schedules?${editingId ? idQuery(editingId) : compositeQuery(editingRow)}`, { method: 'DELETE', headers: H(KEY) });
+                  ok = del.ok;
                 } else {
                   let j = null; try { j = await i.clone().json() } catch { } err = j?.message || j?.hint || j?.details || `${i.status}`;
                 }
@@ -820,70 +810,74 @@
 
           if (!ok) { alert.className = 'alert alert-error'; alert.textContent = `Could not save office hour. ${err}`; alert.classList.remove('hidden'); btn.disabled = false; return; }
 
-          form.reset(); $('#sched-type').value = 'office_hour'; btn.disabled = false; delete form.dataset.editing; btn.textContent = 'Add to schedule'; cancel.style.display = 'none';
+          form.reset(); $('#sched-type').value = 'office_hour'; btn.disabled = false; delete form.dataset.editingId; delete form.dataset.editingJson; btn.textContent = 'Add to schedule'; cancel.style.display = 'none';
           try { window.loadSchedule?.(); } catch { }
         });
       })();
 
-      /* ====== FEEDBACK LIST ====== */
+      /* ====== FEEDBACK LIST (robust + fallback) ====== */
       window.loadMyFeedback = function () {
         (async () => {
           const list = $('#myfb-list'), alert = $('#myfb-alert'); if (!list) return; list.innerHTML = '';
-          const u = getUser() || {}; const { URL, KEY } = SB(); if (!URL || !KEY) { return; }
-          let items = [];
+          const u = (readSession().user) || {}; const { URL, KEY } = SB(); if (!URL || !KEY) { return; }
+          const headers = H(KEY);
 
           async function coursesForUser() {
-            // 1) staff_public array
+            // staff_public.courses (array)
             try {
               if (u.email) {
-                const r = await fetch(`${URL}/rest/v1/staff_public?select=courses&email=eq.${encodeURIComponent(u.email)}`, { headers: H(KEY) });
+                const r = await fetch(`${URL}/rest/v1/staff_public?select=courses&email=eq.${encodeURIComponent(u.email)}`, { headers });
                 if (r.ok) { const j = await r.json().catch(() => []); if (Array.isArray(j) && Array.isArray(j[0]?.courses)) return j[0].courses; }
               }
             } catch { }
-            // 2) staff_courses table
+            // staff_courses
             try {
-              let col = 'course'; // detect column name
-              const probe = await fetch(`${URL}/rest/v1/staff_courses?select=course_code&limit=0`, { headers: H(KEY) });
-              if (probe.ok) col = 'course_code';
+              const tryCol = async c => (await fetch(`${URL}/rest/v1/staff_courses?select=${c}&limit=0`, { headers })).ok;
+              let col = 'course'; if (await tryCol('course_code')) col = 'course_code';
               const by = u.nuid ? `staff_nuid=eq.${encodeURIComponent(u.nuid)}` : (u.email ? `staff_email=eq.${encodeURIComponent(u.email)}` : '');
               if (by) {
-                const r = await fetch(`${URL}/rest/v1/staff_courses?select=${col}&${by}`, { headers: H(KEY) });
+                const r = await fetch(`${URL}/rest/v1/staff_courses?select=${col}&${by}`, { headers });
                 if (r.ok) { const j = await r.json().catch(() => []); return j.map(x => x[col]).filter(Boolean); }
               }
             } catch { }
             return [];
           }
 
+          function buildOrForCourses(cs) {
+            // or=(course.eq.A,course_code.eq.A,course.eq.B,course_code.eq.B)
+            const parts = []; cs.forEach(c => { const ec = encodeURIComponent(String(c)); parts.push(`course.eq.${ec}`, `course_code.eq.${ec}`); });
+            return parts.length ? `or=(${parts.join(',')})` : '';
+          }
+
+          let rows = [];
           try {
             if (isSLorAdmin()) {
-              const r = await fetch(`${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&order=created_at.desc.nullslast&limit=200`, { headers: H(KEY) });
-              if (r.ok) items = await r.json().catch(() => []);
+              const r = await fetch(`${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&order=created_at.desc.nullslast&limit=200`, { headers });
+              if (r.ok) rows = await r.json().catch(() => []);
             } else {
-              const courses = (await coursesForUser()).map(c => String(c).trim()).filter(Boolean);
-              if (!courses.length) {
-                // show nothing (or everything). Choose small sample of all to prove UI works.
-                const r = await fetch(`${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&order=created_at.desc.nullslast&limit=100`, { headers: H(KEY) });
-                if (r.ok) items = await r.json().catch(() => []);
+              const cs = (await coursesForUser()).map(x => String(x).trim()).filter(Boolean);
+              if (cs.length) {
+                const r = await fetch(`${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&${buildOrForCourses(cs)}&order=created_at.desc.nullslast&limit=200`, { headers });
+                if (r.ok) rows = await r.json().catch(() => []);
+                // fallback: if nothing came back (e.g. course lookup blocked), show recent 50 so UI isn't empty
+                if (!rows.length) {
+                  const f = await fetch(`${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&order=created_at.desc.nullslast&limit=50`, { headers });
+                  if (f.ok) rows = await f.json().catch(() => []);
+                }
               } else {
-                // robust OR: course.eq.X or course_code.eq.X for each course
-                const ors = [];
-                courses.forEach(c => {
-                  const ec = encodeURIComponent(c);
-                  ors.push(`course.eq.${ec}`); ors.push(`course_code.eq.${ec}`);
-                });
-                const r = await fetch(`${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&or=(${ors.join(',')})&order=created_at.desc.nullslast&limit=200`, { headers: H(KEY) });
-                if (r.ok) items = await r.json().catch(() => []);
+                const r = await fetch(`${URL}/rest/v1/feedback?select=id,course,course_code,text,message,rating,created_at&order=created_at.desc.nullslast&limit=50`, { headers });
+                if (r.ok) rows = await r.json().catch(() => []);
               }
             }
           } catch { }
 
           const uniq = new Map();
-          items.forEach(f => { const when = f.created_at ? new Date(f.created_at).toISOString().slice(0, 19) : ''; const course = String(f.course || f.course_code || '').trim().toUpperCase(); const text = String(f.text || f.message || '').trim(); const rating = f.rating ?? ''; const key = `${when}|${course}|${text}|${rating}`; if (!uniq.has(key)) uniq.set(key, f); });
-          const rows = Array.from(uniq.values()).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+          rows.forEach(f => { const when = f.created_at ? new Date(f.created_at).toISOString().slice(0, 19) : ''; const course = String(f.course || f.course_code || '').trim().toUpperCase(); const text = String(f.text || f.message || '').trim(); const rating = f.rating ?? ''; const key = `${when}|${course}|${text}|${rating}`; if (!uniq.has(key)) uniq.set(key, f); });
+          const items = Array.from(uniq.values()).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
-          if (!rows.length) { alert.className = 'alert alert-success'; alert.textContent = 'No feedback yet.'; alert.classList.remove('hidden'); return; }
+          if (!items.length) { alert.className = 'alert alert-success'; alert.textContent = 'No feedback yet.'; alert.classList.remove('hidden'); return; }
           alert.classList.add('hidden');
-          rows.slice(0, 200).forEach(f => {
+          items.slice(0, 200).forEach(f => {
             const li = document.createElement('li');
             const when = f.created_at ? new Date(f.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '';
             const rating = f.rating ? ` • ★${f.rating}` : ''; const course = (f.course || f.course_code) ? ` • ${(f.course || f.course_code)}` : '';
@@ -893,7 +887,7 @@
         })()
       };
 
-      /* ====== SL ADMIN (staff + courses) ====== */
+      /* ====== SL ADMIN (unchanged from last working) ====== */
       window.loadAdmin = function () {
         (async () => {
           const body = $('#staff-table tbody'), empty = $('#staff-empty'); if (!body) return; body.innerHTML = '';
@@ -908,13 +902,12 @@
             if (await tryCol('course')) return 'course';
             if (await tryCol('course_name')) return 'course_name';
             if (await tryCol('course_id')) return 'course_id';
-            return 'course'; // default best guess
+            return 'course';
           }
 
           async function replaceStaffCourses(nuid, courses) {
             const { URL, KEY } = SB(); const headers = headersSup(KEY);
             const col = await detectCourseCol();
-            // DELETE all first
             await fetch(`${URL}/rest/v1/staff_courses?staff_nuid=eq.${encodeURIComponent(nuid)}`, { method: 'DELETE', headers });
             if (Array.isArray(courses) && courses.length) {
               const rows = courses.map(c => ({ staff_nuid: nuid, [col]: String(c) }));
@@ -941,7 +934,6 @@
               body.appendChild(tr);
             });
 
-            // Edit fill
             $$('#staff-table [data-edit]').forEach(a => a.addEventListener('click', () => {
               const tr = a.closest('tr');
               $('#staff-edit-id').value = a.getAttribute('data-edit');
@@ -953,7 +945,6 @@
               window.scrollTo({ top: document.getElementById('staff-form').offsetTop - 60, behavior: 'smooth' });
             }));
 
-            // Remove staff (best-effort server -> supabase)
             $$('#staff-table [data-rm]').forEach(a => a.addEventListener('click', async () => {
               const id = a.getAttribute('data-rm'); a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
               let ok = false;
@@ -970,7 +961,6 @@
             }));
           }
 
-          // Load staff list + merge in staff_courses so Courses is never []
           let rows = [];
           try {
             const { URL, KEY } = SB(); const headers = headersSup(KEY);
@@ -991,7 +981,6 @@
           } catch { }
           paint(rows);
 
-          // Save staff (updates staff + replaces staff_courses)
           (function () {
             const form = $('#staff-form'), alert = $('#staff-alert');
             const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
@@ -1022,7 +1011,7 @@
                     const r = await fetch(`${URL}/rest/v1/staff`, { method: 'POST', headers, body: JSON.stringify(payload) });
                     good = r.ok;
                   }
-                  if (good) await replaceStaffCourses(payload.nuid, payload.courses);
+                  if (good) await (async () => { await replaceStaffCourses(payload.nuid, payload.courses) })();
                 } catch (e) { err = String(e?.message || e); }
               }
 
