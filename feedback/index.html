@@ -336,8 +336,8 @@
       window.addEventListener('DOMContentLoaded', () => {
         bindNav(); paintNav();
         const initial = hasToken() ? 'dashboard' : 'feedback';
-        show((location.hash || '').replace('#', '') || initial);  // deep-link aware
-        refreshAll(); // auto-paint when already logged in
+        show((location.hash || '').replace('#', '') || initial);
+        refreshAll(); // paint immediately if already logged in
         $('#logout-btn')?.addEventListener('click', async () => {
           try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch { }
           localStorage.removeItem('lap_auth'); localStorage.removeItem('lap_auth_v1');
@@ -402,7 +402,6 @@
             </select>
           </div>
         </div>
-
         <div>
           <label>Rating</label>
           <div id="stars" class="stars"><span class="star" data-v="1">★</span><span class="star"
@@ -410,9 +409,7 @@
               class="star" data-v="5">★</span></div>
           <input type="hidden" id="rating" value="0" />
         </div>
-
         <div><label>Your feedback</label><textarea id="text" placeholder="Share details…"></textarea></div>
-
         <div class="grid g-2">
           <div><label>Your name (optional)</label><input id="submitter" placeholder="First Last" /></div>
           <div><label>Year (optional)</label>
@@ -426,7 +423,6 @@
             </select>
           </div>
         </div>
-
         <div id="fb-alert" class="alert hidden"></div>
         <div class="actions"><button id="fb-submit" class="btn-primary" type="submit">Submit feedback</button></div>
       </form>
@@ -492,6 +488,12 @@
           <div><label>Location</label><input id="sched-location" placeholder="Avery 12 / Zoom…" /></div>
           <div><label>Start</label><input id="sched-start" type="time" required /></div>
           <div><label>End</label><input id="sched-end" type="time" required /></div>
+          <div><label>Type</label>
+            <select id="sched-type" required>
+              <option value="office_hour" selected>Office Hour</option>
+              <option value="lab_time">Lab Time</option>
+            </select>
+          </div>
           <div class="actions"><button id="sched-save" class="btn-primary" type="submit">Add to schedule</button></div>
         </form>
 
@@ -583,7 +585,7 @@
     </section>
   </main>
 
-  <!-- Supabase config -->
+  <!-- Supabase config (override if needed) -->
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || 'https://wmeijbsvlnjvnhptudfh.supabase.co';
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtZWlqYnN2bG5qdm5ocHR1ZGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MDQ5NzksImV4cCI6MjA3MTM4MDk3OX0.YT_435s_FFsqNJs6M_yW9iIGzxeCu1BHpPVH1cwJlX8';
@@ -617,17 +619,18 @@
         });
       })();
 
-      /* Office hours list */
+      /* Office hours list (READ): office_hours_public + staff_schedules(type=office_hour) */
       (async function () {
         const list = $('#office-list'); if (!list) return; const alert = $('#office-alert');
-        const map = r => ({ course: r.course ?? r.course_code ?? '', day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? '', end: r.end ?? r.end_time ?? '', location: r.location ?? r.room ?? '', staff_name: r.staff_name ?? r.name ?? '' });
+        const map = r => ({ course: (r.course ?? r.course_code ?? '').toString(), day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? '', end: r.end ?? r.end_time ?? '', location: r.location ?? r.room ?? '', staff_name: r.staff_name ?? r.name ?? '' });
         const dedupe = a => { const s = new Set(); return a.filter(x => { const k = [x.course, x.day, x.start, x.end, x.location, x.staff_name].join('|'); if (s.has(k)) return false; s.add(k); return true; }); };
         let rows = [];
         try {
           const { URL, KEY } = SB(); if (URL && KEY) {
-            for (const tbl of ['office_hours_public', 'staff_schedules']) { // removed 'schedule' to avoid schema mismatches
-              const r = await fetch(`${URL}/rest/v1/${tbl}?select=*`, { headers: H(KEY) }); if (r.ok) { const j = await r.json().catch(() => []); rows = rows.concat((Array.isArray(j) ? j : []).map(map)); }
-            }
+            // public view if present
+            for (const tbl of ['office_hours_public']) { const r = await fetch(`${URL}/rest/v1/${tbl}?select=*`, { headers: H(KEY) }); if (r.ok) { rows = rows.concat((await r.json().catch(() => [])).map(map)); } }
+            // fallback / combined: staff_schedules (only office_hour)
+            const r2 = await fetch(`${URL}/rest/v1/staff_schedules?select=*&type=eq.office_hour`, { headers: H(KEY) }); if (r2.ok) { rows = rows.concat((await r2.json().catch(() => [])).map(map)); }
           }
         } catch { }
         if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; }
@@ -663,18 +666,17 @@
         });
       })();
 
-      /* LOAD SCHEDULE (display) */
+      /* LOAD SCHEDULE (display only current user's office_hour rows) */
       window.loadSchedule = function () {
         (async () => {
           const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return; tbody.innerHTML = '';
-          const map = r => ({ id: r.id || r.uuid || r.row_id || '', course: r.course || r.course_code || '', day: r.day || r.day_of_week || '', start: r.start || r.start_time || '', end: r.end || r.end_time || '', location: r.location || r.room || '' });
+          const map = r => ({ id: r.id || r.uuid || r.row_id || '', course: (r.course_code || r.course || '').toString(), day: r.day || r.day_of_week || '', start: r.start || r.start_time || '', end: r.end || r.end_time || '', location: r.location || r.room || '' });
           let data = [];
           try {
             const { URL, KEY } = SB(); if (URL && KEY) {
               const me = getUser() || {}; const f = me.email ? `&staff_email=eq.${encodeURIComponent(me.email)}` : '';
-              for (const tbl of ['staff_schedules']) { // read only from staff_schedules
-                const r = await fetch(`${URL}/rest/v1/${tbl}?select=*&order=start.asc${f}`, { headers: H(KEY) }); if (r.ok) data = data.concat(await r.json().catch(() => []));
-              }
+              const r = await fetch(`${URL}/rest/v1/staff_schedules?select=*&type=eq.office_hour${f}&order=start.asc`, { headers: H(KEY) });
+              if (r.ok) data = await r.json().catch(() => []);
             }
           } catch { }
           data = data.map(map);
@@ -684,7 +686,7 @@
         })()
       };
 
-      /* SAVE SCHEDULE — writes ONLY to public.staff_schedules (no schedule table calls) */
+      /* SAVE SCHEDULE — writes ONLY to public.staff_schedules with course_code + type */
       (function () {
         const form = $('#sched-form'); if (!form) return;
         const alert = $('#sched-alert'), btn = $('#sched-save');
@@ -693,11 +695,14 @@
           e.preventDefault(); alert.classList.add('hidden'); btn.disabled = true;
 
           const payload = {
-            course: $('#sched-course').value.trim(), day: $('#sched-day').value.trim(),
-            start: toHHMMSS($('#sched-start').value.trim()), end: toHHMMSS($('#sched-end').value.trim()),
-            location: $('#sched-location').value.trim()
+            course_code: $('#sched-course').value.trim(),  // <-- exact column name
+            day: $('#sched-day').value.trim(),
+            start: toHHMMSS($('#sched-start').value.trim()),
+            end: toHHMMSS($('#sched-end').value.trim()),
+            location: $('#sched-location').value.trim(),
+            type: $('#sched-type').value || 'office_hour' // <-- exact column name
           };
-          if (!payload.course || !payload.day || !payload.start || !payload.end) {
+          if (!payload.course_code || !payload.day || !payload.start || !payload.end) {
             alert.className = 'alert alert-error'; alert.textContent = 'Course, day, start and end are required.';
             alert.classList.remove('hidden'); btn.disabled = false; return;
           }
@@ -712,7 +717,7 @@
 
           if (!ok) { alert.className = 'alert alert-error'; alert.textContent = `Could not save office hour. ${err}`; alert.classList.remove('hidden'); btn.disabled = false; return; }
 
-          form.reset(); btn.disabled = false; try { window.loadSchedule?.(); } catch { }
+          form.reset(); $('#sched-type').value = 'office_hour'; btn.disabled = false; try { window.loadSchedule?.(); } catch { }
         });
       })();
 
@@ -857,7 +862,7 @@
           } catch { }
           paint(rows);
 
-          // Save staff
+          // Save staff (server-first; fallback to Supabase + staff_courses writer)
           (function () {
             const form = $('#staff-form'), alert = $('#staff-alert');
             const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
