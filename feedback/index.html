@@ -325,8 +325,6 @@
         $('#login-tab')?.classList.toggle('hidden', authed);
         $('#logout-btn')?.classList.toggle('hidden', !authed);
         $('#dashboard-tab')?.classList.toggle('hidden', !authed);
-        // FIX: Don't hide #my-feedback automatically; let loader decide
-        $('#my-feedback')?.classList.toggle('hidden',!authed);
         $('#admin-block')?.classList.toggle('hidden', !(authed && isSLorAdmin()));
       }
       window.__lap_paintNav = paintNav;
@@ -468,7 +466,7 @@
     </section>
 
     <!-- DASHBOARD -->
-    <section id="section-dashboard" class="">
+    <section id="section-dashboard" class="hidden">
       <div class="card">
         <h2>My Schedule</h2>
         <p class="lead">Add, edit, or remove your office hours.</p>
@@ -528,6 +526,21 @@
         <p class="lead">Feedback items for your course(s).</p>
         <div id="myfb-alert" class="alert hidden"></div>
         <ul id="myfb-list"></ul>
+      </div>
+
+      <!-- FIX: Change Password -->
+      <div id="pw-card" class="card">
+        <h2>Change Password</h2>
+        <p class="lead">Update your account password.</p>
+        <div id="pw-alert" class="alert hidden"></div>
+        <form id="pw-form" class="grid g-3" novalidate>
+          <div><label>Current password</label><input id="pw-current" type="password" autocomplete="current-password"
+              required></div>
+          <div><label>New password</label><input id="pw-new" type="password" autocomplete="new-password" required></div>
+          <div><label>Confirm new password</label><input id="pw-confirm" type="password" autocomplete="new-password"
+              required></div>
+          <div class="actions"><button id="pw-save" class="btn-primary" type="submit">Change password</button></div>
+        </form>
       </div>
 
       <div id="admin-block" class="card hidden">
@@ -626,6 +639,7 @@
             const r = await fetch(`${URL}/rest/v1/feedback`, { method: 'POST', headers: H(KEY), body: JSON.stringify(body) });
             if (!r.ok) { let j = null; try { j = await r.clone().json() } catch { } throw new Error(j?.message || j?.hint || j?.details || `${r.status}`); }
             alert.className = 'alert alert-success'; alert.textContent = 'Thanks! Your feedback was submitted.'; alert.classList.remove('hidden'); e.target.reset(); wrap.querySelectorAll('.star').forEach(x => x.classList.remove('active')); $('#rating').value = '0';
+            try { window.loadMyFeedback?.(); } catch { }
           } catch (err) { alert.className = 'alert alert-error'; alert.textContent = String(err?.message || err); alert.classList.remove('hidden'); }
         });
       })();
@@ -633,24 +647,20 @@
       /* Office hours list (READ) + staff name bubble */
       (async function () {
         const list = $('#office-list'); if (!list) return; const alert = $('#office-alert');
-        const map = r => ({ id: r.id || null, nuid: r.nuid || null, course: (r.course ?? r.course_code ?? '').toString(), day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? '', end: r.end ?? r.end_time ?? '', location: r.location ?? r.room ?? '', staff_name: r.staff_name ?? r.name ?? '' });
+        const map = r => ({ nuid: r.nuid || null, course: (r.course ?? r.course_code ?? '').toString(), day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? '', end: r.end ?? r.end_time ?? '', location: r.location ?? r.room ?? '', staff_name: r.staff_name ?? r.name ?? '' });
         let rows = [], staffMap = {};
 
         try {
           const { URL, KEY } = SB(); if (URL && KEY) {
-            // staff name map for nuid → name (used for staff_schedules rows)
             const sm = await fetch(`${URL}/rest/v1/staff_public?select=nuid,name`, { headers: H(KEY) });
             if (sm.ok) { const j = await sm.json().catch(() => []); j.forEach(x => { if (x.nuid && x.name) staffMap[String(x.nuid)] = x.name; }); }
-            // office_hours_public view
             const r1 = await fetch(`${URL}/rest/v1/office_hours_public?select=*`, { headers: H(KEY) });
             if (r1.ok) { rows = rows.concat((await r1.json().catch(() => [])).map(map)); }
-            // staff_schedules table (office_hour only)
             const r2 = await fetch(`${URL}/rest/v1/staff_schedules?select=*&type=eq.office_hour`, { headers: H(KEY) });
             if (r2.ok) { rows = rows.concat((await r2.json().catch(() => [])).map(map)); }
           }
         } catch { }
 
-        // fill missing names from map
         rows.forEach(r => { if (!r.staff_name && r.nuid && staffMap[r.nuid]) r.staff_name = staffMap[r.nuid]; });
 
         if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; }
@@ -696,10 +706,28 @@
         });
       })();
 
-      /* ====== SCHEDULE (CRUD) ====== */
+      /* ====== CHANGE PASSWORD (server endpoint) ====== */
+      (function () {
+        const form = $('#pw-form'); if (!form) return;
+        const alert = $('#pw-alert'), btn = $('#pw-save');
+        const show = (ok, msg) => { alert.className = 'alert ' + (ok ? 'alert-success' : 'alert-error'); alert.textContent = msg; alert.classList.remove('hidden'); };
+        form.addEventListener('submit', async e => {
+          e.preventDefault(); alert.classList.add('hidden'); btn.disabled = true;
+          const cur = $('#pw-current').value, nw = $('#pw-new').value, cf = $('#pw-confirm').value;
+          if (!cur || !nw || !cf) { show(false, 'All fields are required.'); btn.disabled = false; return; }
+          if (nw !== cf) { show(false, 'New password and confirmation do not match.'); btn.disabled = false; return; }
+          try {
+            const r = await fetch('/api/auth/change-password', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ current_password: cur, new_password: nw }) });
+            let j = null; try { j = await r.clone().json() } catch { }
+            if (!r.ok) throw new Error(j?.message || `${r.status}`);
+            show(true, 'Password changed. You may need to sign in again.');
+            form.reset();
+          } catch (err) { show(false, String(err?.message || err)); }
+          btn.disabled = false;
+        });
+      })();
 
-      // Prefer id when possible (stable across edits)
-      const idQuery = id => `id=eq.${encodeURIComponent(id)}`;
+      /* ====== SCHEDULE (CRUD; composite key only) ====== */
       const compositeQuery = r => {
         const enc = v => encodeURIComponent(v ?? '');
         const parts = [];
@@ -717,7 +745,7 @@
       window.loadSchedule = function () {
         (async () => {
           const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return; tbody.innerHTML = '';
-          const map = r => ({ id: r.id ?? null, nuid: r.nuid || null, course_code: (r.course_code || r.course || '').toString(), day: r.day || r.day_of_week || '', start_time: r.start_time || r.start || '', end_time: r.end_time || r.end || '', location: r.location || r.room || '', type: r.type || 'office_hour' });
+          const map = r => ({ nuid: r.nuid || null, course_code: (r.course_code || r.course || '').toString(), day: r.day || r.day_of_week || '', start_time: r.start_time || r.start || '', end_time: r.end_time || r.end || '', location: r.location || r.room || '', type: r.type || 'office_hour' });
           let data = [];
           try {
             const { URL, KEY } = SB(); if (URL && KEY) {
@@ -750,10 +778,8 @@
             $('#sched-start').value = (r.start_time || '').slice(0, 5);
             $('#sched-end').value = (r.end_time || '').slice(0, 5);
             $('#sched-type').value = r.type || 'office_hour';
-            // store original id AND original row (for fallback delete)
             const form = $('#sched-form');
-            form.dataset.editingId = r.id ?? '';
-            form.dataset.editingRow = JSON.stringify(r);
+            form.dataset.editingRow = JSON.stringify(r); // store original row for precise delete
             $('#sched-save').textContent = 'Save changes';
             $('#sched-cancel').style.display = '';
             window.scrollTo({ top: form.offsetTop - 60, behavior: 'smooth' });
@@ -766,7 +792,7 @@
             let ok = false, err = '';
             try {
               const { URL, KEY } = SB();
-              const r = await fetch(`${URL}/rest/v1/staff_schedules?${row.id != null ? idQuery(row.id) : compositeQuery(row)}`, { method: 'DELETE', headers: H(KEY) });
+              const r = await fetch(`${URL}/rest/v1/staff_schedules?${compositeQuery(row)}`, { method: 'DELETE', headers: H(KEY) });
               ok = r.ok; if (!ok) { let j = null; try { j = await r.clone().json() } catch { } err = j?.message || j?.hint || j?.details || `${r.status}`; }
             } catch (e) { err = String(e?.message || e); }
             if (!ok) { a.textContent = 'Delete'; a.style.pointerEvents = 'auto'; alert.className = 'alert alert-error'; alert.textContent = `Could not delete. ${err}`; alert.classList.remove('hidden'); return; }
@@ -775,12 +801,12 @@
         })()
       };
 
-      // CREATE/UPDATE with safe fallback (insert new, delete old by original id)
+      // CREATE/UPDATE with safe fallback (insert new, delete old by original composite)
       (function () {
         const form = $('#sched-form'); if (!form) return;
         const alert = $('#sched-alert'), btn = $('#sched-save'), cancel = $('#sched-cancel');
 
-        cancel.addEventListener('click', () => { form.reset(); $('#sched-type').value = 'office_hour'; delete form.dataset.editingId; delete form.dataset.editingRow; btn.textContent = 'Save'; cancel.style.display = 'none'; });
+        cancel.addEventListener('click', () => { form.reset(); $('#sched-type').value = 'office_hour'; delete form.dataset.editingRow; btn.textContent = 'Save'; cancel.style.display = 'none'; });
 
         form.addEventListener('submit', async e => {
           e.preventDefault(); alert.classList.add('hidden'); btn.disabled = true;
@@ -801,20 +827,19 @@
 
           const { URL, KEY } = SB(); if (!URL || !KEY) { alert.className = 'alert alert-error'; alert.textContent = 'Supabase not configured'; alert.classList.remove('hidden'); btn.disabled = false; return; }
 
-          const originalId = form.dataset.editingId || ''; // <- FIX: keep original id for delete
           const originalRow = form.dataset.editingRow ? JSON.parse(form.dataset.editingRow) : null;
 
           let ok = false, err = '';
           try {
-            if (originalId) {
-              // try UPDATE by id
-              const r = await fetch(`${URL}/rest/v1/staff_schedules?${idQuery(originalId)}`, { method: 'PATCH', headers: H(KEY), body: JSON.stringify(payload) });
+            if (originalRow) {
+              // Try a PATCH by matching the original row values
+              const r = await fetch(`${URL}/rest/v1/staff_schedules?${compositeQuery(originalRow)}`, { method: 'PATCH', headers: H(KEY), body: JSON.stringify(payload) });
               if (r.ok) { ok = true; }
               else {
-                // Fallback: INSERT new first, then DELETE the original row by its id (not the new one)
+                // Fallback: insert new, then delete the exact original row
                 const ins = await fetch(`${URL}/rest/v1/staff_schedules`, { method: 'POST', headers: H(KEY), body: JSON.stringify(payload) });
                 if (ins.ok) {
-                  const del = await fetch(`${URL}/rest/v1/staff_schedules?${idQuery(originalId)}`, { method: 'DELETE', headers: H(KEY) });
+                  const del = await fetch(`${URL}/rest/v1/staff_schedules?${compositeQuery(originalRow)}`, { method: 'DELETE', headers: H(KEY) });
                   ok = del.ok;
                   if (!ok) { let j = null; try { j = await del.clone().json() } catch { } err = j?.message || j?.hint || j?.details || `${del.status}`; }
                 } else {
@@ -822,7 +847,6 @@
                 }
               }
             } else {
-              // creating new
               const r = await fetch(`${URL}/rest/v1/staff_schedules`, { method: 'POST', headers: H(KEY), body: JSON.stringify(payload) });
               ok = r.ok; if (!ok) { let j = null; try { j = await r.clone().json() } catch { } err = j?.message || j?.hint || j?.details || `${r.status} ${r.statusText}`; }
             }
@@ -830,7 +854,7 @@
 
           if (!ok) { alert.className = 'alert alert-error'; alert.textContent = `Could not save office hour. ${err}`; alert.classList.remove('hidden'); btn.disabled = false; return; }
 
-          form.reset(); $('#sched-type').value = 'office_hour'; btn.disabled = false; delete form.dataset.editingId; delete form.dataset.editingRow; btn.textContent = 'Save'; cancel.style.display = 'none';
+          form.reset(); $('#sched-type').value = 'office_hour'; btn.disabled = false; delete form.dataset.editingRow; btn.textContent = 'Save'; cancel.style.display = 'none';
           try { window.loadSchedule?.(); } catch { }
         });
       })();
@@ -950,7 +974,7 @@
                       <td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td>
                       <td class="row-actions">
                         <span class="link" data-edit="${s.nuid || s.id || ''}" data-courses='${JSON.stringify(s.courses || [])}'>Edit</span>
-                        <span class="link" data-rm="${s.nuid || s.id || ''}">Remove</span>
+                        <span class="link" data-rm="${s.nuid || s.id || ''}" data-email="${s.email || ''}">Remove</span>
                       </td>`;
               body.appendChild(tr);
             });
@@ -969,18 +993,22 @@
 
             // full delete (server → supabase fallback)
             $$('#staff-table [data-rm]').forEach(a => a.addEventListener('click', async () => {
-              const id = a.getAttribute('data-rm'); a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
-              let ok = false;
-              try { const r = await fetch(`/api/admin/staff/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'include' }); ok = r.ok; } catch { }
+              const id = a.getAttribute('data-rm'); const email = a.getAttribute('data-email') || ''; a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
+              let ok = false, err = '';
+              try { const r = await fetch(`/api/admin/staff/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'include' }); ok = r.ok; if (!ok) { let j = null; try { j = await r.clone().json() } catch { } err = j?.message || ''; } } catch (e) { err = String(e?.message || e); }
               if (!ok) {
                 try {
                   const { URL, KEY } = SB(); const headers = headersSup(KEY);
                   await fetch(`${URL}/rest/v1/staff_courses?staff_nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers });
-                  const rr = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers });
-                  ok = rr.ok;
-                } catch { }
+                  let rr = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers });
+                  if (!rr.ok && email) {
+                    // second attempt: delete by email (in case primary key mismatch)
+                    rr = await fetch(`${URL}/rest/v1/staff?email=eq.${encodeURIComponent(email)}`, { method: 'DELETE', headers });
+                  }
+                  ok = rr.ok; if (!ok) { let j = null; try { j = await rr.clone().json() } catch { } err = j?.message || j?.hint || j?.details || `${rr.status}`; }
+                } catch (e) { err = String(e?.message || e); }
               }
-              if (ok) loadAdmin(); else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto'; }
+              if (ok) { loadAdmin(); } else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto'; const sa = $('#staff-alert'); sa.className = 'alert alert-error'; sa.textContent = 'Could not delete staff: ' + err; sa.classList.remove('hidden'); }
             }));
           }
 
@@ -1005,7 +1033,7 @@
           } catch { }
           paint(rows);
 
-          // Save staff (server first, supabase fallback)
+          // Save staff (server first; ALWAYS replace staff_courses after success)
           (function () {
             const form = $('#staff-form'), alert = $('#staff-alert');
             const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden'); };
@@ -1024,6 +1052,10 @@
                   method: id ? 'PUT' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                 });
                 good = r.ok; if (!good) { let j = null; try { j = await r.clone().json() } catch { } err = j?.message || ''; }
+                if (good) {
+                  // FIX: always replace staff_courses even if server handled staff table
+                  try { await replaceStaffCourses(payload.nuid, payload.courses); } catch { }
+                }
               } catch (e) { err = String(e?.message || e); }
 
               if (!good) {
