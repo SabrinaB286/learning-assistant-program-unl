@@ -1,3 +1,5 @@
+# Create the fixed index.html with improved Office Hours name resolution and a signup form.
+index_html = r"""
 <!doctype html>
 <html lang="en">
 
@@ -303,13 +305,16 @@
       cursor: pointer;
       font-weight: 700
     }
-  </style>
 
+    .muted {
+      color: var(--muted)
+    }
+  </style>
   <script>
     (function () {
-      const PAGES = ['feedback', 'office', 'login', 'signup', 'dashboard'];
+      const PAGES = ['feedback', 'office', 'login', 'dashboard'];
       const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-      function show(id) { try { if (!PAGES.includes(id)) id = 'feedback'; PAGES.forEach(k => { $('#section-' + k)?.classList.toggle('hidden', k !== id) }); $$('[data-nav]').forEach(b => b.classList.toggle('active', b?.dataset?.nav === id)); if (location.hash !== '#' + id) history.replaceState(null, '', '#' + id) } catch (e) { console.error('show failed', e) } }
+      function show(id) { try { if (!PAGES.includes(id)) id = 'feedback'; PAGES.forEach(k => { const el = $('#section-' + k); if (el) el.classList.toggle('hidden', k !== id) }); $$('[data-nav]').forEach(b => b.classList.toggle('active', b?.dataset?.nav === id)); if (location.hash !== '#' + id) history.replaceState(null, '', '#' + id); } catch (e) { console.error('show failed', e) } }
       window.__lap_show = show;
       function bind() { $$('[data-nav]').forEach(b => { if (b.__bound) return; b.__bound = true; b.addEventListener('click', () => show(b.dataset.nav), { passive: true }) }) }
       window.addEventListener('DOMContentLoaded', () => { bind(); const initial = (location.hash || '').replace('#', ''); show(PAGES.includes(initial) ? initial : 'feedback') });
@@ -327,12 +332,12 @@
         <div id="page-actions"><span id="lap-user-greeting" class="chip hidden" aria-live="polite"></span></div>
         <div class="navrow">
           <nav class="nav">
-            <button class="btn" data-nav="feedback" onclick="__lap_show('feedback')">Feedback</button>
-            <button class="btn" data-nav="office" onclick="__lap_show('office')">Office Hours</button>
-            <button id="dashboard-tab" class="btn hidden" data-nav="dashboard"
+            <button class="btn" type="button" data-nav="feedback" onclick="__lap_show('feedback')">Feedback</button>
+            <button class="btn" type="button" data-nav="office" onclick="__lap_show('office')">Office Hours</button>
+            <button id="dashboard-tab" class="btn hidden" type="button" data-nav="dashboard"
               onclick="__lap_show('dashboard')">Dashboard</button>
-            <button id="login-tab" class="btn" data-nav="login" onclick="__lap_show('login')">Login</button>
-            <button id="signup-tab" class="btn" data-nav="signup" onclick="__lap_show('signup')">Sign up</button>
+            <button id="login-tab" class="btn" type="button" data-nav="login"
+              onclick="__lap_show('login')">Login</button>
           </nav>
           <button id="logout-btn" class="btn hidden" type="button">Log out</button>
         </div>
@@ -345,11 +350,12 @@
     <section id="section-feedback" class="card">
       <h2>Submit Feedback</h2>
       <p class="lead">Share course / LA feedback. Stored in Supabase.</p>
+
       <form id="feedback-form" class="grid" novalidate>
         <div class="grid g-2">
           <div>
             <label for="course">Course</label>
-            <select id="course" required>
+            <select id="course" name="course" required>
               <option value="">Select a course…</option>
               <option>CSCE 101</option>
               <option>CSCE 155A</option>
@@ -360,7 +366,7 @@
           </div>
           <div>
             <label for="type">Type</label>
-            <select id="type" required>
+            <select id="type" name="type" required>
               <option value="">Select type…</option>
               <option>Website</option>
               <option>Staff</option>
@@ -371,20 +377,29 @@
             </select>
           </div>
         </div>
+
         <div>
           <label>Rating</label>
-          <div id="stars" class="stars"><span class="star" data-v="1">★</span><span class="star"
-              data-v="2">★</span><span class="star" data-v="3">★</span><span class="star" data-v="4">★</span><span
-              class="star" data-v="5">★</span></div>
-          <input type="hidden" id="rating" value="0" />
+          <div id="stars" class="stars">
+            <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span><span class="star"
+              data-v="3">★</span><span class="star" data-v="4">★</span><span class="star" data-v="5">★</span>
+          </div>
+          <input type="hidden" id="rating" name="rating" value="0" />
         </div>
-        <div><label for="text">Your feedback</label><textarea id="text" placeholder="Share details…"></textarea></div>
+
+        <div>
+          <label for="text">Your feedback</label>
+          <textarea id="text" name="text" placeholder="Share details…"></textarea>
+        </div>
+
         <div class="grid g-2">
-          <div><label for="submitter">Your name (optional)</label><input id="submitter" placeholder="First Last" />
+          <div>
+            <label for="submitter">Your name (optional)</label>
+            <input id="submitter" name="submitter" placeholder="First Last" />
           </div>
           <div>
             <label for="year">Year (optional)</label>
-            <select id="year">
+            <select id="year" name="year">
               <option value="">Prefer not to say</option>
               <option>Freshman</option>
               <option>Sophomore</option>
@@ -394,6 +409,7 @@
             </select>
           </div>
         </div>
+
         <div id="fb-alert" class="alert hidden"></div>
         <div class="actions"><button id="fb-submit" type="submit" class="btn-primary">Submit feedback</button></div>
       </form>
@@ -403,6 +419,7 @@
     <section id="section-office" class="card hidden">
       <h2>Office Hours</h2>
       <p class="lead">Browse office hours by course.</p>
+
       <div class="pills" id="course-filter">
         <button class="pill active" type="button" data-course="ALL">All</button>
         <button class="pill" type="button" data-course="CSCE 101">CSCE 101</button>
@@ -411,6 +428,7 @@
         <button class="pill" type="button" data-course="CSCE 155H">CSCE 155H</button>
         <button class="pill" type="button" data-course="CSCE 156">CSCE 156</button>
       </div>
+
       <div id="office-alert" class="alert hidden"></div>
       <div id="office-list" class="grid"></div>
     </section>
@@ -419,44 +437,83 @@
     <section id="section-login" class="card hidden">
       <h2>Sign in</h2>
       <p class="lead">Staff and students sign in with NUID (or @huskers.unl.edu) and password.</p>
+
       <div id="login-alert" class="alert hidden"></div>
       <form id="login-form" class="grid g-2" novalidate>
-        <div><label for="login-input">NUID or Email</label><input id="login-input" autocomplete="username" required>
+        <div>
+          <label for="login-input">NUID or Email</label>
+          <input id="login-input" name="login" type="text" placeholder="12345678 or user@huskers.unl.edu"
+            autocomplete="username" required>
         </div>
-        <div><label for="password-input">Password</label><input id="password-input" type="password"
-            autocomplete="current-password" required></div>
+        <div>
+          <label for="password-input">Password</label>
+          <input id="password-input" name="password" type="password" autocomplete="current-password" required>
+        </div>
         <div class="actions">
           <button id="login-btn" type="submit" class="btn-primary">Sign in</button>
-          <button id="change-pass-btn" type="button" class="btn-muted">Change password</button>
-          <button type="button" class="btn-muted" onclick="__lap_show('signup')">Create account</button>
+          <button id="change-pass-toggle" type="button" class="btn-muted">Change password</button>
+          <button id="signup-toggle" type="button" class="btn-muted">Create account</button>
         </div>
       </form>
-    </section>
 
-    <!-- SIGNUP -->
-    <section id="section-signup" class="card hidden">
-      <h2>Create an account</h2>
-      <p class="lead">Use your NUID or your @huskers.unl.edu address.</p>
-      <div id="signup-alert" class="alert hidden"></div>
-      <form id="signup-form" class="grid g-2" novalidate>
-        <div><label for="su-name">Full name</label><input id="su-name" required placeholder="First Last" /></div>
-        <div><label for="su-login">NUID or Email</label><input id="su-login" required
-            placeholder="12345678 or user@huskers.unl.edu" /></div>
-        <div><label for="su-pass">Password</label><input id="su-pass" type="password" required /></div>
-        <div><label for="su-pass2">Confirm password</label><input id="su-pass2" type="password" required /></div>
+      <!-- Change password -->
+      <form id="change-pass-form" class="grid g-2 hidden" novalidate>
+        <div class="muted">Change password</div>
+        <div>
+          <label>Login (NUID or Email)</label>
+          <input id="cp-login" placeholder="12345678 or user@huskers.unl.edu" autocomplete="username">
+        </div>
+        <div>
+          <label>Current password</label>
+          <input id="cp-current" type="password" autocomplete="current-password">
+        </div>
+        <div>
+          <label>New password</label>
+          <input id="cp-new" type="password" autocomplete="new-password">
+        </div>
+        <div>
+          <label>Confirm new password</label>
+          <input id="cp-confirm" type="password" autocomplete="new-password">
+        </div>
         <div class="actions">
-          <button id="signup-btn" class="btn-primary" type="submit">Sign up</button>
-          <button type="button" class="btn-muted" onclick="__lap_show('login')">Back to login</button>
+          <button id="cp-submit" type="button" class="btn-primary">Update password</button>
+          <button id="cp-cancel" type="button" class="btn-muted">Cancel</button>
+        </div>
+      </form>
+
+      <!-- Sign up -->
+      <form id="signup-form" class="grid g-2 hidden" novalidate>
+        <div class="muted">Create account</div>
+        <div>
+          <label>Name</label>
+          <input id="su-name" placeholder="First Last">
+        </div>
+        <div>
+          <label>NUID or Email</label>
+          <input id="su-login" placeholder="12345678 or user@huskers.unl.edu" autocomplete="username">
+        </div>
+        <div>
+          <label>Password</label>
+          <input id="su-pass" type="password" autocomplete="new-password">
+        </div>
+        <div>
+          <label>Confirm password</label>
+          <input id="su-pass2" type="password" autocomplete="new-password">
+        </div>
+        <div class="actions">
+          <button id="su-submit" type="button" class="btn-primary">Sign up</button>
+          <button id="su-cancel" type="button" class="btn-muted">Cancel</button>
         </div>
       </form>
     </section>
 
-    <!-- DASHBOARD (unchanged aside from existing features) -->
+    <!-- DASHBOARD -->
     <section id="section-dashboard" class="hidden">
       <div class="card">
         <h2>My Schedule</h2>
         <p class="lead">Add, edit, or remove your office hours.</p>
         <div id="sched-alert" class="alert hidden"></div>
+
         <form id="sched-form" class="grid g-3" novalidate>
           <div>
             <label for="sched-course">Course</label>
@@ -486,6 +543,7 @@
           <div><label for="sched-end">End</label><input id="sched-end" type="time" required></div>
           <div class="actions"><button id="sched-save" type="submit" class="btn-primary">Add to schedule</button></div>
         </form>
+
         <table class="table" id="sched-table" style="margin-top:10px">
           <thead>
             <tr>
@@ -511,14 +569,14 @@
       <div id="admin-block" class="card hidden">
         <h2>SL Admin</h2>
         <p class="lead">Manage staff and approve students.</p>
-        <!-- form/table markup unchanged from your working build -->
+
+        <h3>Add / Edit staff</h3>
         <div id="staff-alert" class="alert hidden"></div>
         <form id="staff-form" class="grid g-3" novalidate>
           <input type="hidden" id="staff-edit-id" value="" />
-          <div><label>NUID</label><input id="staff-nuid" required placeholder="12345678" /></div>
-          <div><label>Name</label><input id="staff-name" required placeholder="First Last" /></div>
-          <div><label>Email (@huskers.unl.edu)</label><input id="staff-email" placeholder="user@huskers.unl.edu" />
-          </div>
+          <div><label>NUID</label><input id="staff-nuid" placeholder="12345678" required></div>
+          <div><label>Name</label><input id="staff-name" placeholder="First Last" required></div>
+          <div><label>Email (@huskers.unl.edu)</label><input id="staff-email" placeholder="user@huskers.unl.edu"></div>
           <div>
             <label>Role</label>
             <select id="staff-role" required>
@@ -568,13 +626,13 @@
     </section>
   </main>
 
-  <!-- Supabase config -->
+  <!-- Supabase REST config (replace with your own if needed) -->
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || 'https://wmeijbsvlnjvnhptudfh.supabase.co';
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtZWlqYnN2bG5qdm5ocHR1ZGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MDQ5NzksImV4cCI6MjA3MTM4MDk3OX0.YT_435s_FFsqNJs6M_yW9iIGzxeCu1BHpPVH1cwJlX8';
   </script>
 
-  <!-- Core app logic (same as your working build, with the two updates) -->
+  <!-- App logic -->
   <script>
     (function () {
       const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -582,19 +640,19 @@
       const getToken = () => getSession().token || null;
       const getUser = () => getSession().user || null;
       const getUserName = () => { const u = getUser(); return (u && (u.name || u.email || u.full_name)) || null };
+      const roleIs = r => String(getUser()?.role || '').toUpperCase() === r;
       const isStaff = () => ['SL', 'CL', 'LA'].includes(String(getUser()?.role || '').toUpperCase());
       const safe = fn => { try { fn() } catch (e) { console.error(e) } };
 
-      /* header paint */
+      // header state
       safe(() => {
-        const greet = $('#lap-user-greeting'), loginTab = $('#login-tab'), signupTab = $('#signup-tab'), logoutBtn = $('#logout-btn'), dashTab = $('#dashboard-tab');
+        const greet = $('#lap-user-greeting'), loginTab = $('#login-tab'), logoutBtn = $('#logout-btn'), dashTab = $('#dashboard-tab');
         function paint() {
           const authed = !!getToken(); const name = getUserName();
           if (greet) { if (authed && name) { greet.textContent = `Signed in as ${name}`; greet.classList.remove('hidden') } else { greet.textContent = ''; greet.classList.add('hidden') } }
-          loginTab?.classList.toggle('hidden', authed);
-          signupTab?.classList.toggle('hidden', authed);
-          logoutBtn?.classList.toggle('hidden', !authed);
-          dashTab?.classList.toggle('hidden', !(authed && isStaff()));
+          if (loginTab) loginTab.classList.toggle('hidden', authed);
+          if (logoutBtn) logoutBtn.classList.toggle('hidden', !authed);
+          if (dashTab) dashTab.classList.toggle('hidden', !(authed && isStaff()));
           $('#my-feedback')?.classList.toggle('hidden', !(authed && isStaff()));
           $('#admin-block')?.classList.toggle('hidden', !authed);
         }
@@ -602,230 +660,247 @@
         document.addEventListener('DOMContentLoaded', paint);
       });
 
-      /* stars */
+      // feedback stars
       safe(() => {
         const stars = $$('#stars .star'), hidden = $('#rating'); if (!hidden) return;
         const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n));
-        stars.forEach(s => { s.addEventListener('mouseenter', () => paint(+s.dataset.v)); s.addEventListener('mouseleave', () => paint(+hidden.value || 0)); s.addEventListener('click', () => { hidden.value = s.dataset.v; paint(+hidden.value) }) });
+        stars.forEach(s => {
+          s.addEventListener('mouseenter', () => paint(Number(s.dataset.v)));
+          s.addEventListener('mouseleave', () => paint(Number(hidden.value || 0)));
+          s.addEventListener('click', () => { hidden.value = s.dataset.v; paint(Number(hidden.value)) });
+        });
       });
 
-      /* helpers */
-      const env = () => ({ URL: (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY: window.SUPABASE_ANON_KEY || '' });
-      const H = k => ({ apikey: k, Authorization: `Bearer ${k}`, Accept: 'application/json', 'Content-Type': 'application/json' });
-      const normTime = t => String(t || '').slice(0, 5); // HH:MM from HH:MM[:SS]
+      // ---- Supabase helpers
+      function getSupabaseEnv() { const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''); const KEY = window.SUPABASE_ANON_KEY || ''; return { URL, KEY } }
+      async function fetchJSON(url, headers = {}) { const res = await fetch(url, { headers }); let body = null; try { body = await res.clone().json() } catch { } return { res, body } }
+      const supabaseHeaders = key => ({ apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/json', 'Content-Type': 'application/json' });
 
-      /* -------- OFFICE HOURS (now resolves name by email or NUID; filters out lab_time) -------- */
+      // ---------- OFFICE HOURS (server + Supabase union, with staff-name resolution) ----------
       (function () {
         const list = $('#office-list'); if (!list) return; const alert = $('#office-alert');
+        const env = () => ({ URL: (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY: window.SUPABASE_ANON_KEY || '' });
+        const H = (k) => ({ apikey: k, Authorization: `Bearer ${k}`, Accept: 'application/json', 'Content-Type': 'application/json' });
+        const toHM = (t) => {
+          if (!t) return '';
+          const s = String(t).trim();
+          const m24 = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+          if (m24) return `${m24[1].padStart(2, '0')}:${m24[2]}`;
+          const m12 = s.match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+          if (m12) { let h = (+m12[1]) % 12; if (m12[3].toUpperCase() === 'PM') h += 12; return `${String(h).padStart(2, '0')}:${m12[2]}`; }
+          return s;
+        };
+        const normCourse = (c) => String(c || '').replace(/\s+/g, '').toUpperCase();
+        const normDay = (d) => String(d || '').slice(0, 3).toLowerCase();
         const mapRow = r => ({
           course: r.course ?? r.course_code ?? r.course_id ?? '',
-          day: r.day ?? r.weekday ?? r.day_of_week ?? '',
-          start: r.start ?? r.start_time ?? r.begin ?? '',
-          end: r.end ?? r.end_time ?? r.finish ?? '',
-          location: r.location ?? r.room ?? r.place ?? '',
-          staff_name: r.staff_name ?? r.name ?? r.instructor ?? r.staff ?? '',
-          staff_email: r.staff_email ?? r.email ?? '',
-          nuid: r.nuid ?? r.staff_nuid ?? r.staff_id ?? '',
-          type: (r.type ?? r.schedule_type ?? r.kind ?? '').toString()
+          day: r.day ?? r.weekday ?? r.day_of_week ?? '', start: r.start ?? r.start_time ?? r.begin ?? '',
+          end: r.end ?? r.end_time ?? r.finish ?? '', location: r.location ?? r.room ?? r.place ?? '',
+          staff_name: r.staff_name ?? r.name ?? r.instructor ?? r.staff ?? '', staff_email: r.staff_email ?? r.email ?? '',
+          nuid: r.nuid ?? r.staff_nuid ?? r.staff_id ?? '', type: String(r.type ?? r.schedule_type ?? r.kind ?? '')
         });
-        const dedupe = arr => { const s = new Set(); return arr.filter(x => { const k = [x.course, x.day, x.start, x.end, x.location, (x.staff_name || x.staff_email || x.nuid || '')].join('|'); if (s.has(k)) return false; s.add(k); return true; }) };
-
+        const dedupe = arr => { const s = new Set(); return arr.filter(x => { const k = [x.course, x.day, toHM(x.start), toHM(x.end), x.location, (x.staff_name || x.staff_email || x.nuid || '')].join('|'); if (s.has(k)) return false; s.add(k); return true; }); };
         async function enhanceNames(rows) {
           const { URL, KEY } = env(); if (!URL || !KEY) return rows;
-
-          // 1) If we have course/day/time but no email/name/nuid, try derive NUID from staff_schedules (office_hour only)
-          const needsScheduleMatch = rows.filter(r => !r.staff_name && !r.staff_email && !r.nuid && r.course && r.day && r.start && r.end);
-          if (needsScheduleMatch.length) {
+          // email → name
+          const emailMissing = rows.filter(r => !r.staff_name && r.staff_email);
+          if (emailMissing.length) {
+            const emails = [...new Set(emailMissing.map(r => String(r.staff_email).toLowerCase()))];
+            if (emails.length) {
+              const inList = '(' + emails.map(e => '"' + e.replace(/"/g, '""') + '"').join(',') + ')';
+              try {
+                const res = await fetch(`${URL}/rest/v1/staff_public?select=email,name&email=in.${encodeURIComponent(inList)}`, { headers: H(KEY) });
+                if (res.ok) { const data = await res.json().catch(() => []); const byEmail = {}; data.forEach(s => byEmail[String(s.email || '').toLowerCase()] = s.name || ''); rows.forEach(r => { const k = String(r.staff_email || '').toLowerCase(); if (!r.staff_name && byEmail[k]) r.staff_name = byEmail[k]; }); }
+              } catch { }
+            }
+          }
+          // match schedule to derive NUID
+          const needSched = rows.filter(r => !r.staff_name && !r.staff_email && !r.nuid && r.course && r.day && r.start && r.end);
+          if (needSched.length) {
             try {
               const rs = await fetch(`${URL}/rest/v1/staff_schedules?select=nuid,course_code,day,start_time,end_time,type`, { headers: H(KEY) });
               if (rs.ok) {
                 const sched = await rs.json().catch(() => []);
-                needsScheduleMatch.forEach(row => {
-                  const hit = sched.find(s =>
-                    String(s.type || '').toLowerCase().includes('office') &&
-                    (String(s.course_code || '').trim() === (row.course || '').trim()) &&
-                    (String(s.day || '').trim() === (row.day || '').trim()) &&
-                    (normTime(s.start_time) === normTime(row.start)) &&
-                    (normTime(s.end_time) === normTime(row.end))
-                  );
-                  if (hit) row.nuid = hit.nuid || row.nuid;
+                const idx = sched.map(s => ({ nuid: s.nuid, type: String(s.type || ''), c: normCourse(s.course_code), d: normDay(s.day), s: toHM(s.start_time), e: toHM(s.end_time) }));
+                needSched.forEach(row => {
+                  const rc = normCourse(row.course), rd = normDay(row.day), rs = toHM(row.start), re = toHM(row.end);
+                  const hit = idx.find(x => /office/i.test(x.type) && x.c === rc && x.d === rd && x.s === rs && x.e === re); if (hit) row.nuid = hit.nuid || row.nuid;
                 });
               }
             } catch { }
           }
-
-          // 2) Map by email -> name
-          const emailMissing = rows.filter(r => !r.staff_name && r.staff_email);
-          if (emailMissing.length) {
-            const emails = [...new Set(emailMissing.map(r => r.staff_email.toLowerCase()))];
-            if (emails.length) {
-              const inList = '(' + emails.map(e => '"' + e.replace(/"/g, '""') + '"').join(',') + ')';
-              try {
-                const r = await fetch(`${URL}/rest/v1/staff_public?select=email,name&email=in.${encodeURIComponent(inList)}`, { headers: H(KEY) });
-                if (r.ok) {
-                  const data = await r.json().catch(() => []);
-                  const map = {}; data.forEach(s => map[String(s.email || '').toLowerCase()] = s.name || '');
-                  rows.forEach(row => { const k = (row.staff_email || '').toLowerCase(); if (!row.staff_name && map[k]) row.staff_name = map[k]; });
-                }
-              } catch { }
-            }
-          }
-
-          // 3) Map by NUID -> name
-          const nuidMissing = rows.filter(r => !r.staff_name && r.nuid);
-          if (nuidMissing.length) {
-            const nuids = [...new Set(nuidMissing.map(r => String(r.nuid)))];
+          // NUID → name
+          const needNUID = rows.filter(r => !r.staff_name && r.nuid);
+          if (needNUID.length) {
+            const nuids = [...new Set(needNUID.map(r => String(r.nuid)))];
             const inList = '(' + nuids.map(n => '"' + n.replace(/"/g, '""') + '"').join(',') + ')';
             try {
               const r = await fetch(`${URL}/rest/v1/staff_public?select=nuid,name&nuid=in.${encodeURIComponent(inList)}`, { headers: H(KEY) });
-              if (r.ok) {
-                const data = await r.json().catch(() => []);
-                const map = {}; data.forEach(s => map[String(s.nuid || '')] = s.name || '');
-                rows.forEach(row => { const k = String(row.nuid || ''); if (!row.staff_name && map[k]) row.staff_name = map[k]; });
-              }
+              if (r.ok) { const data = await r.json().catch(() => []); const byN = {}; data.forEach(s => byN[String(s.nuid || '')] = s.name || ''); rows.forEach(row => { const k = String(row.nuid || ''); if (!row.staff_name && byN[k]) row.staff_name = byN[k]; }); }
             } catch { }
           }
           return rows;
         }
-
         const render = rows => {
           list.innerHTML = '';
           if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; }
           alert.classList.add('hidden');
           rows.forEach(r => {
-            const label = r.staff_name || (r.staff_email ? r.staff_email.split('@')[0] : (r.nuid || 'Staff'));
+            const label = r.staff_name || (r.nuid ? r.nuid : (r.staff_email ? r.staff_email.split('@')[0] : ''));
             const div = document.createElement('div'); div.className = 'card';
             div.innerHTML = `<div class="grid g-2" style="align-items:center">
-          <div>
-            <div style="font-weight:700">${r.course} • ${r.day} ${normTime(r.start)}–${normTime(r.end)}</div>
-            <div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${label}</span></div>
-          </div>
-        </div>`;
+              <div>
+                <div style="font-weight:700">${r.course} • ${r.day} ${toHM(r.start)}–${toHM(r.end)}</div>
+                <div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${label || 'Staff'}</span></div>
+              </div>
+            </div>`;
             list.appendChild(div);
           });
         };
-
         (async () => {
           let rows = [];
           for (const p of ['/api/office-hours', '/office-hours']) {
-            try { const r = await fetch(p, { credentials: 'include' }); const j = await r.clone().json().catch(() => null); if (r.ok) rows = rows.concat(Array.isArray(j?.items) ? j.items : (Array.isArray(j) ? j : [])) } catch { }
+            try { const r = await fetch(p, { credentials: 'include' }); const j = await r.clone().json().catch(() => null); if (r.ok) rows = rows.concat(Array.isArray(j?.items) ? j.items : (Array.isArray(j) ? j : [])); } catch { }
           }
           try {
             const { URL, KEY } = env(); if (URL && KEY) {
-              const a = await fetch(`${URL}/rest/v1/office_hours_public?select=*`, { headers: H(KEY) });
-              if (a.ok) { rows = rows.concat(await a.json().catch(() => [])) }
-              const b = await fetch(`${URL}/rest/v1/office_hours?select=*`, { headers: H(KEY) });
-              if (b.ok) { rows = rows.concat(await b.json().catch(() => [])) }
+              const a = await fetch(`${URL}/rest/v1/office_hours_public?select=*`, { headers: H(KEY) }); if (a.ok) rows = rows.concat(await a.json().catch(() => []));
+              const b = await fetch(`${URL}/rest/v1/office_hours?select=*`, { headers: H(KEY) }); if (b.ok) rows = rows.concat(await b.json().catch(() => []));
             }
           } catch { }
           rows = rows.map(mapRow);
-
-          // Keep ONLY office-hour items when a type is present
-          rows = rows.filter(r => {
-            const t = String(r.type || '').toLowerCase();
-            if (!t) return true; // many views don’t include type; keep them
-            return t.includes('office');
-          });
-
+          // filter out lab_time
+          rows = rows.filter(r => { const t = String(r.type || '').toLowerCase(); if (!t) return true; if (t.includes('lab')) return false; return true; });
           rows = dedupe(rows);
           rows = await enhanceNames(rows);
           render(rows);
         })();
-
-        // course filter
+        // filter UI
         $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => {
           $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
           const c = p.dataset.course;
-          Array.from(list.children).forEach(card => {
-            const on = (c === 'ALL') || (card.textContent || '').includes(c);
-            card.style.display = on ? '' : 'none';
-          });
+          Array.from(list.children).forEach(card => { const on = (c === 'ALL') || (card.textContent || '').includes(c); card.style.display = on ? '' : 'none'; });
         }));
       })();
 
-      /* LOGIN */
-      safe(() => {
+      // ---------- LOGIN/LOGOUT (server only) + change password + signup ----------
+      (function () {
         const form = $('#login-form'); if (!form) return;
-        const alert = $('#login-alert'), logoutBtn = $('#logout-btn'), loginTab = $('#login-tab'), signupTab = $('#signup-tab'), dashTab = $('#dashboard-tab');
+        const alert = $('#login-alert'), logoutBtn = $('#logout-btn'), loginTab = $('#login-tab'), dashTab = $('#dashboard-tab');
         const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') };
         form.addEventListener('submit', async e => {
-          e.preventDefault(); alert.classList.add('hidden'); const login = $('#login-input').value.trim(), password = $('#password-input').value;
+          e.preventDefault(); alert.classList.add('hidden'); alert.textContent = '';
+          const login = $('#login-input').value.trim(), password = $('#password-input').value;
           if (!login || !password) return bad('Missing login or password');
           let res, json;
           try { res = await fetch('/api/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) }); try { json = await res.clone().json() } catch { } } catch { }
-          if (!res || res.status === 404) { try { const r = await fetch('/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) }); res = r; try { json = await r.clone().json() } catch { } } catch { } }
-          if (!res) return bad('Login request failed.'); if (!res.ok) return bad(json?.message || 'Invalid credentials');
-          try { if (json?.token && json?.user) { localStorage.setItem('lap_auth_v1', JSON.stringify({ token: json.token, user: json.user })) } } catch { }
-          logoutBtn.classList.remove('hidden'); loginTab.classList.add('hidden'); signupTab.classList.add('hidden');
+          if (!res || res.status === 404) {
+            try { const r = await fetch('/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) }); res = r; try { json = await r.clone().json() } catch { } } catch { }
+          }
+          if (!res) return bad('Login request failed.');
+          if (!res.ok) return bad(json?.message || 'Invalid credentials');
+          try { if (json?.token && json?.user) { localStorage.setItem('lap_auth_v1', JSON.stringify({ token: json.token, user: json.user })); } } catch { }
+          logoutBtn.classList.remove('hidden'); loginTab.classList.add('hidden');
           const staff = ['sl', 'cl', 'la'].includes(String(json?.user?.role || json?.role || '').toLowerCase());
           dashTab.classList.toggle('hidden', !staff);
           if (staff) { __lap_show('dashboard'); loadSchedule(); loadMyFeedback(); if (String(json?.user?.role || '').toUpperCase() === 'SL') loadAdmin(); }
           else { __lap_show('feedback'); }
           window.dispatchEvent(new Event('hashchange'));
         });
-        $('#logout-btn').addEventListener('click', async () => { try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch { } localStorage.removeItem('lap_auth'); localStorage.removeItem('lap_auth_v1'); $('#dashboard-tab').classList.add('hidden'); $('#logout-btn').classList.add('hidden'); $('#login-tab').classList.remove('hidden'); $('#signup-tab').classList.remove('hidden'); __lap_show('feedback'); window.dispatchEvent(new Event('hashchange')); });
-      });
-
-      /* SIGNUP */
-      safe(() => {
-        const form = $('#signup-form'); if (!form) return;
-        const alert = $('#signup-alert');
-        const fail = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') };
-        const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') };
-
-        form.addEventListener('submit', async e => {
-          e.preventDefault(); alert.classList.add('hidden');
-          const name = $('#su-name').value.trim(), login = $('#su-login').value.trim(), pass = $('#su-pass').value, pass2 = $('#su-pass2').value;
-          if (!name || !login || !pass || !pass2) return fail('All fields are required.');
-          if (pass !== pass2) return fail('Passwords do not match.');
-          let res, json;
-          try { res = await fetch('/api/auth/register', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, login, password: pass }) }); try { json = await res.clone().json() } catch { } } catch { }
-          if (!res || res.status === 404) { try { const r = await fetch('/auth/register', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, login, password: pass }) }); res = r; try { json = await r.clone().json() } catch { } } catch { } }
-          if (!res) return fail('Sign up request failed.');
-          if (!res.ok) return fail(json?.message || 'Could not create account.');
-          ok('Account created. You can sign in now.'); form.reset();
-          setTimeout(() => __lap_show('login'), 800);
+        $('#logout-btn').addEventListener('click', async () => {
+          try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch { }
+          localStorage.removeItem('lap_auth'); localStorage.removeItem('lap_auth_v1');
+          $('#dashboard-tab').classList.add('hidden'); $('#logout-btn').classList.add('hidden'); $('#login-tab').classList.remove('hidden');
+          __lap_show('feedback'); window.dispatchEvent(new Event('hashchange'));
         });
-      });
 
-      /* SCHEDULE load/save/delete (as in your working build) */
+        // Change password
+        const cpToggle = $('#change-pass-toggle'), cpForm = $('#change-pass-form');
+        const cpCancel = $('#cp-cancel'), cpSubmit = $('#cp-submit');
+        cpToggle.addEventListener('click', () => cpForm.classList.toggle('hidden'));
+        cpCancel.addEventListener('click', () => cpForm.classList.add('hidden'));
+        cpSubmit.addEventListener('click', async () => {
+          const login = $('#cp-login').value.trim(), cur = $('#cp-current').value, nw = $('#cp-new').value, cf = $('#cp-confirm').value;
+          if (!login || !cur || !nw || !cf) return bad('Fill out all password fields.');
+          if (nw !== cf) return bad('New passwords do not match.');
+          let ok = false, r = null;
+          try { r = await fetch('/api/auth/password', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, current_password: cur, new_password: nw }) }); ok = r.ok; } catch { }
+          if (!ok) {
+            try { r = await fetch('/auth/password', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, current_password: cur, new_password: nw }) }); ok = r.ok; } catch { }
+          }
+          if (ok) { alert.className = 'alert alert-success'; alert.textContent = 'Password updated.'; alert.classList.remove('hidden'); cpForm.classList.add('hidden'); }
+          else bad('Could not change password.');
+        });
+
+        // Sign up
+        const suToggle = $('#signup-toggle'), suForm = $('#signup-form'), suCancel = $('#su-cancel'), suSubmit = $('#su-submit');
+        suToggle.addEventListener('click', () => suForm.classList.toggle('hidden'));
+        suCancel.addEventListener('click', () => suForm.classList.add('hidden'));
+        suSubmit.addEventListener('click', async () => {
+          const name = $('#su-name').value.trim(), login = $('#su-login').value.trim(), p1 = $('#su-pass').value, p2 = $('#su-pass2').value;
+          if (!name || !login || !p1 || !p2) return bad('Fill out all sign up fields.');
+          if (p1 !== p2) return bad('Passwords do not match.');
+          let ok = false, r = null, j = null;
+          try { r = await fetch('/api/auth/register', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, login, password: p1 }) }); j = await r.clone().json().catch(() => null); ok = r.ok; } catch { }
+          if (!ok) {
+            try { r = await fetch('/auth/register', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, login, password: p1 }) }); j = await r.clone().json().catch(() => null); ok = r.ok; } catch { }
+          }
+          if (ok) { alert.className = 'alert alert-success'; alert.textContent = 'Account created. You can sign in now.'; alert.classList.remove('hidden'); suForm.classList.add('hidden'); }
+          else bad(j?.message || 'Could not create account.');
+        });
+      })();
+
+      // ---------- SCHEDULE: load + save (server first, Supabase fallback) ----------
       window.loadSchedule = function () {
         const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
         const safe = fn => { try { fn() } catch (e) { console.error(e) } };
         const getUser = () => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw).user } catch { } } return null };
+
         safe(async () => {
           const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return; tbody.innerHTML = '';
           const mapRow = r => ({ id: r.id || r.row_id || r.uuid || '', course: r.course || r.course_code || '', day: r.day || r.day_of_week || '', start: r.start || r.start_time || '', end: r.end || r.end_time || '', location: r.location || '', staff_email: r.staff_email || r.email || '', staff_name: r.staff_name || r.name || '' });
-          let data = null, lastJson = null;
+
+          let data = null, lastRes = null, lastJson = null;
           for (const url of ['/api/staff/schedule', '/api/schedule/mine', '/api/schedule']) {
             try {
-              const res = await fetch(url, { credentials: 'include' }); try { lastJson = await res.clone().json() } catch { lastJson = null }
+              const res = await fetch(url, { credentials: 'include' }); lastRes = res;
+              try { lastJson = await res.clone().json() } catch { lastJson = null }
               if (res.ok && Array.isArray(lastJson)) { data = lastJson; break }
               if (res.ok && lastJson?.items && Array.isArray(lastJson.items)) { data = lastJson.items; break }
             } catch { }
           }
           if (!data) {
             try {
-              const { URL, KEY } = env(); if (URL && KEY) {
-                const me = getUser(); const params = me?.email ? `?select=*&staff_email=eq.${encodeURIComponent(me.email)}` : `?select=*`;
-                const r = await fetch(`${URL}/rest/v1/office_hours${params}`, { headers: H(KEY) }); if (r.ok) { data = await r.json().catch(() => []) }
+              const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY = window.SUPABASE_ANON_KEY || '';
+              if (URL && KEY) {
+                const me = getUser();
+                const params = me?.email ? `?select=*&staff_email=eq.${encodeURIComponent(me.email)}` : `?select=*`;
+                const r = await fetch(`${URL}/rest/v1/office_hours${params}`, { headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' } });
+                if (r.ok) { const j = await r.json().catch(() => []); data = Array.isArray(j) ? j : [] }
               }
             } catch { }
           }
-          data = (Array.isArray(data) ? data : []).map(mapRow);
-          if (!data.length) { alert.className = 'alert alert-success'; alert.textContent = 'You have no office hours yet. Use the form above to add your first block.'; alert.classList.remove('hidden'); return }
+          data = Array.isArray(data) ? data.map(mapRow) : [];
+          if (!data.length) { alert.className = 'alert alert-success'; alert.textContent = 'You have no office hours yet. Use the form above to add your first block.'; alert.classList.remove('hidden'); return; }
           alert.classList.add('hidden');
           data.forEach(row => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${row.course}</td><td>${row.day}</td><td>${normTime(row.start)}</td><td>${normTime(row.end)}</td><td>${row.location}</td>
-          <td class="row-actions"><span class="link" data-edit="${row.id}">Edit</span><span class="link" data-del="${row.id}">Delete</span></td>`;
-            tbody.appendChild(tr);
+            tr.innerHTML = `<td>${row.course}</td><td>${row.day}</td><td>${row.start}</td><td>${row.end}</td><td>${row.location}</td>
+              <td class="row-actions"><span class="link" data-edit="${row.id}">Edit</span><span class="link" data-del="${row.id}">Delete</span></td>`;
+            tbody.appendChild(tr)
           });
           $$('[data-del]').forEach(a => a.addEventListener('click', async () => {
             const id = a.getAttribute('data-del'); a.textContent = 'Deleting…'; a.style.pointerEvents = 'none';
             let ok = false;
-            for (const t of [`/api/staff/schedule/${id}`, `/api/schedule/${id}`]) { try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { ok = true; break } } catch { } }
-            if (!ok) { try { const { URL, KEY } = env(); if (URL && KEY) { const r = await fetch(`${URL}/rest/v1/office_hours?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: H(KEY) }); ok = r.ok } } catch { } }
+            for (const t of [`/api/staff/schedule/${id}`, `/api/schedule/${id}`]) {
+              try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { ok = true; break } } catch { }
+            }
+            if (!ok) {
+              try {
+                const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY = window.SUPABASE_ANON_KEY || '';
+                if (URL && KEY) { const r = await fetch(`${URL}/rest/v1/office_hours?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' } }); ok = r.ok }
+              } catch { }
+            }
             if (ok) loadSchedule(); else { a.textContent = 'Delete'; a.style.pointerEvents = 'auto' }
           }));
           $$('[data-edit]').forEach(a => a.addEventListener('click', () => {
@@ -834,71 +909,323 @@
             const btn = $('#sched-save'); btn.dataset.editId = a.getAttribute('data-edit'); btn.textContent = 'Save changes';
             window.scrollTo({ top: $('#section-dashboard').offsetTop - 10, behavior: 'smooth' });
           }));
-        });
+        })
       };
 
+      // schedule form submit (server first; basic Supabase fallback)
       (function () {
+        const $ = (s, r = document) => r.querySelector(s);
         const form = $('#sched-form'); if (!form) return; const alert = $('#sched-alert'); const btn = $('#sched-save');
+        function supaHeaders(KEY) { return { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json', 'Content-Type': 'application/json' } }
         form.addEventListener('submit', async e => {
-          e.preventDefault(); alert.classList.add('hidden');
-          const payload = { course: $('#sched-course').value.trim(), day: $('#sched-day').value.trim(), start: $('#sched-start').value.trim(), end: $('#sched-end').value.trim(), location: $('#sched-location').value.trim() };
-          if (!payload.course || !payload.day || !payload.start || !payload.end) { alert.className = 'alert alert-error'; alert.textContent = 'Course, day, start and end are required.'; alert.classList.remove('hidden'); return }
+          e.preventDefault(); alert.classList.add('hidden'); const payload = { course: $('#sched-course').value.trim(), day: $('#sched-day').value.trim(), start: $('#sched-start').value.trim(), end: $('#sched-end').value.trim(), location: $('#sched-location').value.trim() };
+          if (!payload.course || !payload.day || !payload.start || !payload.end) { alert.className = 'alert alert-error'; alert.textContent = 'Course, day, start and end are required.'; alert.classList.remove('hidden'); return; }
           let ok = false; const id = btn.dataset.editId || '';
-          try { const r = await fetch(id ? `/api/staff/schedule/${id}` : '/api/staff/schedule', { method: id ? 'PUT' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); ok = r.ok; } catch { }
+          try {
+            const r = await fetch(id ? `/api/staff/schedule/${id}` : '/api/staff/schedule', {
+              method: id ? 'PUT' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            ok = r.ok;
+          } catch { }
           if (!ok) {
             try {
-              const { URL, KEY } = env(); if (URL && KEY) {
-                const sess = getSession(); const base = { ...payload, staff_email: sess?.user?.email || null, staff_name: sess?.user?.name || sess?.user?.full_name || sess?.user?.email || null };
-                const r = await fetch(`${URL}/rest/v1/office_hours${id ? `?id=eq.${encodeURIComponent(id)}` : ''}`, { method: id ? 'PATCH' : 'POST', headers: H(KEY), body: JSON.stringify(base) }); ok = r.ok;
+              const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY = window.SUPABASE_ANON_KEY || '';
+              if (URL && KEY) {
+                const sess = (function () { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw) } catch { } } return {} })();
+                const base = {
+                  course: payload.course, day: payload.day, start: payload.start, end: payload.end, location: payload.location,
+                  staff_email: sess?.user?.email || null, staff_name: sess?.user?.name || sess?.user?.full_name || sess?.user?.email || null
+                };
+                const simple = await fetch(`${URL}/rest/v1/office_hours${id ? `?id=eq.${encodeURIComponent(id)}` : ''}`, {
+                  method: id ? 'PATCH' : 'POST', headers: supaHeaders(KEY),
+                  body: JSON.stringify(id ? base : { ...base })
+                });
+                ok = simple.ok;
               }
             } catch { }
           }
-          if (!ok) { alert.className = 'alert alert-error'; alert.textContent = 'Could not save office hour.'; alert.classList.remove('hidden'); return }
+          if (!ok) { alert.className = 'alert alert-error'; alert.textContent = 'Could not save office hour.'; alert.classList.remove('hidden'); return; }
           btn.textContent = 'Add to schedule'; delete btn.dataset.editId; form.reset(); loadSchedule();
         });
       })();
 
-      /* Staff admin + feedback loaders unchanged from your working version (omitted here for brevity if already present) */
-      // If your build expects them here, keep your existing implementations.
+      // ---------- FEEDBACK list for staff ----------
+      window.loadMyFeedback = function () {
+        const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+        const safe = fn => { try { fn() } catch (e) { console.error(e) } };
+        const getUser = () => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw).user } catch { } } return null };
 
+        safe(async () => {
+          const wrap = $('#my-feedback'); if (!wrap) return;
+          const list = $('#myfb-list'); const alert = $('#myfb-alert'); list.innerHTML = '';
+          const u = getUser() || {}; let courses = [];
+          if (Array.isArray(u.courses) && u.courses.length) courses = u.courses; else if (u.course) courses = [u.course];
+
+          async function fetchStaffSelf() { for (const p of ['/api/admin/staff/me', '/api/staff/me']) { try { const r = await fetch(p, { credentials: 'include' }); if (r.ok) return await r.json(); } catch { } } return null; }
+          if (!courses.length) { const me = await fetchStaffSelf(); if (me?.courses && Array.isArray(me.courses)) courses = me.courses; else if (me?.course) courses = [me.course]; }
+          courses = (courses || []).map(c => String(c || '').trim()).filter(Boolean);
+
+          async function fetchByCourseServer(cs) {
+            const q = cs.map(c => `course=${encodeURIComponent(c)}`).join('&');
+            for (const path of [`/api/feedback?${q}&scope=course`, `/feedback?${q}`]) {
+              try { const r = await fetch(path, { credentials: 'include' }); if (r.ok) { const j = await r.json().catch(() => []); return Array.isArray(j?.items) ? j.items : (Array.isArray(j) ? j : []) } } catch { }
+            }
+            return null;
+          }
+
+          let items = await fetchByCourseServer(courses);
+
+          if (!items || !items.length) {
+            try {
+              const { URL, KEY } = (function () { const U = (window.SUPABASE_URL || '').replace(/\/+$/, ''); const K = window.SUPABASE_ANON_KEY || ''; return { URL: U, KEY: K }; })();
+              if (URL && KEY && courses.length) {
+                const inList = '(' + courses.map(c => '"' + String(c).replace(/\"/g, '\\"') + '"').join(',') + ')';
+                const url = `${URL}/rest/v1/feedback?select=course,course_code,text,message,rating,created_at&course=in.${encodeURIComponent(inList)}&order=created_at.desc.nullslast`;
+                const r = await fetch(url, { headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' } });
+                if (r.ok) { const j = await r.json().catch(() => []); items = Array.isArray(j) ? j : []; }
+              }
+            } catch { }
+          }
+
+          if (!items || !items.length) {
+            alert.className = 'alert alert-success'; alert.textContent = 'No feedback yet for your course(s).'; alert.classList.remove('hidden'); return;
+          }
+          alert.classList.add('hidden');
+
+          items.slice(0, 100).forEach(f => {
+            const li = document.createElement('li');
+            const when = f.created_at ? new Date(f.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '';
+            const rating = f.rating ? ` • ★${f.rating}` : '';
+            const course = (f.course || f.course_code) ? ` • ${(f.course || f.course_code)}` : '';
+            li.textContent = `${when}${course}${rating} — ${f.text || f.message || ''}`;
+            list.appendChild(li);
+          });
+        })
+      };
+
+      // ---------- SL ADMIN (server first, Supabase write fallbacks) ----------
+      window.loadAdmin = function () {
+        const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+        const safe = fn => { try { fn() } catch (e) { console.error(e) } };
+        const supabaseHeaders = key => ({ apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/json', 'Content-Type': 'application/json' });
+
+        safe(async () => {
+          const body = $('#staff-table tbody'); const empty = $('#staff-empty'); if (!body) return; body.innerHTML = '';
+
+          function paintStaff(rows) {
+            window.__API_FILLED_STAFF = Array.isArray(rows) && rows.length > 0;
+            body.innerHTML = '';
+            if (!rows.length) { empty.className = 'alert alert-success'; empty.textContent = 'No staff found yet. Use “Add staff” to create the first entry.'; empty.classList.remove('hidden'); return }
+            if (empty) empty.classList.add('hidden');
+            rows.forEach(s => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td>${s.nuid || ''}</td>
+                <td>${s.name || ''}</td>
+                <td>${s.email || ''}</td>
+                <td>${(s.role || '')}</td>
+                <td>${Array.isArray(s.courses) ? s.courses.join(', ') : (s.course || '')}</td>
+                <td><span class="link" data-edit="${s.nuid || s.id || ''}">Edit</span> <span class="link" data-rm="${s.nuid || s.id || ''}">Remove</span></td>`;
+              body.appendChild(tr);
+            });
+            bindRowActions();
+          }
+
+          function bindRowActions() {
+            $$('#staff-table [data-edit]').forEach(a => a.addEventListener('click', () => {
+              const tr = a.closest('tr'); $('#staff-edit-id').value = a.getAttribute('data-edit');
+              $('#staff-nuid').value = tr.children[0].textContent.trim();
+              $('#staff-name').value = tr.children[1].textContent.trim();
+              $('#staff-email').value = tr.children[2].textContent.trim();
+              $('#staff-role').value = tr.children[3].textContent.trim();
+            }));
+            $$('#staff-table [data-rm]').forEach(a => a.addEventListener('click', async () => {
+              const id = a.getAttribute('data-rm'); a.textContent = 'Removing…'; a.style.pointerEvents = 'none';
+              let ok = false;
+              for (const t of [`/api/admin/staff/${id}`, `/admin/staff/${id}`]) {
+                try { const r = await fetch(t, { method: 'DELETE', credentials: 'include' }); if (r.ok) { ok = true; break } } catch { }
+              }
+              if (!ok) {
+                try {
+                  const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY = window.SUPABASE_ANON_KEY || '';
+                  if (URL && KEY) { const r = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: supabaseHeaders(KEY) }); ok = r.ok; }
+                } catch { }
+              }
+              if (ok) loadAdmin(); else { a.textContent = 'Remove'; a.style.pointerEvents = 'auto' }
+            }));
+          }
+
+          // 1) Try server endpoints
+          let rows = [], ok = false;
+          for (const path of ['/api/admin/staff', '/admin/staff', '/api/staff', '/api/staff/list']) {
+            try {
+              const res = await fetch(path, { credentials: 'include' });
+              const j = await res.clone().json().catch(() => null);
+              if (res.ok) { rows = Array.isArray(j) ? j : (Array.isArray(j?.items) ? j.items : []); ok = true; break }
+            } catch { }
+          }
+          paintStaff(rows);
+
+          // 2) Supabase read-only list if still empty
+          if (!ok || !rows.length) {
+            try {
+              const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY = window.SUPABASE_ANON_KEY || '';
+              if (URL && KEY) {
+                const res = await fetch(`${URL}/rest/v1/staff_public?select=nuid,name,email,role,courses,is_active&order=name.asc`, { headers: supabaseHeaders(KEY) });
+                if (res.ok) { const data = await res.json(); if (Array.isArray(data) && data.length) paintStaff(data); }
+              }
+            } catch { }
+          }
+
+          // Add/Edit staff
+          (function () {
+            const form = $('#staff-form'), alert = $('#staff-alert');
+            const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') };
+            const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') };
+            $('#staff-cancel').addEventListener('click', () => { form.reset(); $('#staff-edit-id').value = '' });
+
+            form.addEventListener('submit', async e => {
+              e.preventDefault(); alert.classList.add('hidden');
+              const id = $('#staff-edit-id').value.trim();
+              const payload = {
+                nuid: $('#staff-nuid').value.trim(),
+                name: $('#staff-name').value.trim(),
+                email: $('#staff-email').value.trim(),
+                role: $('#staff-role').value,
+                is_active: true
+              };
+              if (!payload.nuid || !payload.name || !payload.role) return bad('NUID, name, and role are required.');
+
+              let good = false;
+              try {
+                const r = await fetch(id ? `/api/admin/staff/${encodeURIComponent(id)}` : '/api/admin/staff', {
+                  method: id ? 'PUT' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                good = r.ok;
+              } catch { }
+
+              if (!good) {
+                try {
+                  const URL = (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY = window.SUPABASE_ANON_KEY || '';
+                  if (URL && KEY) {
+                    if (id) {
+                      const r = await fetch(`${URL}/rest/v1/staff?nuid=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: supabaseHeaders(KEY), body: JSON.stringify(payload) });
+                      good = r.ok;
+                    } else {
+                      const r = await fetch(`${URL}/rest/v1/staff`, { method: 'POST', headers: supabaseHeaders(KEY), body: JSON.stringify(payload) });
+                      good = r.ok;
+                    }
+                  }
+                } catch { }
+              }
+
+              if (!good) return bad('Could not save staff.');
+              ok('Saved.'); form.reset(); $('#staff-edit-id').value = ''; loadAdmin();
+            });
+          })();
+        })
+      };
     })();
   </script>
 
-  <!-- Fallback hooks (same behavior as your working build) -->
-  <script>
+  <!-- ===== FIXES that only run if your existing handlers fail (do NOT remove) ===== -->
+  <script id="lap-overrides-v3">
     (() => {
       const $ = (s, r = document) => r.querySelector(s);
+      const sess = () => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw) } catch { } } return {} };
       const env = () => ({ URL: (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY: window.SUPABASE_ANON_KEY || '' });
       const H = () => { const { KEY } = env(); return { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json', 'Content-Type': 'application/json', Prefer: 'return=representation' } };
-      const fmtTime = t => String(t || '').match(/^\d{1,2}:\d{2}$/) ? t + ':00' : t;
+      const fmtTime = t => (!t ? '' : (/^\d{1,2}:\d{2}$/.test(t) ? t + ':00' : t));
 
-      // Feedback fallback
-      (function () {
+      // FEEDBACK SUBMIT fallback
+      (function hookFeedback() {
         const form = $('#feedback-form'), alert = $('#fb-alert'); if (!form) return;
-        form.addEventListener('submit', async e => {
+        form.addEventListener('submit', async (e) => {
           await new Promise(r => setTimeout(r, 250));
           if (alert && alert.classList.contains('alert-success')) return;
-          const payload = { course: ($('#course') || {}).value?.trim(), type: ($('#type') || {}).value?.trim(), rating: parseInt((($('#rating') || {}).value || '0'), 10) || null, text: ($('#text') || {}).value?.trim() || '', submitter: ($('#submitter') || {}).value?.trim() || null, year: ($('#year') || {}).value?.trim() || null };
-          if (!payload.course || !payload.type || !payload.text) { alert.className = 'alert alert-error'; alert.textContent = 'Course, type, and feedback text are required.'; alert.classList.remove('hidden'); return; }
-          let ok = false; for (const p of ['/api/feedback', '/feedback']) { try { const r = await fetch(p, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (r.ok) { ok = true; break } } catch { } }
-          if (!ok) { try { const { URL, KEY } = env(); if (URL && KEY) { const variants = [{ course: payload.course, type: payload.type, rating: payload.rating, text: payload.text, submitter: payload.submitter, year: payload.year }, { course_code: payload.course, type: payload.type, rating: payload.rating, message: payload.text, submitter: payload.submitter, year: payload.year }]; for (const body of variants) { const r = await fetch(`${URL}/rest/v1/feedback`, { method: 'POST', headers: H(), body: JSON.stringify(body) }); if (r.ok) { ok = true; break } } } } catch { } }
-          if (ok) { alert.className = 'alert alert-success'; alert.textContent = 'Thanks! Your feedback was submitted.'; alert.classList.remove('hidden'); form.reset?.(); if (typeof window.loadMyFeedback === 'function') window.loadMyFeedback(); } else { alert.className = 'alert alert-error'; alert.textContent = 'Could not submit feedback.'; alert.classList.remove('hidden'); }
+          const payload = {
+            course: ($('#course') || {}).value?.trim(),
+            type: ($('#type') || {}).value?.trim(),
+            rating: parseInt((($('#rating') || {}).value || '0'), 10) || null,
+            text: ($('#text') || {}).value?.trim() || '',
+            submitter: ($('#submitter') || {}).value?.trim() || null,
+            year: ($('#year') || {}).value?.trim() || null
+          };
+          if (!payload.course || !payload.type || !payload.text) {
+            if (alert) { alert.className = 'alert alert-error'; alert.textContent = 'Course, type, and feedback text are required.'; alert.classList.remove('hidden'); }
+            return;
+          }
+          let ok = false;
+          for (const path of ['/api/feedback', '/feedback']) {
+            try {
+              const r = await fetch(path, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+              if (r.ok) { ok = true; break; }
+            } catch { }
+          }
+          if (!ok) {
+            try {
+              const { URL, KEY } = env(); if (URL && KEY) {
+                const variants = [
+                  { course: payload.course, type: payload.type, rating: payload.rating, text: payload.text, submitter: payload.submitter, year: payload.year },
+                  { course_code: payload.course, type: payload.type, rating: payload.rating, message: payload.text, submitter: payload.submitter, year: payload.year },
+                ];
+                for (const body of variants) {
+                  const r = await fetch(`${URL}/rest/v1/feedback`, { method: 'POST', headers: H(), body: JSON.stringify(body) });
+                  if (r.ok) { ok = true; break; }
+                }
+              }
+            } catch { }
+          }
+          if (ok) {
+            if (alert) { alert.className = 'alert alert-success'; alert.textContent = 'Thanks! Your feedback was submitted.'; alert.classList.remove('hidden'); }
+            form.reset?.();
+            if (typeof window.loadMyFeedback === 'function') window.loadMyFeedback();
+          } else {
+            if (alert) { alert.className = 'alert alert-error'; alert.textContent = 'Could not submit feedback.'; alert.classList.remove('hidden'); }
+          }
         }, true);
       })();
 
-      // Schedule fallback writer
-      (function () {
+      // OFFICE HOUR SAVE fallback
+      (function hookScheduleSubmit() {
         const form = $('#sched-form'), alert = $('#sched-alert'), btn = $('#sched-save'); if (!form || !btn) return;
-        form.addEventListener('submit', async e => {
+        async function writeOH({ id, base }) {
+          const { URL, KEY } = env(); if (!URL || !KEY) return false;
+          const variants = id ? [
+            { qs: `id=eq.${encodeURIComponent(id)}`, body: { course: base.course, day: base.day, start: fmtTime(base.start), end: fmtTime(base.end), location: base.location, staff_email: base.staff_email, staff_name: base.staff_name } },
+            { qs: `id=eq.${encodeURIComponent(id)}`, body: { course_code: base.course, day_of_week: base.day, start_time: fmtTime(base.start), end_time: fmtTime(base.end), location: base.location, staff_email: base.staff_email, staff_name: base.staff_name } }
+          ] : [
+            { body: { course: base.course, day: base.day, start: fmtTime(base.start), end: fmtTime(base.end), location: base.location, staff_email: base.staff_email, staff_name: base.staff_name } },
+            { body: { course_code: base.course, day_of_week: base.day, start_time: fmtTime(base.start), end_time: fmtTime(base.end), location: base.location, staff_email: base.staff_email, staff_name: base.staff_name } }
+          ];
+          for (const v of variants) {
+            try { const r = await fetch(`${URL}/rest/v1/office_hours${v.qs ? `?${v.qs}` : ''}`, { method: id ? 'PATCH' : 'POST', headers: H(), body: JSON.stringify(v.body) }); if (r.ok) return true; } catch { }
+          }
+          return false;
+        }
+        form.addEventListener('submit', async (e) => {
           await new Promise(r => setTimeout(r, 300));
-          const tbody = document.querySelector('#sched-table tbody'); if (tbody && tbody.children.length) return;
-          const s = (() => { for (const k of ['lap_auth_v1', 'lap_auth']) { try { const raw = localStorage.getItem(k); if (raw) return JSON.parse(raw) } catch { } } return {} })();
-          const base = { course: ($('#sched-course') || {}).value?.trim(), day: ($('#sched-day') || {}).value?.trim(), start: ($('#sched-start') || {}).value?.trim(), end: ($('#sched-end') || {}).value?.trim(), location: ($('#sched-location') || {}).value?.trim(), staff_email: s?.user?.email || null, staff_name: s?.user?.name || s?.user?.full_name || s?.user?.email || null };
-          const id = btn.dataset.editId || ''; const { URL, KEY } = env(); if (!URL || !KEY) return;
-          const variants = id ? [{ qs: `id=eq.${encodeURIComponent(id)}`, body: { ...base, start: fmtTime(base.start), end: fmtTime(base.end) } }] : [{ body: { ...base, start: fmtTime(base.start), end: fmtTime(base.end) } }];
-          let ok = false; for (const v of variants) { try { const r = await fetch(`${URL}/rest/v1/office_hours${v.qs ? `?${v.qs}` : ''}`, { method: id ? 'PATCH' : 'POST', headers: H(), body: JSON.stringify(v.body) }); if (r.ok) { ok = true; break } } catch { } }
-          if (ok) { alert.className = 'alert alert-success'; alert.textContent = 'Saved (via Supabase).'; alert.classList.remove('hidden'); btn.textContent = 'Add to schedule'; delete btn.dataset.editId; form.reset?.(); if (typeof window.loadSchedule === 'function') window.loadSchedule(); }
-          else { alert.className = 'alert alert-error'; alert.textContent = 'Could not save office hour.'; alert.classList.remove('hidden'); }
+          const tbody = document.querySelector('#sched-table tbody');
+          if (tbody && tbody.children.length) return;
+          const s = sess();
+          const base = {
+            course: ($('#sched-course') || {}).value?.trim(),
+            day: ($('#sched-day') || {}).value?.trim(),
+            start: ($('#sched-start') || {}).value?.trim(),
+            end: ($('#sched-end') || {}).value?.trim(),
+            location: ($('#sched-location') || {}).value?.trim(),
+            staff_email: s?.user?.email || null,
+            staff_name: s?.user?.name || s?.user?.full_name || s?.user?.email || null
+          };
+          const id = btn.dataset.editId || '';
+          const ok = await writeOH({ id, base });
+          if (ok) {
+            if (alert) { alert.className = 'alert alert-success'; alert.textContent = 'Saved (via Supabase).'; alert.classList.remove('hidden'); }
+            btn.textContent = 'Add to schedule'; delete btn.dataset.editId; form.reset?.();
+            if (typeof window.loadSchedule === 'function') window.loadSchedule();
+          } else {
+            if (alert) { alert.className = 'alert alert-error'; alert.textContent = 'Could not save office hour.'; alert.classList.remove('hidden'); }
+          }
         }, true);
       })();
     })();
@@ -906,3 +1233,7 @@
 </body>
 
 </html>
+"""
+with open('/mnt/data/index.fixed.html', 'w', encoding='utf-8') as f:
+f.write(index_html)
+print("Wrote /mnt/data/index.fixed.html")
