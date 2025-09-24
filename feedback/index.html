@@ -756,9 +756,9 @@
         })();
 
       // Course filter pills
-      $$('#course-filter .pill').forEach(p => {
+      document.querySelectorAll('#course-filter .pill').forEach(p => {
         p.addEventListener('click', () => {
-          $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
+          document.querySelectorAll('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
           const c = p.dataset.course;
           Array.from(listEl.children).forEach(card => {
             const on = (c === 'ALL') || (card.dataset.course === c);
