@@ -305,7 +305,6 @@
     }
   </style>
 
-  <!-- tiny router -->
   <script>
     (function () {
       const PAGES = ['feedback', 'office', 'login', 'dashboard'];
@@ -583,13 +582,12 @@
     </section>
   </main>
 
-  <!-- Supabase REST config (your values already set here) -->
+  <!-- Supabase REST config -->
   <script>
     window.SUPABASE_URL = window.SUPABASE_URL || 'https://wmeijbsvlnjvnhptudfh.supabase.co';
     window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtZWlqYnN2bG5qdm5ocHR1ZGZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU4MDQ5NzksImV4cCI6MjA3MTM4MDk3OX0.YT_435s_FFsqNJs6M_yW9iIGzxeCu1BHpPVH1cwJlX8';
   </script>
 
-  <!-- App logic -->
   <script>
     (function () {
       const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -602,9 +600,8 @@
       const env = () => ({ URL: (window.SUPABASE_URL || '').replace(/\/+$/, ''), KEY: window.SUPABASE_ANON_KEY || '' });
       const H = () => { const { KEY } = env(); return { apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json', 'Content-Type': 'application/json' } };
       const fmtTime = t => (!t ? '' : (/^\d{1,2}:\d{2}$/.test(t) ? t + ':00' : t));
-      const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-      // header state
+      /* header paint */
       (function () {
         const greet = $('#lap-user-greeting'), loginTab = $('#login-tab'), logoutBtn = $('#logout-btn'), dashTab = $('#dashboard-tab');
         function paint() {
@@ -614,13 +611,12 @@
           logoutBtn?.classList.toggle('hidden', !authed);
           dashTab?.classList.toggle('hidden', !(authed && isStaff()));
           $('#my-feedback')?.classList.toggle('hidden', !(authed && isStaff()));
-          // show admin for authed users (switch to SL-only by changing next line)
           $('#admin-block')?.classList.toggle('hidden', !authed);
         }
         window.addEventListener('hashchange', paint); document.addEventListener('DOMContentLoaded', paint);
       })();
 
-      // feedback stars
+      /* stars */
       (function () {
         const stars = $$('#stars .star'), hidden = $('#rating'); if (!hidden) return;
         const paint = n => stars.forEach(s => s.classList.toggle('active', Number(s.dataset.v) <= n));
@@ -631,9 +627,10 @@
         });
       })();
 
-      // ---------------- OFFICE HOURS (name resolution fix + filter type) ----------------
+      /* ================= OFFICE HOURS — name by NUID + filter only office_hour ================= */
       (function () {
         const alert = $('#office-alert'), list = $('#office-list'); if (!list) return;
+        const { URL, KEY } = env();
 
         const mapRow = r => ({
           id: r.id || r.row_id || r.uuid || '',
@@ -642,30 +639,67 @@
           start: r.start ?? r.start_time ?? r.begin ?? '',
           end: r.end ?? r.end_time ?? r.finish ?? '',
           location: r.location ?? r.room ?? r.place ?? '',
-          staff_name: r.staff_name ?? r.name ?? '',
-          staff_email: r.staff_email ?? r.email ?? '',
           nuid: r.nuid ?? r.staff_nuid ?? '',
+          staff_email: r.staff_email ?? r.email ?? '',
+          staff_name: r.staff_name ?? r.name ?? '',
           type: r.type ?? r.schedule_type ?? ''
         });
 
         const isOffice = v => {
           const s = String(v || '').toLowerCase().replace(/\s+/g, '_');
-          // treat empty/unknown as office hour (so historical rows without type still show)
-          if (!s) return true;
-          return s.includes('office') && !s.includes('lab');
+          return !s || s.includes('office');           // blank or contains 'office' = show
         };
 
-        function render(rows, staffMap) {
+        async function fetchOfficeRows() {
+          let rows = [];
+          // 1) server (if you have it)
+          for (const p of ['/api/office-hours', '/office-hours']) {
+            try {
+              const res = await fetch(p, { credentials: 'include' });
+              const j = await res.clone().json().catch(() => null);
+              if (res.ok) rows = rows.concat(Array.isArray(j?.items) ? j.items : (Array.isArray(j) ? j : []));
+            } catch { }
+          }
+          // 2) supabase: include staff_schedules so we have NUID
+          if (URL && KEY) {
+            const paths = [
+              // your view (may not include nuid)
+              '/rest/v1/office_hours_public?select=*',
+              // the raw table with nuid/type columns
+              '/rest/v1/staff_schedules?select=nuid,course_code,day,start_time,end_time,location,type'
+            ];
+            for (const path of paths) {
+              try {
+                const r = await fetch(URL + path, { headers: H() });
+                if (r.ok) { const j = await r.json().catch(() => []); rows = rows.concat(Array.isArray(j) ? j : []) }
+              } catch { }
+            }
+          }
+          // normalize + filter to office hour only
+          return rows.map(mapRow).filter(r => isOffice(r.type));
+        }
+
+        async function fetchStaffNamesByNUID(nuids) {
+          const byNUID = new Map();
+          if (!(URL && KEY) || !nuids.length) return byNUID;
+          // build IN (...) list
+          const inList = '(' + nuids.map(n => '"' + String(n).replace(/"/g, '\\"') + '"').join(',') + ')';
+          try {
+            const r = await fetch(`${URL}/rest/v1/staff_public?select=nuid,name&nuid=in.${encodeURIComponent(inList)}`, { headers: H() });
+            if (r.ok) {
+              const a = await r.json();
+              (a || []).forEach(s => { if (s?.nuid) byNUID.set(String(s.nuid), s?.name || '') });
+            }
+          } catch { }
+          return byNUID;
+        }
+
+        function render(rows, nameByNUID) {
           list.innerHTML = '';
           if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; }
           alert.classList.add('hidden');
           rows.forEach(r => {
-            // resolve a single name for THIS row only
-            const resolved = r.staff_name
-              || (r.staff_email && staffMap.byEmail.get(r.staff_email))
-              || (r.nuid && staffMap.byNUID.get(r.nuid))
-              || 'Staff';
-
+            const resolved = r.staff_name || (r.nuid && nameByNUID.get(String(r.nuid))) || 'Staff';
             const card = document.createElement('div'); card.className = 'card';
             card.innerHTML = `<div class="grid g-2" style="align-items:center">
               <div>
@@ -677,52 +711,14 @@
           });
         }
 
-        async function fetchOfficeRows() {
-          let rows = [];
-          // server endpoints
-          for (const p of ['/api/office-hours', '/office-hours']) {
-            try {
-              const res = await fetch(p, { credentials: 'include' });
-              const j = await res.clone().json().catch(() => null);
-              if (res.ok) rows = rows.concat(Array.isArray(j?.items) ? j.items : (Array.isArray(j) ? j : []));
-            } catch { }
-          }
-          // supabase views/tables
-          const { URL, KEY } = env();
-          if (URL && KEY) {
-            for (const path of ['/rest/v1/office_hours_public?select=*', '/rest/v1/office_hours?select=*']) {
-              try {
-                const r = await fetch(URL + path, { headers: H() });
-                if (r.ok) { const j = await r.json().catch(() => []); rows = rows.concat(Array.isArray(j) ? j : []) }
-              } catch { }
-            }
-          }
-          return rows.map(mapRow).filter(r => isOffice(r.type));
-        }
-
-        async function fetchStaffMap() {
-          const byEmail = new Map(), byNUID = new Map();
-          const { URL, KEY } = env();
-          if (!(URL && KEY)) return { byEmail, byNUID };
-          try {
-            const r = await fetch(`${URL}/rest/v1/staff_public?select=nuid,email,name`, { headers: H() });
-            if (r.ok) {
-              const a = await r.json();
-              (a || []).forEach(s => {
-                if (s?.email) byEmail.set(String(s.email).trim(), s?.name || '');
-                if (s?.nuid) byNUID.set(String(s.nuid).trim(), s?.name || '');
-              });
-            }
-          } catch { }
-          return { byEmail, byNUID };
-        }
-
         (async () => {
-          const [rows, staffMap] = await Promise.all([fetchOfficeRows(), fetchStaffMap()]);
-          render(rows, staffMap);
+          const rows = await fetchOfficeRows();
+          const uniqNuids = Array.from(new Set(rows.map(r => String(r.nuid || '')).filter(Boolean)));
+          const nameByNUID = await fetchStaffNamesByNUID(uniqNuids);
+          render(rows, nameByNUID);
         })();
 
-        // filter bar
+        // course filter pills
         $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => {
           $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
           const c = p.dataset.course; Array.from(list.children).forEach(card => {
@@ -730,14 +726,14 @@
           });
         }));
       })();
+      /* ================= end OFFICE HOURS ================= */
 
-      // ---------------- LOGIN / LOGOUT / SIGNUP / CHANGE PASSWORD ----------------
+      /* LOGIN / LOGOUT / SIGNUP / CHANGE PASSWORD (unchanged from your working file) */
       (function () {
         const form = $('#login-form'); if (!form) return;
         const alert = $('#login-alert'), logoutBtn = $('#logout-btn'), loginTab = $('#login-tab'), dashTab = $('#dashboard-tab');
         const bad = m => { alert.className = 'alert alert-error'; alert.textContent = m; alert.classList.remove('hidden') };
 
-        // toggles
         $('#change-pass-toggle')?.addEventListener('click', () => { $('#change-pass-form')?.classList.toggle('hidden') });
         $('#signup-toggle')?.addEventListener('click', () => { $('#signup-form')?.classList.toggle('hidden') });
 
@@ -745,13 +741,10 @@
           e.preventDefault(); alert.classList.add('hidden'); alert.textContent = '';
           const login = $('#login-input').value.trim(), password = $('#password-input').value;
           if (!login || !password) return bad('Missing login or password');
-
           let res, json;
           try { res = await fetch('/api/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) }); try { json = await res.clone().json() } catch { } } catch { }
           if (!res || res.status === 404) { try { const r = await fetch('/auth/login', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ login, password }) }); res = r; try { json = await r.clone().json() } catch { } } catch { } }
-          if (!res) return bad('Login request failed.');
-          if (!res.ok) return bad(json?.message || 'Invalid credentials');
-
+          if (!res) return bad('Login request failed.'); if (!res.ok) return bad(json?.message || 'Invalid credentials');
           try { if (json?.token && json?.user) { localStorage.setItem('lap_auth_v1', JSON.stringify({ token: json.token, user: json.user })); } } catch { }
           logoutBtn.classList.remove('hidden'); loginTab.classList.add('hidden');
           const staff = ['sl', 'cl', 'la'].includes(String(json?.user?.role || json?.role || '').toLowerCase());
@@ -768,7 +761,6 @@
           __lap_show('feedback'); window.dispatchEvent(new Event('hashchange'));
         });
 
-        // change password
         $('#cp-submit')?.addEventListener('click', async () => {
           const login = $('#cp-login').value.trim(), oldp = $('#cp-old').value, newp = $('#cp-new').value;
           if (!login || !oldp || !newp) return bad('Enter login, current password, and new password.');
@@ -780,7 +772,6 @@
           else { bad('Could not change password' + (resp ? ` (${resp.status})` : '')) }
         });
 
-        // sign up
         $('#su-submit')?.addEventListener('click', async () => {
           const name = $('#su-name').value.trim(), nuid = $('#su-nuid').value.trim(), email = $('#su-email').value.trim(), pass = $('#su-pass').value;
           if (!name || !nuid || !email || !pass) return bad('Fill name, NUID, email and password.');
@@ -793,7 +784,7 @@
         });
       })();
 
-      // ---------------- SCHEDULE (load/save/delete; server-first + Supabase fallback) ----------------
+      /* SCHEDULE load/save/delete */
       window.loadSchedule = function () {
         (async () => {
           const tbody = $('#sched-table tbody'), alert = $('#sched-alert'); if (!tbody) return; tbody.innerHTML = '';
@@ -824,7 +815,6 @@
               <td class="row-actions"><span class="link" data-edit="${row.id}">Edit</span><span class="link" data-del="${row.id}">Delete</span></td>`;
             tbody.appendChild(tr)
           });
-          // delete
           $$('#sched-table [data-del]').forEach(a => a.addEventListener('click', async () => {
             const id = a.getAttribute('data-del'); a.textContent = 'Deleting…'; a.style.pointerEvents = 'none';
             let ok = false;
@@ -834,7 +824,6 @@
             if (!ok) { const { URL, KEY } = env(); if (URL && KEY) { try { const r = await fetch(`${URL}/rest/v1/office_hours?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: H() }); ok = r.ok } catch { } } }
             if (ok) loadSchedule(); else { a.textContent = 'Delete'; a.style.pointerEvents = 'auto' }
           }));
-          // edit
           $$('#sched-table [data-edit]').forEach(a => a.addEventListener('click', () => {
             const tr = a.closest('tr'); $('#sched-course').value = tr.children[0].textContent; $('#sched-day').value = tr.children[1].textContent;
             $('#sched-start').value = tr.children[2].textContent; $('#sched-end').value = tr.children[3].textContent; $('#sched-location').value = tr.children[4].textContent;
@@ -858,7 +847,6 @@
             const r = await fetch(id ? `/api/staff/schedule/${id}` : '/api/staff/schedule', { method: id ? 'PUT' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             ok = r.ok;
           } catch { }
-
           if (!ok) {
             const { URL, KEY } = env();
             if (URL && KEY) {
@@ -878,19 +866,14 @@
         });
       })();
 
-      // ---------------- FEEDBACK submit (server first, SB fallback) ----------------
+      /* FEEDBACK submit */
       (function () {
         const form = $('#feedback-form'), alert = $('#fb-alert'); if (!form) return;
         form.addEventListener('submit', async (e) => {
-          await sleep(0); // allow any other listeners
+          await new Promise(r => setTimeout(r, 0));
           if (alert && alert.classList.contains('alert-success')) return;
-          const payload = {
-            course: $('#course').value.trim(), type: $('#type').value.trim(),
-            rating: parseInt(($('#rating').value || '0'), 10) || null, text: $('#text').value.trim(),
-            submitter: $('#submitter').value.trim() || null, year: $('#year').value.trim() || null
-          };
+          const payload = { course: $('#course').value.trim(), type: $('#type').value.trim(), rating: parseInt(($('#rating').value || '0'), 10) || null, text: $('#text').value.trim(), submitter: $('#submitter').value.trim() || null, year: $('#year').value.trim() || null };
           if (!payload.course || !payload.type || !payload.text) { alert.className = 'alert alert-error'; alert.textContent = 'Course, type, and feedback text are required.'; alert.classList.remove('hidden'); return; }
-
           let ok = false;
           for (const path of ['/api/feedback', '/feedback']) {
             try { const r = await fetch(path, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (r.ok) { ok = true; break } } catch { }
@@ -911,7 +894,7 @@
         }, true);
       })();
 
-      // ---------------- STAFF FEEDBACK list (server first, SB fallback) ----------------
+      /* FEEDBACK list for staff */
       window.loadMyFeedback = function () {
         (async () => {
           const wrap = $('#my-feedback'); if (!wrap) return;
@@ -949,7 +932,7 @@
         })();
       };
 
-      // ---------------- SL ADMIN list/save/delete (server first, SB fallback) ----------------
+      /* Admin list/save/delete (unchanged) */
       window.loadAdmin = function () {
         (async () => {
           const body = $('#staff-table tbody'); const empty = $('#staff-empty'); if (!body) return; body.innerHTML = '';
@@ -982,7 +965,6 @@
             }));
           }
 
-          // server list
           let rows = [], ok = false;
           for (const path of ['/api/admin/staff', '/admin/staff', '/api/staff', '/api/staff/list']) {
             try {
@@ -992,7 +974,6 @@
           }
           paint(rows);
 
-          // supabase fallback list
           if (!ok || !rows.length) {
             const { URL, KEY } = env();
             if (URL && KEY) {
@@ -1003,7 +984,6 @@
             }
           }
 
-          // add/edit
           (function () {
             const form = $('#staff-form'), alert = $('#staff-alert');
             const ok = m => { alert.className = 'alert alert-success'; alert.textContent = m; alert.classList.remove('hidden') };
