@@ -409,35 +409,15 @@
     <!-- OFFICE HOURS -->
     <section id="section-office" class="card hidden">
       <h2>Office Hours</h2>
-      <p class="lead">Browse or search office hours by course, day, or time.</p>
+      <p class="lead">Browse office hours by course.</p>
 
-      <!-- Updated course filter pills (adds 155N and merges 155E/H) -->
       <div class="pills" id="course-filter">
         <button class="pill active" type="button" data-course="ALL">All</button>
         <button class="pill" type="button" data-course="CSCE 101">CSCE 101</button>
         <button class="pill" type="button" data-course="CSCE 155A">CSCE 155A</button>
-        <button class="pill" type="button" data-course="CSCE 155E/H">CSCE 155E/H</button>
-        <button class="pill" type="button" data-course="CSCE 155N">CSCE 155N</button>
+        <button class="pill" type="button" data-course="CSCE 155E">CSCE 155E</button>
+        <button class="pill" type="button" data-course="CSCE 155H">CSCE 155H</button>
         <button class="pill" type="button" data-course="CSCE 156">CSCE 156</button>
-      </div>
-
-      <!-- New: search UI -->
-      <div class="grid g-2" style="margin-top:12px">
-        <div>
-          <label for="office-search">Search</label>
-          <input id="office-search" placeholder="Try: 101 • Mon • 2pm • 14:00 • 155E/H • Monday 2:30 pm" />
-        </div>
-        <div>
-          <label>Quick days</label>
-          <div class="pills" id="day-quick">
-            <button class="pill" type="button" data-day="Mon">Mon</button>
-            <button class="pill" type="button" data-day="Tue">Tue</button>
-            <button class="pill" type="button" data-day="Wed">Wed</button>
-            <button class="pill" type="button" data-day="Thu">Thu</button>
-            <button class="pill" type="button" data-day="Fri">Fri</button>
-            <button class="pill" type="button" data-clear="day">Clear day</button>
-          </div>
-        </div>
       </div>
 
       <div id="office-alert" class="alert hidden"></div>
@@ -704,61 +684,21 @@
           return out;
         }
 
-        // Helpers for search/filter
-        const DAY_ALIASES = {
-          mon: 'Mon', monday: 'Mon',
-          tue: 'Tue', tues: 'Tue', tuesday: 'Tue',
-          wed: 'Wed', weds: 'Wed', wednesday: 'Wed',
-          thu: 'Thu', thur: 'Thu', thurs: 'Thu', thursday: 'Thu',
-          fri: 'Fri', friday: 'Fri'
-        };
 
-        function parseTimeToMinutes(s) {
-          if (!s) return null;
-          const raw = String(s).trim().toLowerCase();
-          if (raw === 'noon') return 12 * 60;
-          if (raw === 'midnight') return 0;
-          // 2pm, 2 pm, 2:30pm, 14:00
-          const m12 = /^(\d{1,2})(?::(\d{2}))?\s*(a|am|p|pm)$/i.exec(raw.replace(/\s+/g, ''));
-          if (m12) {
-            let hh = parseInt(m12[1], 10), mm = parseInt(m12[2] || '0', 10), ap = m12[3][0];
-            if (ap === 'p' && hh !== 12) hh += 12;
-            if (ap === 'a' && hh === 12) hh = 0;
-            return hh * 60 + mm;
-          }
-          const m24 = /^(\d{1,2})(?::(\d{2}))$/.exec(raw);
-          if (m24) {
-            const hh = parseInt(m24[1], 10), mm = parseInt(m24[2] || '0', 10);
-            return (hh % 24) * 60 + (mm % 60);
-          }
-          // "14" as hour
-          const justH = /^(\d{1,2})$/.exec(raw);
-          if (justH) {
-            const hh = parseInt(justH[1], 10);
-            if (hh <= 23) return hh * 60; // assume :00
-          }
-          // "2 pm" with space
-          const spaced = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i.exec(String(s).trim());
-          if (spaced) return parseTimeToMinutes((spaced[1] || '') + (spaced[2] ? ':' + spaced[2] : '') + spaced[3]);
-          return null;
+        function to12(t) {
+          if (!t) return '';
+          const s = String(t).trim();
+          const m = /^\s*(\d{1,2})(?::(\d{2}))?/.exec(s);
+          if (!m) return s;
+          let hh = parseInt(m[1], 10);
+          let mm = m[2] ? m[2].slice(0, 2) : '00';
+          if (Number.isNaN(hh)) return s;
+          const ampm = hh >= 12 ? 'PM' : 'AM';
+          hh = hh % 12;
+          if (hh === 0) hh = 12;
+          return `${hh}:${String(mm).padStart(2, '0')} ${ampm}`;
         }
-
-        function displayCourse(course) {
-          const c = String(course || '').toUpperCase().replace(/\s+/g, ' ').trim();
-          if (c === 'CSCE 155E' || c === 'CSCE 155H') return 'CSCE 155E/H';
-          return c;
-        }
-
-        function tokenMatchCourse(token, courseDisplay) {
-          const t = token.toUpperCase();
-          // allow "101" to match "CSCE 101"
-          if (/^\d{3}[A-Z]?$/i.test(t)) return courseDisplay.includes(t);
-          return courseDisplay.includes(t);
-        }
-
         function render(rows, nameByNUID) {
-          const listEl = document.getElementById('office-list');
-          const alertEl = document.getElementById('office-alert');
           listEl.innerHTML = '';
           if (!rows.length) {
             alertEl.className = 'alert alert-error';
@@ -770,130 +710,40 @@
 
           for (const r of rows) {
             const name = nameByNUID.get(String(r.nuid)) || 'Staff';
-            const cDisp = displayCourse(r.course);
-            const startMin = parseTimeToMinutes(r.start);
-            const endMin = parseTimeToMinutes(r.end);
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.dataset.course = cDisp;                  // for pill filtering
-            card.dataset.day = r.day;                     // e.g., Mon/Tue…
-            card.dataset.startMin = String(startMin ?? '');
-            card.dataset.endMin = String(endMin ?? '');
-            card.dataset.location = r.location || '';
-            // For search, keep a normalized haystack
-            card.dataset.hay = `${cDisp} ${r.course} ${r.day} ${r.start} ${r.end} ${name}`.toLowerCase();
-
-            card.innerHTML = `
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.dataset.course = r.course;
+            div.innerHTML = `
               <div class="grid g-2" style="align-items:center">
                 <div>
-                  <div style="font-weight:700">${cDisp} • ${r.day} ${r.start}–${r.end}</div>
+                  <div style="font-weight:700">${r.course} • ${r.day} ${to12(r.start)}–${to12(r.end)}</div>
                   <div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${name}</span></div>
                 </div>
               </div>`;
-            listEl.appendChild(card);
+            listEl.appendChild(div);
           }
         }
 
-        // Initial load
         (async () => {
           let rows = await fetchSchedules();
+          // keep ONLY office_hour
           rows = rows.filter(r => r.type === 'office_hour');
           const nuids = Array.from(new Set(rows.map(r => String(r.nuid || '')).filter(Boolean)));
           const nameByNUID = await fetchNames(nuids);
           render(rows, nameByNUID);
-
-          // Wire up filters/search AFTER initial render
-          wireFilters();
         })();
 
-        // Filtering & search
-        function wireFilters() {
-          const listEl = document.getElementById('office-list');
-          const search = document.getElementById('office-search');
-          const dayQuick = document.getElementById('day-quick');
-          let activeCourse = 'ALL';
-          let activeDay = '';
-
-          function applyFilters() {
-            const q = (search.value || '').trim().toLowerCase();
-            const tokens = q.split(/\s+/).filter(Boolean);
-            let timeQuery = null;
-            let dayQuery = null;
-            let courseTokens = [];
-
-            for (const t of tokens) {
-              const tDayStd = DAY_ALIASES[t] || DAY_ALIASES[t.replace(/[^\w]/g, '')];
-              if (!dayQuery && tDayStd) { dayQuery = tDayStd; continue; }
-              if (timeQuery === null) {
-                const mins = parseTimeToMinutes(t);
-                if (mins !== null) { timeQuery = mins; continue; }
-              }
-              courseTokens.push(t);
-            }
-
-            // If quick day selected, override dayQuery
-            if (activeDay) dayQuery = activeDay;
-
+        // Course filter pills
+        $$('#course-filter .pill').forEach(p => {
+          p.addEventListener('click', () => {
+            $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
+            const c = p.dataset.course;
             Array.from(listEl.children).forEach(card => {
-              const courseOk = (activeCourse === 'ALL') || (card.dataset.course === activeCourse);
-              if (!courseOk) { card.style.display = 'none'; return; }
-
-              // Day match
-              if (dayQuery && card.dataset.day !== dayQuery) { card.style.display = 'none'; return; }
-
-              // Time within block
-              if (timeQuery !== null) {
-                const s = parseInt(card.dataset.startMin || '-1', 10);
-                const e = parseInt(card.dataset.endMin || '-1', 10);
-                const within = (s >= 0 && e >= 0 && timeQuery >= s && timeQuery < e);
-                if (!within) { card.style.display = 'none'; return; }
-              }
-
-              // Course token(s) (like "101" or "CSCE")
-              if (courseTokens.length) {
-                const cDisp = card.dataset.course || '';
-                const ok = courseTokens.every(t => tokenMatchCourse(t, cDisp));
-                if (!ok) { card.style.display = 'none'; return; }
-              }
-
-              // If raw string still has other words, allow fallback contains
-              if (tokens.length && !courseTokens.length && timeQuery === null && !dayQuery) {
-                // generic contains on haystack
-                const hay = card.dataset.hay || '';
-                const ok = tokens.every(t => hay.includes(t));
-                if (!ok) { card.style.display = 'none'; return; }
-              }
-
-              card.style.display = '';
-            });
-          }
-
-          // Course filter pills
-          $$('#course-filter .pill').forEach(p => {
-            p.addEventListener('click', () => {
-              $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
-              activeCourse = p.dataset.course || 'ALL';
-              applyFilters();
+              const on = (c === 'ALL') || (card.dataset.course === c);
+              card.style.display = on ? '' : 'none';
             });
           });
-
-          // Day quick pills
-          dayQuick?.querySelectorAll('.pill').forEach(b => {
-            b.addEventListener('click', () => {
-              if (b.dataset.clear === 'day') {
-                activeDay = '';
-                dayQuick.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
-              } else {
-                activeDay = b.dataset.day || '';
-                dayQuick.querySelectorAll('.pill').forEach(x => x.classList.toggle('active', x === b));
-              }
-              applyFilters();
-            });
-          });
-
-          // Search input
-          search?.addEventListener('input', () => applyFilters());
-        }
+        });
       })();
       /* ========================= end OFFICE HOURS ========================= */
 
