@@ -628,104 +628,124 @@
       })();
 
       /* ================= OFFICE HOURS — name by NUID + filter only office_hour ================= */
-      (function () {
-        const alert = $('#office-alert'), list = $('#office-list'); if (!list) return;
-        const { URL, KEY } = env();
+        (function(){
+          const alertEl = document.querySelector('#office-alert');
+          const listEl  = document.querySelector('#office-list');
+          if (!listEl) return;
 
-        const mapRow = r => ({
-          id: r.id || r.row_id || r.uuid || '',
-          course: r.course ?? r.course_code ?? r.course_id ?? '',
-          day: r.day ?? r.weekday ?? r.day_of_week ?? '',
-          start: r.start ?? r.start_time ?? r.begin ?? '',
-          end: r.end ?? r.end_time ?? r.finish ?? '',
-          location: r.location ?? r.room ?? r.place ?? '',
-          nuid: r.nuid ?? r.staff_nuid ?? '',
-          staff_email: r.staff_email ?? r.email ?? '',
-          staff_name: r.staff_name ?? r.name ?? '',
-          type: r.type ?? r.schedule_type ?? ''
-        });
+          const env = () => ({
+            URL: (window.SUPABASE_URL || '').replace(/\/+$/,''),
+            KEY: window.SUPABASE_ANON_KEY || ''
+          });
+          const H = () => {
+            const {KEY} = env();
+            return {apikey: KEY, Authorization: `Bearer ${KEY}`, Accept: 'application/json' };
+          };
 
-        const isOffice = v => {
-          const s = String(v || '').toLowerCase().replace(/\s+/g, '_');
-          return !s || s.includes('office');           // blank or contains 'office' = show
-        };
+          // Shape rows into a consistent object
+          const mapRow = r => ({
+            course: r.course_code || r.course || r.course_id || '',
+            day:    r.day || r.day_of_week || r.weekday || '',
+            start:  r.start_time || r.start || r.begin || '',
+            end:    r.end_time   || r.end   || r.finish || '',
+            location: r.location || r.room || '',
+            nuid:   r.nuid || r.staff_nuid || '',
+            type:   r.type || r.schedule_type || ''   // office_hour / lab_time / etc
+          });
 
-        async function fetchOfficeRows() {
-          let rows = [];
-          // 1) server (if you have it)
-          for (const p of ['/api/office-hours', '/office-hours']) {
-            try {
-              const res = await fetch(p, { credentials: 'include' });
-              const j = await res.clone().json().catch(() => null);
-              if (res.ok) rows = rows.concat(Array.isArray(j?.items) ? j.items : (Array.isArray(j) ? j : []));
-            } catch { }
+        async function fetchSchedules(){
+          const {URL, KEY} = env();
+          if (!(URL && KEY)) return [];
+
+          // Try plural then singular
+          const paths = [
+          '/rest/v1/staff_schedules?select=nuid,course_code,day,start_time,end_time,location,type&order=course_code.asc,day.asc,start_time.asc',
+          '/rest/v1/staff_schedule?select=nuid,course_code,day,start_time,end_time,location,type&order=course_code.asc,day.asc,start_time.asc'
+          ];
+
+          for (const p of paths){
+            try{
+              const r = await fetch(URL + p, {headers: H() });
+              if (r.ok) {
+                const j = await r.json().catch(()=>[]);
+                if (Array.isArray(j) && j.length) return j.map(mapRow);
+              }
+            }catch{ }
           }
-          // 2) supabase: include staff_schedules so we have NUID
-          if (URL && KEY) {
-            const paths = [
-              // your view (may not include nuid)
-              '/rest/v1/office_hours_public?select=*',
-              // the raw table with nuid/type columns
-              '/rest/v1/staff_schedules?select=nuid,course_code,day,start_time,end_time,location,type'
-            ];
-            for (const path of paths) {
-              try {
-                const r = await fetch(URL + path, { headers: H() });
-                if (r.ok) { const j = await r.json().catch(() => []); rows = rows.concat(Array.isArray(j) ? j : []) }
-              } catch { }
-            }
-          }
-          // normalize + filter to office hour only
-          return rows.map(mapRow).filter(r => isOffice(r.type));
-        }
+        return [];
+      }
 
-        async function fetchStaffNamesByNUID(nuids) {
-          const byNUID = new Map();
-          if (!(URL && KEY) || !nuids.length) return byNUID;
-          // build IN (...) list
-          const inList = '(' + nuids.map(n => '"' + String(n).replace(/"/g, '\\"') + '"').join(',') + ')';
-          try {
-            const r = await fetch(`${URL}/rest/v1/staff_public?select=nuid,name&nuid=in.${encodeURIComponent(inList)}`, { headers: H() });
+      async function fetchNamesByNUID(nuids){
+        const by = new Map();
+        const {URL, KEY} = env();
+        if (!(URL && KEY) || !nuids.length) return by;
+
+        const IN = '(' + nuids.map(n => `"${String(n).replace(/"/g, '\\"')}"`).join(',') + ')';
+
+        // Prefer staff_public, fall back to staff if you’ve granted anon select
+        const attempts = [
+          `/rest/v1/staff_public?select=nuid,name&nuid=in.${encodeURIComponent(IN)}`,
+          `/rest/v1/staff?select=nuid,name&nuid=in.${encodeURIComponent(IN)}`
+        ];
+
+        for (const path of attempts){
+          try{
+            const r = await fetch(URL + path, {headers: H() });
             if (r.ok) {
-              const a = await r.json();
-              (a || []).forEach(s => { if (s?.nuid) byNUID.set(String(s.nuid), s?.name || '') });
+              const a = await r.json().catch(()=>[]);
+              for (const row of (a||[])) if (row?.nuid) by.set(String(row.nuid), row.name || '');
+              if (by.size) break;
             }
-          } catch { }
-          return byNUID;
+          }catch{ }
         }
+      return by;
+    }
 
-        function render(rows, nameByNUID) {
-          list.innerHTML = '';
-          if (!rows.length) { alert.className = 'alert alert-error'; alert.textContent = 'No office hours to show.'; alert.classList.remove('hidden'); return; }
-          alert.classList.add('hidden');
-          rows.forEach(r => {
-            const resolved = r.staff_name || (r.nuid && nameByNUID.get(String(r.nuid))) || 'Staff';
-            const card = document.createElement('div'); card.className = 'card';
-            card.innerHTML = `<div class="grid g-2" style="align-items:center">
-              <div>
-                <div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
-                <div class="sub">Location: ${r.location || 'TBA'} &nbsp; <span class="tag">${resolved}</span></div>
+    function render(rows, nameByNUID){
+      listEl.innerHTML = '';
+      if (!rows.length){
+        alertEl.className = 'alert alert-error';
+        alertEl.textContent = 'No schedule to show.';
+        alertEl.classList.remove('hidden');
+        return;
+      }
+      alertEl.classList.add('hidden');
+
+      for (const r of rows){
+        const name = nameByNUID.get(String(r.nuid||'')) || 'Staff';
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="grid g-2" style="align-items:center">
+            <div>
+              <div style="font-weight:700">${r.course} • ${r.day} ${r.start}–${r.end}</div>
+              <div class="sub">
+                Location: ${r.location || 'TBA'}
+                &nbsp; <span class="tag">${name}</span>
               </div>
-            </div>`;
-            list.appendChild(card);
-          });
-        }
+            </div>
+          </div>`;
+        listEl.appendChild(card);
+      }
+    }
 
-        (async () => {
-          const rows = await fetchOfficeRows();
-          const uniqNuids = Array.from(new Set(rows.map(r => String(r.nuid || '')).filter(Boolean)));
-          const nameByNUID = await fetchStaffNamesByNUID(uniqNuids);
-          render(rows, nameByNUID);
-        })();
+    (async () => {
+      let rows = await fetchSchedules();              // rows from staff_schedule(s)
+      // Build NUID→Name map
+      const nuids = Array.from(new Set(rows.map(r => String(r.nuid||'')).filter(Boolean)));
+      const nameByNUID = await fetchNamesByNUID(nuids);
+      render(rows, nameByNUID);
+    })();
 
-        // course filter pills
-        $$('#course-filter .pill').forEach(p => p.addEventListener('click', () => {
-          $$('#course-filter .pill').forEach(x => x.classList.toggle('active', x === p));
-          const c = p.dataset.course; Array.from(list.children).forEach(card => {
-            const on = (c === 'ALL') || (card.textContent || '').includes(c); card.style.display = on ? '' : 'none';
-          });
-        }));
-      })();
+    // Course filter pills
+    Array.from(document.querySelectorAll('#course-filter .pill')).forEach(p => {
+      p.addEventListener('click', () => {
+        Array.from(document.querySelectorAll('#course-filter .pill')).forEach(x => x.classList.toggle('active', x === p));
+        const c = p.dataset.course;
+        Array.from(listEl.children).forEach(card => {
+        const on = (c === 'ALL') || (card.textContent || '').includes(c);
+        card.style.display = on ? '' : 'none';
+      });
       /* ================= end OFFICE HOURS ================= */
 
       /* LOGIN / LOGOUT / SIGNUP / CHANGE PASSWORD (unchanged from your working file) */
